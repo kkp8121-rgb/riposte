@@ -31,6 +31,8 @@
     this.parryLock = 0;        // 재입력 불가 잔여
     this.parryPose = 0;        // 포즈 연출 잔여
     this.parryFlash = 0;
+    this.parryBuffer = 0;      // 락/대시 중에 눌린 패리 입력 (버퍼)
+    this.parryGrace = 0;       // 패리 성공 직후 유예 — 같은 순간 겹쳐 온 두 번째 위협도 받아낸다
 
     this.dashT = 0;
     this.dashCd = 0;
@@ -60,6 +62,9 @@
     return this.iframes > 0 || this.dashInvuln();
   };
   Player.prototype.parryWindow = function () {
+    // 성공 직후 유예: 같은 프레임에 함께 도착한 두 번째 투사체가
+    // "받아냈는데 맞았다"가 되지 않게 한다
+    if (this.parryGrace > 0) return 'perfect';
     if (this.parryT < 0) return 'none';
     if (this.parryT < C.PARRY.PERFECT_WINDOW) return 'perfect';
     if (this.parryT < C.PARRY.BLOCK_WINDOW) return 'block';
@@ -93,6 +98,7 @@
   Player.prototype.onParrySuccess = function () {
     this.parryLock = Math.min(this.parryLock, C.PARRY.RECOVERY_ON_SUCCESS);
     this.parryT = -1;
+    this.parryGrace = C.PARRY.SUCCESS_GRACE;
     this.parryFlash = C.BOSS.FLASH_TIME;
   };
 
@@ -102,6 +108,7 @@
     this.dashDir = dir;
     this.ghostT = 0;
     this.parryT = -1;
+    this.parryGrace = 0;
     this.riposte = null;
     this.knock = 0;
   };
@@ -130,6 +137,7 @@
     this.hurtFlash = 0.3;
     this.streak = 0;
     this.parryT = -1;
+    this.parryGrace = 0;
     this.riposte = null;
     if (this.hp < 0) this.hp = 0;
   };
@@ -148,6 +156,8 @@
     if (this.streakPulse > 0) this.streakPulse -= dt;
     if (this.heartBreakT > 0) this.heartBreakT -= dt;
     if (this.riposteBuffer > 0) this.riposteBuffer -= dt;
+    if (this.parryBuffer > 0) this.parryBuffer -= dt;
+    if (this.parryGrace > 0) this.parryGrace -= dt;
 
     if (this.parryT >= 0) {
       this.parryT += dt;
@@ -227,6 +237,8 @@
     this.owner = o.owner || 'boss';
     this.color = o.color || (o.tell === 'red' ? C.COLORS.RED : C.COLORS.GOLD);
     this.skill = o.skill || null;        // 패리 시 훔칠 기술
+    this.fromHand = o.fromHand || null;  // 손패에서 쓴 리포스트 탄이면 그 기술 (0딜이면 환불)
+    this.label = o.label || null;        // 패배 화면 "SLAIN BY ..." 용
     this.reflectDamage = o.reflectDamage || 0;
     this.shape = o.shape || 'arrow';     // 'arrow' | 'wave' | 'bolt'
     this.dead = false;
@@ -261,6 +273,7 @@
     this.delay = o.delay;
     this.damage = o.damage || 1;
     this.tell = o.tell || 'red';
+    this.label = o.label || 'ZONE';
     this.struck = false;
     this.strikeT = 0;
     this.dead = false;
@@ -271,6 +284,7 @@
   };
 
   Zone.prototype.update = function (dt, game) {
+    if (this.dead) return;      // 취소된 존(보스 경직/페이즈 전환)은 절대 낙하하지 않는다
     if (!this.struck) {
       this.t -= dt;
       if (this.t <= 0) {

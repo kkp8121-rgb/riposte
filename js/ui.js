@@ -24,25 +24,47 @@
     CARD_W: 460, CARD_H: 268
   };
 
+  /* 자간(letter-spacing) 텍스트의 글자 폭 캐시.
+     measureText 는 비싸다 — 프레임마다 글자당 2번씩 재는 대신 폰트+문자열로 캐시한다. */
+  var _measCache = Object.create(null);
+  var _measCount = 0;
+  var MEAS_CACHE_MAX = 256;
+
+  function charWidths(ctx, str, font) {
+    var key = font + '|' + str;
+    var hit = _measCache[key];
+    if (hit) return hit;
+    var w = new Array(str.length);
+    var total = 0;
+    for (var i = 0; i < str.length; i++) {
+      w[i] = ctx.measureText(str[i]).width;
+      total += w[i];
+    }
+    if (_measCount >= MEAS_CACHE_MAX) { _measCache = Object.create(null); _measCount = 0; }
+    _measCount++;
+    hit = { w: w, total: total };
+    _measCache[key] = hit;
+    return hit;
+  }
+
   function text(ctx, str, x, y, o) {
     o = o || {};
     ctx.save();
-    ctx.font = C.font(o.weight || '600', o.size || 16, o.family);
+    var font = C.font(o.weight || '600', o.size || 16, o.family);
+    ctx.font = font;
     ctx.fillStyle = o.color || C.COLORS.TEXT;
     ctx.textAlign = o.align || 'center';
     ctx.textBaseline = o.baseline || 'middle';
     if (o.glow) { ctx.shadowColor = o.glow === true ? (o.color || C.COLORS.TEXT) : o.glow; ctx.shadowBlur = o.blur || 14; }
     if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
     if (o.spacing) {
-      var total = 0, i;
-      for (i = 0; i < str.length; i++) total += ctx.measureText(str[i]).width + o.spacing;
-      total -= o.spacing;
-      var cx = (o.align === 'left') ? x : x - total / 2;
-      for (i = 0; i < str.length; i++) {
-        var w = ctx.measureText(str[i]).width;
-        ctx.textAlign = 'left';
+      var m = charWidths(ctx, str, font);
+      var total = m.total + o.spacing * (str.length - 1);
+      var cx = (o.align === 'left') ? x : (o.align === 'right' ? x - total : x - total / 2);
+      ctx.textAlign = 'left';
+      for (var i = 0; i < str.length; i++) {
         ctx.fillText(str[i], cx, y);
-        cx += w + o.spacing;
+        cx += m.w[i] + o.spacing;
       }
     } else {
       ctx.fillText(str, x, y);
@@ -105,6 +127,18 @@
     ctx.restore();
   }
 
+  /* HP 바 그라디언트 — 보스 색이 바뀔 때만 다시 만든다 (프레임마다 만들지 않는다) */
+  var _hpGrad = null, _hpGradColor = null;
+  function hpGradient(ctx, x0, color) {
+    if (_hpGrad && _hpGradColor === color) return _hpGrad;
+    var g = ctx.createLinearGradient(x0, 0, x0 + L.HP_W, 0);
+    g.addColorStop(0, color);
+    g.addColorStop(1, C.COLORS.HP_BOSS);
+    _hpGrad = g;
+    _hpGradColor = color;
+    return g;
+  }
+
   var UI = {};
 
   /* =========================================================================
@@ -125,10 +159,7 @@
     ctx.fillRect(x0, L.HP_Y, L.HP_W, L.HP_H);
 
     var ratio = clamp(b.hp / b.maxHp, 0, 1);
-    var grad = ctx.createLinearGradient(x0, 0, x0 + L.HP_W, 0);
-    grad.addColorStop(0, b.color);
-    grad.addColorStop(1, C.COLORS.HP_BOSS);
-    ctx.fillStyle = grad;
+    ctx.fillStyle = hpGradient(ctx, x0, b.color);
     ctx.shadowColor = b.color;
     ctx.shadowBlur = 12;
     ctx.fillRect(x0, L.HP_Y, L.HP_W * ratio, L.HP_H);
@@ -268,33 +299,40 @@
   ];
 
   UI.drawTitle = function (ctx, game) {
-    dim(ctx, 0.55);
-
     var t = game.sceneT;
+    // 뒤에서 두 실루엣이 대치 중이다 — 타이틀은 그 위로 0.6s 동안 떠오른다
+    var fade = clamp(t / C.TITLE.FADE, 0, 1);
+    dim(ctx, 0.55 * fade);
+
     text(ctx, 'RIPOSTE', V.W / 2, L.TITLE_Y,
-      { size: 78, weight: '800', color: C.COLORS.WHITE, spacing: 12, glow: C.COLORS.PLAYER, blur: 26 });
+      { size: 78, weight: '800', color: C.COLORS.WHITE, spacing: 12, glow: C.COLORS.PLAYER, blur: 26,
+        alpha: fade });
 
     text(ctx, 'You have no sword. Parry perfectly, and their attack becomes yours.',
-      V.W / 2, L.TITLE_Y + 54, { size: 16, weight: '600', color: C.COLORS.GOLD });
+      V.W / 2, L.TITLE_Y + 54, { size: 16, weight: '600', color: C.COLORS.GOLD, alpha: fade });
 
     // 조작표
     var ty = 268;
     text(ctx, 'CONTROLS', V.W / 2, ty - 24,
-      { size: 11, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4 });
+      { size: 11, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: fade });
     for (var i = 0; i < CONTROLS.length; i++) {
       text(ctx, CONTROLS[i][0], V.W / 2 - 16, ty + i * 24,
-        { size: 14, weight: '700', color: C.COLORS.TEXT, align: 'right', family: C.FONT.MONO });
+        { size: 14, weight: '700', color: C.COLORS.TEXT, align: 'right', family: C.FONT.MONO, alpha: fade });
       text(ctx, CONTROLS[i][1], V.W / 2 + 16, ty + i * 24,
-        { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, align: 'left' });
+        { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, align: 'left', alpha: fade });
     }
 
-    var blink = 0.55 + 0.45 * Math.sin(t * 4);
-    var hasSave = game.save.unlocked > 1;
-    if (hasSave) {
+    var blink = (0.55 + 0.45 * Math.sin(t * C.TITLE.BLINK_HZ)) * fade;
+    if (game.save.cleared) {
+      text(ctx, '[ENTER]  PLAY AGAIN  ·  BEST RANKS', V.W / 2, 452,
+        { size: 19, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 2, glow: C.COLORS.GOLD, blur: 12 });
+      text(ctx, '[N]  NEW GAME  —  CLEAR PROGRESS', V.W / 2, 480,
+        { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2, alpha: fade });
+    } else if (game.save.unlocked > 1) {
       text(ctx, '[ENTER]  CONTINUE  —  BOSS ' + game.save.unlocked, V.W / 2, 452,
         { size: 19, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 2, glow: C.COLORS.PLAYER, blur: 12 });
       text(ctx, '[N]  NEW GAME', V.W / 2, 480,
-        { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
+        { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2, alpha: fade });
     } else {
       text(ctx, 'PRESS ENTER', V.W / 2, 462,
         { size: 22, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 4, glow: C.COLORS.PLAYER, blur: 14 });
@@ -309,7 +347,8 @@
         var r = game.save.ranks[d.key];
         line += d.name + ' ' + (r || '-') + (k < game.defs.length - 1 ? '   ' : '');
       }
-      text(ctx, line, V.W / 2, 514, { size: 11, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 1 });
+      text(ctx, line, V.W / 2, 514,
+        { size: 11, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 1, alpha: fade });
     }
   };
 
@@ -406,21 +445,47 @@
       { size: 15, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
   };
 
+  /** 무엇에 죽었는지 → 다음 판에 무엇을 눌러야 하는지 (텔 색이 곧 정답) */
+  function defeatHint(src) {
+    if (!src) return null;
+    if (src.kind === 'zone') return C.DEFEAT.HINT_ZONE;
+    return src.tell === 'gold' ? C.DEFEAT.HINT_GOLD : C.DEFEAT.HINT_RED;
+  }
+
   UI.drawDefeat = function (ctx, game) {
     dim(ctx, 0.68);
     var t = game.sceneT;
     var r = game.result || {};
-    text(ctx, 'DEFEAT', V.W / 2, 210,
+    text(ctx, 'DEFEAT', V.W / 2, 196,
       { size: 60, weight: '800', color: C.COLORS.HEART, spacing: 10, glow: C.COLORS.HEART, blur: 24 });
     text(ctx, (r.boss || '') + '  ·  ' + fmtTime(r.time) + '  ·  ' + (r.perfects || 0) + ' PERFECT',
-      V.W / 2, 258, { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, spacing: 2 });
-    text(ctx, 'Nothing is given. Everything is taken.', V.W / 2, 296,
-      { size: 14, weight: '600', color: C.COLORS.TEXT_DIM });
+      V.W / 2, 244, { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, spacing: 2 });
+
+    /* 죽인 공격 + 그 텔 색의 정답을 가르친다 */
+    var src = r.slainBy;
+    var hint = defeatHint(src);
+    if (src && hint) {
+      var tellCol = (src.kind === 'zone' || src.tell === 'red') ? C.COLORS.RED : C.COLORS.GOLD;
+      text(ctx, C.DEFEAT.SLAIN_BY + (src.label || '?'), V.W / 2, 288,
+        { size: 20, weight: '800', color: tellCol, spacing: 3, glow: tellCol, blur: 14 });
+      text(ctx, hint, V.W / 2, 316,
+        { size: 14, weight: '600', color: C.COLORS.TEXT });
+    } else {
+      text(ctx, 'Nothing is given. Everything is taken.', V.W / 2, 300,
+        { size: 14, weight: '600', color: C.COLORS.TEXT_DIM });
+    }
+
+    /* 이 보스의 저장된 최고 랭크 */
+    var best = r.key && game.save.ranks ? game.save.ranks[r.key] : null;
+    if (best) {
+      text(ctx, 'BEST RANK  ' + best, V.W / 2, 344,
+        { size: 12, weight: '700', color: rankColor(best), spacing: 2 });
+    }
 
     var blink = 0.5 + 0.5 * Math.sin(t * 4);
-    text(ctx, 'R  —  RETRY', V.W / 2, 364,
+    text(ctx, 'R  —  RETRY', V.W / 2, 392,
       { size: 22, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
-    text(ctx, 'ESC  —  TITLE', V.W / 2, 396,
+    text(ctx, 'ESC  —  TITLE', V.W / 2, 424,
       { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 

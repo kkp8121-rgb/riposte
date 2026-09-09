@@ -10,6 +10,9 @@
  *   node tests/bot.mjs --all           -> 보스 1..4 순차 + 무입력 패배 검증
  *   node tests/bot.mjs --seed=7
  *
+ * installBot / TUNE 은 export 되어 tools/shots.mjs 가 같은 봇으로 스크린샷을 찍는다.
+ * (직접 실행할 때만 테스트 본체가 돈다 — import 해도 브라우저가 뜨지 않는다.)
+ *
  * [설계 메모] 판단 루프는 페이지 "안"에서 돈다.
  *   퍼펙트 패리 창은 0.15s 인데 Node -> CDP 왕복이 이 환경에서 90~170ms 라
  *   바깥에서 16ms 주기로 반응하는 것이 물리적으로 불가능하다. 그래서 봇 루프를
@@ -45,7 +48,7 @@ const LAUNCH_ARGS = [
 ];
 
 /* ---- 봇 튜닝 ("조작 습관" — 게임 상수와 독립) ------------------------------ */
-const TUNE = {
+export const TUNE = {
   POLL_MS: 16,
   PARRY_LEAD: 0.05,       // 금색 공격은 hitAt - 0.05s 에 패리
   DASH_LEAD: 0.10,        // 붉은 공격 / 존 / 붉은 투사체는 hitAt - 0.10s 에 대시
@@ -70,7 +73,7 @@ const log = (...a) => console.log(...a);
 /* =========================================================================
  * 페이지 안에서 도는 봇 드라이버 (이 함수 본문이 브라우저로 직렬화된다)
  * ====================================================================== */
-function installBot(TUNE) {
+export function installBot(TUNE) {
   const R = window.__RIPOSTE;
 
   /* 손패 기술 id -> {kind, reach}. shot 은 사거리 무제한. */
@@ -257,9 +260,12 @@ async function until(page, pred, timeoutMs) {
 }
 
 /* =========================================================================
- * 진입점
+ * 진입점 — 직접 실행(node tests/bot.mjs)일 때만 돈다
  * ====================================================================== */
-(async () => {
+const IS_MAIN = process.argv[1] &&
+  pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+
+if (IS_MAIN) (async () => {
   const browser = await chromium.launch({ headless: true, args: LAUNCH_ARGS });
   const list = ALL ? [1, 2, 3, 4] : [BOSS];
 

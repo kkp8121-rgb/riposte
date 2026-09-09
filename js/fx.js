@@ -11,7 +11,9 @@
   var C = CONFIG;
 
   var FX = {
-    enabled: true,          // ?nofx=1 이면 false (판정에는 영향 없음)
+    /* ?nofx=1 이면 false — 파티클·링·잔상·텍스트 팝이 꺼진다.
+       히트스톱/흔들림/슬로모는 판정 타이밍의 일부라 그대로 유지된다 (README 참조). */
+    enabled: true,
     particles: [],
     pops: [],
     rings: [],
@@ -118,8 +120,9 @@
     }, 64);
   };
 
-  /** 텍스트 팝 ("STOLEN: THRUST", 피해 숫자, "COUNTER!") */
+  /** 텍스트 팝 ("STOLEN: THRUST", 피해 숫자, "COUNTER!") — ?nofx=1 이면 나오지 않는다 */
   FX.pop = function (text, x, y, color, opt) {
+    if (!FX.enabled) return;
     opt = opt || {};
     push(FX.pops, {
       text: text, x: x, y: y, color: color,

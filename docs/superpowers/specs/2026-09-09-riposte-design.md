@@ -87,6 +87,7 @@
   - 블록 창 안 → **BLOCK**: 피해 0, 훔치기 없음, 플레이어 40px 밀림, 스트릭 유지(증가 없음).
   - 창 밖 / 붉은 공격 → **HIT**.
 - 패리 키 입력 후 `PARRY_RECOVERY`(0.40s) 동안 재입력 불가(연타 방지). 헛친 패리 = 0.4s 무방비.
+- 단, **패리가 성공하면 재입력 불가 시간이 `RECOVERY_ON_SUCCESS`(0.10s)로 단축된다** — 연속으로 날아오는 공격(§3.2 triple 등)을 연달아 받아낼 수 있어야 하기 때문이다. 성공 직후 `PARRY_SUCCESS_GRACE`(0.05s) 동안은 판정이 유지돼, 같은 순간에 겹쳐 도착한 두 번째 투사체도 "받아냈는데 맞는" 일이 없다.
 
 ### 2.4 대시 (Space)
 
@@ -130,7 +131,9 @@
 
 공통: 아레나 논리 해상도 960×540, 바닥 y=440, 플레이어 x∈[60, 900]. 보스는 선호 거리를 유지하려 이동.
 
-### 3.1 VESPER — 결투가 (HP 100, par 60s) — 튜토리얼 보스
+공통 하한: **windup 은 배수(P2 ×0.8)를 먹여도 `BOSS.MIN_WINDUP`(0.34s) 아래로 내려가지 않는다** — 플래시를 보고 반응할 수 있는 최소 시간을 보장한다. 돌진(charge)은 진행 방향 벽까지 `BOSS.MIN_CHARGE_RUN`(260px)이 안 나오면 그 스텝을 건너뛴다(시작하자마자 자기 경직으로 끝나는 무의미한 돌진 방지).
+
+### 3.1 VESPER — 결투가 (HP 150, par 60s) — 튜토리얼 보스
 
 | 공격 | 텔 | windup | active | recover | reach | 접근 | 훔친 기술 |
 |---|---|---|---|---|---|---|---|
@@ -142,7 +145,7 @@
 - P2 패턴: `[thrust, slash]`(간격 .25), `[coup]`, `[slash, wait .2, thrust]`, `[back, thrust]`
 - **튜토리얼 HUD 프롬프트(이 보스 P1 한정)**: 첫 퍼펙트 패리 전 "K — 금색 플래시에 패리", 손패가 생기면 "J — 훔친 THRUST로 리포스트", 첫 붉은 텔에 "SPACE — 붉은 공격은 대시". 각 프롬프트는 해당 행동 성공 시 사라진다.
 
-### 3.2 SERAPH — 궁수 (HP 120, par 70s)
+### 3.2 SERAPH — 궁수 (HP 190, par 70s)
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
@@ -156,7 +159,7 @@
 - 행동: 거리 ≥ 350 유지 시도. P2에서 arrow windup 0.36, triple 간격 0.18.
 - 아레나 폭 제한으로 코너에 몰리면 kick 또는 rain을 쓴다.
 
-### 3.3 GRAVEN — 거한 (HP 160, par 80s) — 아머
+### 3.3 GRAVEN — 거한 (HP 250, par 80s) — 아머
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
@@ -168,10 +171,10 @@
 
 - 아머: 일반 리포스트에 flinch/interrupt 없음. 엠파워(스트릭 ≥3) 리포스트만 interrupt. 벽 충돌 경직 중에는 모든 리포스트가 카운터 판정.
 
-### 3.4 MIRROR — 거울 (HP 200, par 100s) — 최종
+### 3.4 MIRROR — 거울 (HP 320, par 100s) — 최종
 
 - 실루엣 = 플레이어와 동일(백색). 앞선 보스들의 thrust / slash / arrow / slam 을 windup ×0.85로 사용.
-- **feint**: 금색 플래시 후 무기가 멈춤 → 0.45s 뒤 두 번째 플래시와 함께 실제 타격. (조기 패리 = 블록 창에 걸려 무피해·무보상. 인내를 가르친다.)
+- **feint**: 금색 플래시 → (가짜) windup → 무기가 `FEINT_HOLD`(0.45s) 동안 멈춤 → **두 번째 플래시** → 그 공격의 **정상 windup** → 실제 타격. 즉 2차 플래시부터 타격까지의 간격은 그 공격의 평소 리듬과 정확히 같다(§2.2의 약속을 페인트도 지킨다). 배운 박자대로 1차 플래시에 패리하면 허공을 치고(무피해·무보상), 2차 플래시를 기다린 사람만 받아낸다 — 인내를 가르친다.
 - **P2 "mirror"**: 플레이어 손패에 든 기술을 순서대로 그대로 사용(손패가 비면 기본 thrust). 훔친 기술이 거울에 비쳐 돌아온다 = 주제의 결말.
 - **execution** (적): 0.95s windup 후 reach 240 잡기. 대시로만 회피. 피해 2.
 - P1 패턴: `[thrust]`, `[feint-thrust]`, `[slash, thrust]`, `[arrow, close, slash]`, `[slam]`
@@ -242,6 +245,9 @@ js/game.js            상태 머신·업데이트·판정·점수·저장
 js/main.js            부트·리사이즈·루프·디버그 훅
 tests/smoke.mjs       playwright-core 헤드리스: 콘솔 에러 0, 타이틀→FIGHT 진입, 스크린샷
 tests/bot.mjs         반응형 봇: 텔을 읽고 패리/대시/리포스트 → 각 보스 승리 가능 검증 + 무입력 봇은 패배 검증
+tests/state.mjs       보스 정의 테이블 불변 검증 (전투 전후 window.BOSSES 동일)
+tests/audio-smoke.mjs 오디오: 제스처 후 AudioContext running + 전 사운드 경로 호출 무예외
+tools/shots.mjs       README 용 스크린샷 3장 → docs/media/
 README.md
 ```
 
@@ -253,8 +259,10 @@ README.md
 
 1. `node tests/smoke.mjs` — pageerror 0, 타이틀 렌더, Enter로 FIGHT 진입, 60초 무입력 시 DEFEAT 도달(위협 존재 증명).
 2. `node tests/bot.mjs --boss=N` (N=1..4) — 반응형 봇이 각 보스에게 승리(루프가 닫혀 있음을 증명). 봇 승리 시간이 par의 2배를 넘으면 밸런스 경고.
-3. 헤드리스 스크린샷 육안 점검: 타이틀·전투·패리 스파크·승리 카드·엔딩.
+3. 헤드리스 스크린샷 육안 점검: 타이틀·전투·패리 스파크·승리 카드·엔딩. (`node tools/shots.mjs` → `docs/media/`)
 4. Pages 배포 후 `curl -I` 200, 헤드리스로 Pages URL 로드 시 pageerror 0.
+5. `node tests/state.mjs` — 전투를 끝까지 굴린 뒤 `window.BOSSES` 가 부팅 직후와 완전히 동일(정의 테이블 불변 = 재시작·결정론 보장).
+6. `node tests/audio-smoke.mjs` — 음소거 없이 Enter 한 번으로 AudioContext 가 `running`, 모든 `RAudio` 공개 메서드 호출에 예외 0.
 
 ---
 

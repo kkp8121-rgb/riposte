@@ -12,7 +12,7 @@
     title: 'THE DUELIST',
     color: '#ff4d6d',
     silhouette: 'rapier',      // 가느다란 레이피어 결투가
-    hp: 100,
+    hp: 150,
     par: 60,
     armor: false,
     spawnX: 660,

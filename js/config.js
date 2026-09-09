@@ -80,6 +80,7 @@
       BLOCK_WINDOW: 0.30,
       RECOVERY: 0.40,           // 헛친 패리 = 0.40s 무방비
       RECOVERY_ON_SUCCESS: 0.10, // 성공 시 즉시 회복 (연속 패리 허용 — 스펙 §3.2 triple 대응)
+      SUCCESS_GRACE: 0.05,      // 패리 성공 직후 유예 — 같은 스텝에 겹쳐 온 두 번째 투사체도 받아낸다
       PROJECTILE_CATCH: 52,     // 패리 중 투사체를 쳐내는 전방 거리
       BLOCK_PUSH: 40,
       POSE_TIME: 0.26,
@@ -109,7 +110,7 @@
       EMPOWER_STREAK: 3,
       EMPOWER_MULT: 2,
       COUNTER_MULT: 1.5,
-      RIPOSTE_BUFFER: 0.16,
+      INPUT_BUFFER: 0.16,     // 리포스트/패리 입력 버퍼 (락 중 눌린 입력을 흘리지 않는다)
       RIPOSTE_FLINCH: 0.20,   // 일반 리포스트 명중 시 경직 (아머 보스는 면역)
       COUNTER_FLINCH: 0.45    // 카운터 히트 interrupt 경직
     },
@@ -139,8 +140,11 @@
       PHASE2_HP_RATIO: 0.5,
       PHASE2_WINDUP_MULT: 0.8,
       PHASE2_ROAR: 1.0,
-      FEINT_HOLD: 0.45,         // 스펙 §3.4 feint
-      FEINT_SECOND: 0.30,
+      MIN_WINDUP: 0.34,         // 배수를 먹여도 이 아래로는 내려가지 않는다 (반응 하한)
+      MIN_CHARGE_RUN: 260,      // 돌진 방향 벽까지 이 거리가 안 나오면 charge 스텝을 건너뛴다
+      FEINT_HOLD: 0.45,         // 스펙 §3.4 feint — 1차 플래시 후 무기가 멈춰 있는 시간
+      /* feint 2차 플래시 → 타격 간격은 그 공격의 "정상 windup" 과 같다.
+         (고정 상수를 쓰면 배운 리듬과 어긋난다 — 스펙 §2.2) */
       FLASH_TIME: 0.16,
       HURT_FLASH: 0.12
     },
@@ -207,6 +211,7 @@
       PERFECT_SPARKS: 24,
       BLOCK_SPARKS: 8,
       RIPOSTE_SPARKS: 14,
+      VOLLEY_SPARKS: 8,        // 연사 2·3발째 "발사" 스파크 (텔 플래시 아님)
       HIT_SPARKS: 16,
       DEATH_SHARDS: 46,
       DUST: 10,
@@ -230,6 +235,27 @@
     SCENE: {
       INTRO_TIME: 1.2,
       PHASE2_BANNER: 1.4
+    },
+
+    /* ---- 타이틀 연출 (플레이어 vs VESPER 실루엣 대치) --------------------- */
+    TITLE: {
+      FADE: 0.6,             // 타이틀 페이드 인 시간
+      BLINK_HZ: 4,           // "PRESS ENTER" 점멸 = 금색 텔 펄스와 같은 주기
+      /* 조작표 텍스트 블록(x≈330~700)을 피해 아레나 바깥쪽에 세운다 */
+      PLAYER_X: 206,
+      BOSS_X: 764,
+      SWAY: 3.5,             // 좌우 미세 흔들림 진폭(px)
+      SWAY_HZ: 0.55,
+      PULSE_R: 9,            // 무기 끝 금색 펄스 반경
+      ALPHA: 0.92
+    },
+
+    /* ---- 패배 화면 학습 문구 (텔 색으로 무엇을 눌렀어야 했는지 가르친다) --- */
+    DEFEAT: {
+      SLAIN_BY: 'SLAIN BY ',
+      HINT_GOLD: 'Gold flash  —  press K as it lands',
+      HINT_RED:  'Red flash  —  dash through with SPACE',
+      HINT_ZONE: 'Red zone  —  dash out before it lands'
     },
 
     /* ---- 오디오 (스펙 §5) ------------------------------------------------ */

@@ -15,6 +15,18 @@
 
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
+  /**
+   * 패턴 스텝(정의 테이블의 객체)을 공격 옵션으로 복사한다.
+   * 정의 객체는 절대 변형하지 않는다 — 변형하면 BOSSES 테이블이 영구 오염되어
+   * 재시작·다음 보스·?seed 결정론이 모두 깨진다.
+   */
+  function stepOpt(step) {
+    var o = {};
+    if (!step) return o;
+    for (var k in step) if (step.hasOwnProperty(k)) o[k] = step[k];
+    return o;
+  }
+
   /* =========================================================================
    * Boss
    * ====================================================================== */
@@ -119,7 +131,7 @@
     }
     var step = this.pattern[this.stepIndex++];
 
-    if (step.atk) { this.beginAttack(step.atk, step); return; }
+    if (step.atk) { this.beginAttack(step.atk, stepOpt(step)); return; }
     if (step.feint) { this.beginAttack(step.feint, { feint: true }); return; }
 
     if (step.mirror) {
@@ -174,6 +186,13 @@
     if (!def) { this.nextStep(); return; }
     opt = opt || {};
 
+    // 벽에 붙어서 시작하는 돌진은 즉시 자기 경직으로 끝난다 — 그런 스텝은 건너뛴다
+    if (def.kind === 'charge') {
+      var cdir = this.dirToPlayer();
+      var wall = cdir > 0 ? V.MAX_X : V.MIN_X;
+      if (Math.abs(wall - this.x) < B.MIN_CHARGE_RUN) { this.nextStep(); return; }
+    }
+
     // 근접 공격이면 사거리 안으로 먼저 붙는다 (패턴이 헛치지 않도록)
     if (def.kind === 'melee' && !opt._approached) {
       var need = def.reach * B.APPROACH_RATIO + (def.approach || 0) * 0.5;
@@ -187,12 +206,16 @@
     this.pendingAttack = null;
 
     var mult = this.windupMult();
-    var windup = def.windup * mult;
+    // 배수를 먹여도 반응 하한 아래로는 내려가지 않는다
+    var windup = Math.max(B.MIN_WINDUP, def.windup * mult);
     var feint = !!(opt.feint || def.feint);
     var hold = 0, second = 0;
     if (feint) {
+      // 1차(가짜) 플래시 → windup → 무기 정지(hold) → 2차 플래시 → 같은 windup → 타격.
+      // 2차 플래시부터 타격까지가 그 공격의 정상 windup 과 정확히 같아야
+      // "금색 플래시 → 항상 같은 시간 → 타격" 리듬이 유지된다 (스펙 §2.2 / §3.4).
       hold = (this.def.feintHold === undefined ? B.FEINT_HOLD : this.def.feintHold);
-      second = (this.def.feintSecond === undefined ? B.FEINT_SECOND : this.def.feintSecond) * mult;
+      second = windup;
     }
     var windupTotal = windup + hold + second;
 
@@ -210,6 +233,7 @@
       startX: this.x,
       lungeDone: 0,
       hasHit: false,
+      zones: [],                    // 이 공격이 깐 존 — 취소되면 같이 사라져야 한다
       damage: def.damage === undefined ? 1 : def.damage
     };
     this.attack = a;
@@ -219,25 +243,43 @@
     // 존(rain)은 windup 시작에 바닥 경고 스트립을 깔고 windup 끝에 낙하한다.
     // => 존의 tRemain 과 attack.hitAt 이 항상 일치한다.
     if (def.kind === 'zone') {
-      this.game.spawnZone(new Zone({
+      var z = new Zone({
         x: clamp(this.game.player.x, V.MIN_X, V.MAX_X),
         w: def.zone.w,
         delay: windupTotal,
         damage: def.zone.damage === undefined ? 1 : def.zone.damage,
-        tell: def.tell
-      }));
+        tell: def.tell,
+        label: def.label || def.id
+      });
+      a.zones.push(z);
+      this.game.spawnZone(z);
     }
 
     this.flash(def.tell);
     if (this.def.onAttackStart) this.def.onAttackStart(this, a, this.game);
   };
 
+  /** 텔 플래시 = "이제부터 일정 시간 뒤에 맞는다"는 약속. windup 시작에만 찍는다. */
   Boss.prototype.flash = function (tell) {
+    // recover 중에는 절대 텔이 나가지 않는다 (거짓 예고 금지)
+    if (this.attack && this.attack.stage === 'recover') return;
     this.flashT = B.FLASH_TIME;
     this.flashColor = (tell === 'red') ? C.COLORS.RED : C.COLORS.GOLD;
     var tip = this.weaponTip();
     FX.tellBurst(tip.x, tip.y, this.flashColor);
     if (tell === 'red') RAudio.tellRed(); else RAudio.tellGold();
+  };
+
+  /**
+   * 연사 2·3발째의 "발사" 표시. 텔(예고)이 아니라 이미 날아간 사실의 표시이므로
+   * 금색 버스트도, 텔 오디오 큐도 쓰지 않는다 (스펙 §2.2 — 플래시는 예고 전용).
+   */
+  Boss.prototype.releaseSpark = function (tell) {
+    var col = (tell === 'red') ? C.COLORS.RED : C.COLORS.GOLD;
+    var tip = this.weaponTip();
+    FX.sparks(tip.x, tip.y, C.FX.VOLLEY_SPARKS, col,
+      { speed: 170, life: 0.22, size: 1.7, gravity: 140, drag: 3.4 });
+    RAudio.swing();
   };
 
   Boss.prototype.updateAttack = function (dt) {
@@ -313,6 +355,7 @@
           reflectDamage: pj.reflectDamage || 0,
           shape: pj.shape || 'arrow',
           skill: def.steal || null,
+          label: def.label || def.id,
           owner: 'boss'
         });
       };
@@ -400,9 +443,24 @@
     return applied;
   };
 
+  /**
+   * 진행 중인 공격이 이미 월드에 뿌려 놓은 것(존)을 같이 취소한다.
+   * 취소하지 않으면 "보스를 끊었는데 낙하는 그대로 온다" = 텔과 결과가 어긋난다.
+   */
+  Boss.prototype.cancelAttackSpawns = function () {
+    var a = this.attack;
+    if (!a || !a.zones) return;
+    for (var i = 0; i < a.zones.length; i++) {
+      var z = a.zones[i];
+      if (z && !z.struck) z.dead = true;   // 아직 떨어지지 않았으면 소멸
+    }
+    a.zones.length = 0;
+  };
+
   /** 경직. counter=true 면 경직 동안 모든 리포스트가 카운터 판정. */
   Boss.prototype.stagger = function (dur, counter) {
     if (this.dead) return;
+    this.cancelAttackSpawns();
     this.attack = null;
     this.pendingAttack = null;
     this.state = 'stagger';
@@ -418,6 +476,7 @@
 
   Boss.prototype.enterPhase2 = function () {
     this.phase = 2;
+    this.cancelAttackSpawns();
     this.attack = null;
     this.pendingAttack = null;
     this.pattern = null;
@@ -430,6 +489,7 @@
 
   Boss.prototype.die = function () {
     this.dead = true;
+    this.cancelAttackSpawns();
     this.attack = null;
     this.pattern = null;
     this.state = 'dead';
@@ -451,6 +511,7 @@
     this.watch += dt;
     if (this.watch > 6 && this.state !== 'idle') {
       // 안전망: 어떤 상태에도 6초 이상 머물지 않는다
+      this.cancelAttackSpawns();
       this.attack = null;
       this.state = 'idle';
       this.idleTime = B.WATCHDOG_IDLE;

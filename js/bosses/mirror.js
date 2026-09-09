@@ -28,7 +28,7 @@
     title: 'YOUR REFLECTION',
     color: '#ffffff',
     silhouette: 'mirror',       // 플레이어 실루엣, 백색
-    hp: 200,
+    hp: 320,
     par: 100,
     armor: false,
     spawnX: 680,
@@ -38,9 +38,10 @@
     prefer: { close: 120, far: 300, back: 200 },
     gap: { 1: 0.7, 2: 0.45 },
 
-    /* feint 타이밍 (스펙 §3.4: 0.45s 뒤 두 번째 플래시) */
+    /* feint 타이밍 (스펙 §3.4): 1차 플래시 → windup → 무기가 0.45s 멈춤 →
+       2차 플래시 → 같은 windup → 실제 타격.
+       2차 플래시부터 타격까지는 그 공격의 정상 windup 과 같다 (배운 리듬 유지). */
     feintHold: 0.45,
-    feintSecond: 0.30,
     mirrorGap: 0.35,
     fallbackAttack: 'thrust',
 

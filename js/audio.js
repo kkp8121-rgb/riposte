@@ -16,7 +16,8 @@
     supported: false,
     _drone: null,
     _kick: null,
-    _kickTimer: null
+    _kickTimer: null,
+    _want: null        // 재생돼야 할 BGM 상태 {root, bpm, phase2} — 준비/음소거 해제 시 복구
   };
 
   function Ctor() {
@@ -24,35 +25,57 @@
   }
   RAudio.supported = !!Ctor();
 
-  /** 첫 사용자 입력에서 호출 — AudioContext 생성/resume */
+  /** AudioContext 의 현재 상태 ('none'|'suspended'|'running'|'closed') */
+  RAudio.state = function () { return RAudio.ctx ? RAudio.ctx.state : 'none'; };
+
+  /** ctx 가 실제로 running 이 된 뒤에만 ready — 그 시점에 밀린 BGM 을 복구한다. */
+  function markReady() {
+    if (!RAudio.ctx || RAudio.ctx.state !== 'running') return;
+    RAudio.ready = true;
+    resumeWanted();
+  }
+
+  /**
+   * 첫 사용자 입력에서 호출 — AudioContext 생성/resume.
+   * 멱등(idempotent): 매 keydown 마다 불러도 안전하고, running 이 될 때까지 resume 을 재시도한다.
+   * (Shift·Tab 처럼 브라우저가 user activation 을 주지 않는 키로 첫 입력이 들어와도
+   *  다음 키에서 다시 시도하므로 영구 무음에 빠지지 않는다.)
+   */
   RAudio.init = function () {
-    if (RAudio.ready || RAudio.muted) return;
+    if (RAudio.muted) return;
+    if (RAudio.ready && RAudio.ctx && RAudio.ctx.state === 'running') return;
     var C = Ctor();
     if (!C) return;
+    if (!RAudio.ctx) {
+      try {
+        RAudio.ctx = new C();
+        RAudio.master = RAudio.ctx.createGain();
+        RAudio.master.gain.value = A.MASTER;
+        RAudio.master.connect(RAudio.ctx.destination);
+      } catch (e) {
+        RAudio.ctx = null;
+        RAudio.master = null;
+        RAudio.ready = false;
+        return;
+      }
+    }
+    if (RAudio.ctx.state === 'running') { markReady(); return; }
     try {
-      RAudio.ctx = new C();
-      RAudio.master = RAudio.ctx.createGain();
-      RAudio.master.gain.value = A.MASTER;
-      RAudio.master.connect(RAudio.ctx.destination);
-      RAudio.ready = true;
-    } catch (e) {
-      RAudio.ctx = null;
-      RAudio.ready = false;
-      return;
-    }
-    if (RAudio.ctx.state === 'suspended') {
-      try { RAudio.ctx.resume(); } catch (e) { /* noop */ }
-    }
+      var pr = RAudio.ctx.resume();
+      if (pr && pr.then) pr.then(markReady, function () { /* 다음 입력에서 재시도 */ });
+    } catch (e) { /* 다음 입력에서 재시도 */ }
+    markReady();
   };
 
   RAudio.setMuted = function (m) {
     RAudio.muted = !!m;
     if (RAudio.muted) {
-      RAudio.stopDrone();
+      stopDroneNodes();                    // _want 는 유지 — 음소거 해제 시 되살린다
       if (RAudio.master) RAudio.master.gain.value = 0;
     } else {
-      if (!RAudio.ready) RAudio.init();
+      RAudio.init();
       if (RAudio.master) RAudio.master.gain.value = A.MASTER;
+      resumeWanted();
     }
     return RAudio.muted;
   };
@@ -244,10 +267,15 @@
 
   /* ---- 드론 BGM ---------------------------------------------------------- */
 
-  /** 디튠 saw 2개 + lowpass + LFO. Phase 2 에서 cutoff 상승 + 심박 킥. */
+  /**
+   * 디튠 saw 2개 + lowpass + LFO. Phase 2 에서 cutoff 상승 + 심박 킥.
+   * 아직 오디오가 준비되지 않았어도 "무엇이 울려야 하는지"(_want)는 기억한다.
+   * => ?boss=N 부팅처럼 전투가 이미 시작된 뒤 오디오가 열려도 드론이 살아난다.
+   */
   RAudio.startDrone = function (rootHz, bpm) {
+    RAudio._want = { root: rootHz, bpm: bpm, phase2: false };
     if (!ok()) return;
-    RAudio.stopDrone();
+    stopDroneNodes();
     var t = now();
     var g = RAudio.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
@@ -282,6 +310,7 @@
   };
 
   RAudio.dronePhase2 = function () {
+    if (RAudio._want) RAudio._want.phase2 = true;
     if (!ok() || !RAudio._drone) return;
     var t = now();
     RAudio._drone.lp.frequency.cancelScheduledValues(t);
@@ -306,7 +335,8 @@
     if (RAudio._kickTimer) { global.clearInterval(RAudio._kickTimer); RAudio._kickTimer = null; }
   };
 
-  RAudio.stopDrone = function () {
+  /** 노드만 정리한다 (_want 는 남긴다 — 음소거 토글용) */
+  function stopDroneNodes() {
     RAudio.stopHeartbeat();
     var d = RAudio._drone;
     RAudio._drone = null;
@@ -318,6 +348,20 @@
       d.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
       d.o1.stop(t + 0.4); d.o2.stop(t + 0.4); d.lfo.stop(t + 0.4);
     } catch (e) { /* noop */ }
+  }
+
+  /** 기억해 둔 BGM 상태를 실제로 재생한다 (오디오 준비 완료 / 음소거 해제 시) */
+  function resumeWanted() {
+    var w = RAudio._want;
+    if (!w || !ok()) return;
+    RAudio.startDrone(w.root, w.bpm);      // _want 를 다시 기록한다 (phase2=false)
+    if (w.phase2) RAudio.dronePhase2();    // phase2 였다면 즉시 되살린다
+  }
+
+  /** 전투 종료 — BGM 을 완전히 끈다 (기억도 지운다) */
+  RAudio.stopDrone = function () {
+    RAudio._want = null;
+    stopDroneNodes();
   };
 
   global.RAudio = RAudio;

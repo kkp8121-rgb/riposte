@@ -47,6 +47,20 @@
     stars: null
   };
 
+  /* ---- 고정 그라디언트 캐시 -----------------------------------------------
+   * createLinearGradient 는 프레임마다 새로 만들 이유가 없다 (좌표가 고정).
+   * 한 번 만들어 재사용한다 — HP 바만 보스 색이 바뀔 때 다시 만든다.
+   * ---------------------------------------------------------------------- */
+  var GRAD = {};
+  function gradient(ctx, key, x0, y0, x1, y1, stops) {
+    var g = GRAD[key];
+    if (g) return g;
+    g = ctx.createLinearGradient(x0, y0, x1, y1);
+    for (var i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
+    GRAD[key] = g;
+    return g;
+  }
+
   /**
    * 특정 포즈에서 무기 끝의 로컬 좌표 (발밑 원점, y 는 위가 음수).
    * boss.js 가 텔 플래시 위치를 잡을 때 쓴다 — 그림과 완전히 같은 식.
@@ -83,21 +97,37 @@
 
   /* ---- 아레나 ------------------------------------------------------------- */
 
+  /* 기둥 그리기 — 프레임마다 클로저를 새로 만들지 않도록 모듈 스코프에 둔다 */
+  function drawPillars(ctx, list, off, color, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    for (var k = 0; k < list.length; k++) {
+      var p = list[k];
+      var px = p.x - off;
+      ctx.fillRect(px, V.FLOOR_Y - p.h, p.w, p.h);
+      // 기둥 상단 캡
+      ctx.fillRect(px - 5, V.FLOOR_Y - p.h - 8, p.w + 10, 8);
+    }
+    ctx.restore();
+  }
+
+  var STAR_COLOR = '#9fb3d9';
+  var ARENA_EDGES = [V.MIN_X, V.MAX_X];      // 프레임마다 배열을 새로 만들지 않는다
+
   function drawBackground(ctx, camX) {
-    var g = ctx.createLinearGradient(0, 0, 0, V.FLOOR_Y);
-    g.addColorStop(0, C.COLORS.BG_FAR);
-    g.addColorStop(0.62, C.COLORS.BG);
-    g.addColorStop(1, '#0e1220');
-    ctx.fillStyle = g;
+    ctx.fillStyle = gradient(ctx, 'bg', 0, 0, 0, V.FLOOR_Y, [
+      [0, C.COLORS.BG_FAR], [0.62, C.COLORS.BG], [1, '#0e1220']
+    ]);
     ctx.fillRect(0, 0, V.W, V.FLOOR_Y);
 
     // 먼 입자
     var i, s;
     ctx.save();
+    ctx.fillStyle = STAR_COLOR;
     for (i = 0; i < Render.stars.length; i++) {
       s = Render.stars[i];
       ctx.globalAlpha = s.a;
-      ctx.fillStyle = '#9fb3d9';
       ctx.fillRect(s.x - camX * 0.02, s.y, s.s, s.s);
     }
     ctx.restore();
@@ -105,20 +135,6 @@
     // 패럴랙스 기둥 2층
     drawPillars(ctx, Render.pillars.far, camX * 0.06, C.COLORS.PILLAR_FAR, 0.9);
     drawPillars(ctx, Render.pillars.near, camX * 0.16, C.COLORS.PILLAR_NEAR, 1);
-
-    function drawPillars(c2, list, off, color, alpha) {
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = color;
-      for (var k = 0; k < list.length; k++) {
-        var p = list[k];
-        var px = p.x - off;
-        ctx.fillRect(px, V.FLOOR_Y - p.h, p.w, p.h);
-        // 기둥 상단 캡
-        ctx.fillRect(px - 5, V.FLOOR_Y - p.h - 8, p.w + 10, 8);
-      }
-      ctx.restore();
-    }
   }
 
   function drawFloor(ctx) {
@@ -126,11 +142,11 @@
     ctx.fillRect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
 
     // 바닥 반사 그라디언트
-    var g = ctx.createLinearGradient(0, V.FLOOR_Y, 0, V.H);
-    g.addColorStop(0, 'rgba(94,230,255,0.07)');
-    g.addColorStop(0.45, 'rgba(10,13,22,0.0)');
-    g.addColorStop(1, 'rgba(6,8,14,0.55)');
-    ctx.fillStyle = g;
+    ctx.fillStyle = gradient(ctx, 'floor', 0, V.FLOOR_Y, 0, V.H, [
+      [0, 'rgba(94,230,255,0.07)'],
+      [0.45, 'rgba(10,13,22,0.0)'],
+      [1, 'rgba(6,8,14,0.55)']
+    ]);
     ctx.fillRect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
 
     ctx.strokeStyle = C.COLORS.FLOOR_LINE;
@@ -145,12 +161,12 @@
     ctx.globalAlpha = 0.5;
     ctx.strokeStyle = C.COLORS.FLOOR_LINE;
     ctx.lineWidth = 1;
-    [V.MIN_X, V.MAX_X].forEach(function (bx) {
-      ctx.beginPath();
-      ctx.moveTo(bx, V.FLOOR_Y - 14);
-      ctx.lineTo(bx, V.FLOOR_Y + 14);
-      ctx.stroke();
-    });
+    ctx.beginPath();
+    for (var i = 0; i < ARENA_EDGES.length; i++) {
+      ctx.moveTo(ARENA_EDGES[i], V.FLOOR_Y - 14);
+      ctx.lineTo(ARENA_EDGES[i], V.FLOOR_Y + 14);
+    }
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -204,9 +220,9 @@
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // 글로우
+    // 글로우 — 바닥 반사 패스(noShadow)에서는 끈다 (같은 실루엣을 두 번 blur 하지 않는다)
     ctx.shadowColor = bodyCol;
-    ctx.shadowBlur = flash > 0 ? 26 : 12;
+    ctx.shadowBlur = o.noShadow ? 0 : (flash > 0 ? 26 : 12);
 
     /* 다리 */
     ctx.lineWidth = Math.max(3, b.thick * 0.62);
@@ -515,10 +531,9 @@
       ctx.fillRect(x0, V.FLOOR_Y - C.ZONE.STRIP_H, z.w * prog, C.ZONE.STRIP_H);
       // 위쪽 예고 기둥
       ctx.globalAlpha = C.ZONE.COLUMN_ALPHA * (0.4 + prog * 0.6);
-      var g = ctx.createLinearGradient(0, V.FLOOR_Y - 240, 0, V.FLOOR_Y);
-      g.addColorStop(0, 'rgba(255,59,59,0)');
-      g.addColorStop(1, 'rgba(255,59,59,0.9)');
-      ctx.fillStyle = g;
+      ctx.fillStyle = gradient(ctx, 'zone', 0, V.FLOOR_Y - 240, 0, V.FLOOR_Y, [
+        [0, 'rgba(255,59,59,0)'], [1, 'rgba(255,59,59,0.9)']
+      ]);
       ctx.fillRect(x0, V.FLOOR_Y - 240, z.w, 240);
       // 경계선
       ctx.globalAlpha = 0.8;
@@ -622,6 +637,72 @@
     drawFloor(ctx);
   };
 
+  /** 바닥 반사는 아래로 갈수록 사라진다 (하단 HUD 와 겹치지 않게) */
+  function drawReflectionFade(ctx) {
+    ctx.save();
+    ctx.fillStyle = gradient(ctx, 'reflect', 0, V.FLOOR_Y, 0, V.H, [
+      [0, 'rgba(11,13,20,0)'],
+      [0.55, 'rgba(11,13,20,0.55)'],
+      [1, 'rgba(8,10,16,0.95)']
+    ]);
+    ctx.fillRect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
+    ctx.restore();
+  }
+
+  /* ---- 타이틀 화면 ---------------------------------------------------------
+   * 플레이어와 VESPER 가 아레나에서 마주 본 채 숨만 쉬고 있다.
+   * 무기 끝의 금색 펄스는 "PRESS ENTER" 점멸과 같은 주기로 뛴다 —
+   * 게임을 시작하기 전에 이미 텔 문법을 한 번 보여 준다.
+   * ---------------------------------------------------------------------- */
+  Render.drawTitleScene = function (ctx, t) {
+    Render.drawArena(ctx, 0);
+
+    var T = C.TITLE;
+    var bossDef = (global.BOSSES && global.BOSSES[0]) || null;
+    var bossColor = bossDef ? bossDef.color : C.COLORS.WHITE;
+    var bossBuild = bossDef ? bossDef.silhouette : 'rapier';
+
+    var px = T.PLAYER_X + Math.sin(t * T.SWAY_HZ) * T.SWAY;
+    var bx = T.BOSS_X - Math.sin(t * T.SWAY_HZ * 0.8 + 1.1) * T.SWAY;
+
+    var pOpt = {
+      x: px, facing: 1, color: C.COLORS.PLAYER, build: 'player',
+      t: t, pose: 'idle', poseP: 0, vx: 0, moving: false, alpha: T.ALPHA
+    };
+    var bOpt = {
+      x: bx, facing: -1, color: bossColor, build: bossBuild,
+      t: t * 0.87 + 1.4, pose: 'idle', poseP: 0, vx: 0, moving: false, alpha: T.ALPHA
+    };
+
+    // 바닥 반사 (전투 화면과 같은 처리)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
+    ctx.clip();
+    ctx.translate(0, V.FLOOR_Y * 2);
+    ctx.scale(1, -1);
+    pOpt.alpha = 0.17; pOpt.noShadow = true; drawFighter(ctx, pOpt);
+    bOpt.alpha = 0.17; bOpt.noShadow = true; drawFighter(ctx, bOpt);
+    ctx.restore();
+    drawReflectionFade(ctx);
+
+    pOpt.alpha = T.ALPHA; pOpt.noShadow = false; drawFighter(ctx, pOpt);
+    bOpt.alpha = T.ALPHA; bOpt.noShadow = false; drawFighter(ctx, bOpt);
+
+    // 금색 텔 펄스 — 무기 끝에서 조용히 뛴다
+    var pulse = 0.5 + 0.5 * Math.sin(t * T.BLINK_HZ);
+    var tip = Render.tipOf(bossBuild, -1, 'idle');
+    ctx.save();
+    ctx.globalAlpha = 0.18 + pulse * 0.55;
+    ctx.fillStyle = C.COLORS.GOLD;
+    ctx.shadowColor = C.COLORS.GOLD;
+    ctx.shadowBlur = 24;
+    ctx.beginPath();
+    ctx.arc(bx + tip.x, V.FLOOR_Y + tip.y, T.PULSE_R * (0.7 + pulse * 0.5), 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  };
+
   Render.drawWorld = function (ctx, game) {
     var p = game.player;
     var b = game.boss;
@@ -646,15 +727,7 @@
     drawPlayer(ctx, p, pp, true);
     ctx.restore();
 
-    // 반사는 아래로 갈수록 사라진다 (하단 HUD 와 겹치지 않게)
-    ctx.save();
-    var fade = ctx.createLinearGradient(0, V.FLOOR_Y, 0, V.H);
-    fade.addColorStop(0, 'rgba(11,13,20,0)');
-    fade.addColorStop(0.55, 'rgba(11,13,20,0.55)');
-    fade.addColorStop(1, 'rgba(8,10,16,0.95)');
-    ctx.fillStyle = fade;
-    ctx.fillRect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
-    ctx.restore();
+    drawReflectionFade(ctx);
 
     // 대시 잔상
     for (i = 0; i < FX.ghosts.length; i++) {
@@ -783,13 +856,18 @@
       ctx.restore();
     }
     if (FX.tintFlash > 0) {
+      // 세기는 globalAlpha 로 준다 — 그라디언트 자체는 한 번만 만든다
       var a = clamp(FX.tintFlash / FX.tintFlashMax, 0, 1);
-      var g = ctx.createRadialGradient(V.W / 2, V.H / 2, V.W * 0.28, V.W / 2, V.H / 2, V.W * 0.62);
-      g.addColorStop(0, 'rgba(255,34,51,0)');
-      g.addColorStop(0.55, 'rgba(255,34,51,' + (a * 0.22).toFixed(3) + ')');
-      g.addColorStop(1, 'rgba(255,34,51,' + (a * 0.8).toFixed(3) + ')');
+      if (!GRAD.vignette) {
+        var g = ctx.createRadialGradient(V.W / 2, V.H / 2, V.W * 0.28, V.W / 2, V.H / 2, V.W * 0.62);
+        g.addColorStop(0, 'rgba(255,34,51,0)');
+        g.addColorStop(0.55, 'rgba(255,34,51,0.275)');
+        g.addColorStop(1, 'rgba(255,34,51,1)');
+        GRAD.vignette = g;
+      }
       ctx.save();
-      ctx.fillStyle = g;
+      ctx.globalAlpha = a * 0.8;
+      ctx.fillStyle = GRAD.vignette;
       ctx.fillRect(0, 0, V.W, V.H);
       ctx.restore();
     }

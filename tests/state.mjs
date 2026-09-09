@@ -1,0 +1,111 @@
+/* =============================================================================
+ * RIPOSTE — tests/state.mjs
+ *
+ * 보스 정의 테이블(window.BOSSES)은 불변이어야 한다.
+ *
+ * 회귀 방지 대상: 패턴 실행기가 스텝 객체(정의 테이블의 원본)를 공격 옵션으로
+ * 그대로 넘기고 접근(approach)이 끝날 때 그 객체에 `_approached = true` 를 찍던
+ * 버그. entry.steps.slice() 는 얕은 복사라 원본 스텝이 영구 오염되고,
+ * 그 뒤로는 그 스텝이 두 번 다시 접근하지 않아 근접 공격이 허공을 벤다
+ * (Vesper slash 가 285px 에서 헛침). R 재시작 · 다음 보스 · ?seed 결정론이 모두 깨진다.
+ *
+ * 검증: 각 보스의 전투를 끝까지 굴린 뒤 JSON.stringify(window.BOSSES) 가
+ *       부팅 직후와 완전히 동일한지 본다.
+ *
+ *   node tests/state.mjs
+ * ========================================================================== */
+import { chromium } from 'playwright-core';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { dirname, resolve, join } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '..');
+
+const SPEED = 4;            // setTimeScale — 전투를 빨리 굴린다 (판정 로직은 그대로)
+const FIGHT_TIMEOUT = 40000;
+
+const failures = [];
+const t0 = Date.now();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function check(name, cond, detail = '') {
+  if (cond) console.log(`  PASS  ${name}${detail ? '  ' + detail : ''}`);
+  else { console.log(`  FAIL  ${name}${detail ? '  ' + detail : ''}`); failures.push(name); }
+}
+
+/** 정의 테이블 스냅샷 — 함수는 JSON 에 안 실리므로 키 목록도 같이 찍는다 */
+const snapshot = () => JSON.stringify({
+  defs: window.BOSSES,
+  shape: window.BOSSES.map((b) => Object.keys(b).sort().join(','))
+});
+
+async function until(page, fn, timeoutMs) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const v = await page.evaluate(fn).catch(() => null);
+    if (v) return true;
+    await sleep(60);
+  }
+  return false;
+}
+
+async function runBoss(browser, n) {
+  const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
+
+  const url = pathToFileURL(join(ROOT, 'index.html')).href + `?boss=${n}&mute=1&seed=7`;
+  await page.goto(url, { waitUntil: 'load' });
+  await until(page, () => !!window.__RIPOSTE, 5000);
+
+  const before = await page.evaluate(snapshot);
+  await page.evaluate((s) => window.__RIPOSTE.setTimeScale(s), SPEED);
+
+  // 무입력으로 전투를 끝까지 굴린다 (approach / 패턴 실행기를 충분히 돌린다)
+  const ended = await until(page,
+    () => ['DEFEAT', 'VICTORY', 'ENDING'].indexOf(window.__RIPOSTE.getState().scene) >= 0,
+    FIGHT_TIMEOUT);
+
+  const after = await page.evaluate(snapshot);
+  const state = await page.evaluate(() => window.__RIPOSTE.getState());
+  await page.close();
+
+  return { before, after, ended, scene: state.scene, errors };
+}
+
+(async () => {
+  console.log('RIPOSTE state test — boss definition tables must stay immutable');
+  const browser = await chromium.launch({ headless: true });
+
+  for (const n of [1, 2, 3, 4]) {
+    const r = await runBoss(browser, n);
+    check(`boss ${n}: fight reached an end scene`, r.ended, `(scene ${r.scene})`);
+
+    let detail = '';
+    if (r.before !== r.after) {
+      // 첫 차이 지점을 뽑아 보여 준다
+      let i = 0;
+      while (i < r.before.length && i < r.after.length && r.before[i] === r.after[i]) i++;
+      detail = `\n        before: ...${r.before.slice(Math.max(0, i - 70), i + 70)}` +
+               `\n        after : ...${r.after.slice(Math.max(0, i - 70), i + 70)}`;
+    }
+    check(`boss ${n}: window.BOSSES unchanged after a full fight`, r.before === r.after, detail);
+    check(`boss ${n}: zero page/console errors`, r.errors.length === 0,
+      r.errors.length ? r.errors.slice(0, 3).join(' | ') : '');
+  }
+
+  await browser.close();
+
+  const secs = ((Date.now() - t0) / 1000).toFixed(1);
+  console.log('');
+  if (failures.length) {
+    console.log(`STATE FAILED (${failures.length}): ${failures.join(', ')}  [${secs}s]`);
+    process.exit(1);
+  }
+  console.log(`STATE PASSED — boss definitions immutable across all four fights  [${secs}s]`);
+  process.exit(0);
+})().catch((e) => {
+  console.error('state test crashed:', e);
+  process.exit(1);
+});

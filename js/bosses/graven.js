@@ -13,7 +13,7 @@
     title: 'THE BULWARK',
     color: '#ffb347',
     silhouette: 'hammer',       // 거대한 망치를 든 거한
-    hp: 160,
+    hp: 250,
     par: 80,
     armor: true,
     spawnX: 700,

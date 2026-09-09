@@ -69,7 +69,7 @@
     ctx.translate(FX.shakeX, FX.shakeY);
 
     if (game.boss) Render.drawWorld(ctx, game);
-    else Render.drawArena(ctx, 0);
+    else Render.drawTitleScene(ctx, game.sceneT);
 
     ctx.restore();
 
@@ -117,15 +117,14 @@
     if (p.mute !== undefined) RAudio.setMuted(true);
 
     Input.attach(global);
-    Input.onFirstGesture = function () { RAudio.init(); };
-    global.addEventListener('pointerdown', function once() {
-      RAudio.init();
-      global.removeEventListener('pointerdown', once);
-    });
+    // 매 입력마다 재시도한다 — 첫 키가 user activation 을 주지 않아도 무음에 갇히지 않는다
+    Input.onGesture = function () { RAudio.init(); };
+    global.addEventListener('pointerdown', function () { RAudio.init(); });
 
     if (p.boss !== undefined) {
       var bi = Math.round(numParam(p, 'boss', 1)) - 1;
-      game.startRun(Math.max(0, Math.min(global.BOSSES.length - 1, bi)));
+      // URL 로 바로 들어온 판은 진행도를 저장하지 않는다
+      game.startRun(Math.max(0, Math.min(global.BOSSES.length - 1, bi)), { noSave: true });
     }
 
     global.addEventListener('resize', resize);

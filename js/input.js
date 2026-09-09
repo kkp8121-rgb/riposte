@@ -22,10 +22,11 @@
     newgame: ['KeyN']
   };
 
-  /* 스크롤/기본동작을 막아야 하는 코드 */
+  /* 스크롤/기본동작을 막아야 하는 코드.
+     Tab 은 매핑이 없으므로 넣지 않는다 — 막으면 키보드 포커스가 페이지에 갇힌다(a11y). */
   var PREVENT = {
     Space: 1, ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1,
-    Enter: 1, Tab: 1
+    Enter: 1
   };
 
   var codeToActions = {};
@@ -48,7 +49,10 @@
     _just: {},     // 현재 고정 스텝에서 true
     _anyKey: false,
     enabled: true,
-    onFirstGesture: null
+    /* 모든 keydown 에서 호출된다 (첫 입력 한 번이 아니다).
+       AudioContext 는 user activation 을 주지 않는 키(Shift/Tab 등)로는 열리지 않으므로
+       running 이 될 때까지 매 입력마다 재시도해야 영구 무음에 빠지지 않는다. */
+    onGesture: null
   };
 
   function setAction(action, isDown) {
@@ -64,14 +68,13 @@
     if (!Input.enabled) return;
     if (PREVENT[e.code]) e.preventDefault();
     if (e.repeat) return;
+    // 매핑 여부와 무관하게 제스처 훅을 먼저 친다 (오디오 resume 재시도)
+    Input._anyKey = true;
+    if (typeof Input.onGesture === 'function') {
+      try { Input.onGesture(); } catch (err) { /* 오디오 없음 — 무시 */ }
+    }
     var actions = codeToActions[e.code];
     if (!actions) return;
-    if (!Input._anyKey) {
-      Input._anyKey = true;
-      if (typeof Input.onFirstGesture === 'function') {
-        try { Input.onFirstGesture(); } catch (err) { /* 오디오 없음 — 무시 */ }
-      }
-    }
     for (var i = 0; i < actions.length; i++) setAction(actions[i], true);
   }
 
@@ -93,6 +96,12 @@
     t.addEventListener('keydown', handleDown, { passive: false });
     t.addEventListener('keyup', handleUp, { passive: false });
     global.addEventListener('blur', handleBlur);
+    // 탭이 숨겨지면 keyup 이 오지 않는다 — 눌린 키가 그대로 붙어 있지 않도록 비운다
+    if (global.document) {
+      global.document.addEventListener('visibilitychange', function () {
+        if (global.document.hidden) handleBlur();
+      });
+    }
   };
 
   /** 고정 스텝 시작 — 버퍼된 keydown 을 이번 스텝의 justPressed 로 옮긴다. */

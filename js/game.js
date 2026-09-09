@@ -13,15 +13,17 @@
   /* =========================================================================
    * 저장 (localStorage — file:// 에서 막힐 수 있으므로 전부 try/catch)
    * ====================================================================== */
-  function loadSave() {
-    var fallback = { unlocked: 1, ranks: {}, bestTimes: {} };
+  function loadSave(bossCount) {
+    var n = bossCount || 1;
+    var fallback = { unlocked: 1, cleared: false, ranks: {}, bestTimes: {} };
     try {
       var raw = global.localStorage.getItem(C.STORAGE.KEY);
       if (!raw) return fallback;
       var o = JSON.parse(raw);
       if (!o || typeof o !== 'object') return fallback;
       return {
-        unlocked: clamp(o.unlocked || 1, 1, 4),
+        unlocked: clamp(o.unlocked || 1, 1, n),   // 보스 수는 테이블이 결정한다
+        cleared: !!o.cleared,
         ranks: o.ranks || {},
         bestTimes: o.bestTimes || {}
       };
@@ -67,7 +69,10 @@
 
     this.banner = null;
     this.tut = null;
-    this.save = loadSave();
+    this.lastHitBy = null;     // 마지막으로 플레이어를 때린 공격 {label, tell, kind}
+    /* ?boss=N 으로 들어온 판은 진행도를 건드리지 않는다 (디버그/테스트 진입) */
+    this.noSave = false;
+    this.save = loadSave(this.defs.length);
     this.run = this.newRun();
 
     this.skillTable = this.buildSkillTable();
@@ -75,6 +80,12 @@
 
   Game.prototype.newRun = function () {
     return { time: 0, hits: 0, perfects: 0, ranks: [], bosses: [] };
+  };
+
+  /** 저장 — URL 로 특정 보스에 바로 들어온 판은 진행도를 쓰지 않는다 */
+  Game.prototype.persist = function () {
+    if (this.noSave) return;
+    writeSave(this.save);
   };
 
   /** 모든 보스의 steal 정의를 모아 기술 표를 만든다 (봇/HUD 가 참조) */
@@ -114,7 +125,9 @@
     this.pendingShots.length = 0;
   };
 
-  Game.prototype.startRun = function (fromIndex) {
+  /** opts.noSave = true 면 이 판의 결과를 localStorage 에 쓰지 않는다 (?boss=N) */
+  Game.prototype.startRun = function (fromIndex, opts) {
+    this.noSave = !!(opts && opts.noSave);
     this.run = this.newRun();
     this.startBoss(fromIndex || 0);
   };
@@ -135,6 +148,7 @@
     this.ko = null;
     this.koT = 0;
     this.result = null;
+    this.lastHitBy = null;
     this.banner = { name: def.name, title: def.title, t: 0 };
     this.tut = def.tutorial
       ? { parryDone: false, riposteDone: false, dashDone: false, redSeen: false, active: true }
@@ -205,14 +219,17 @@
   Game.prototype.stepTitle = function (dt) {
     if (Input.consume('newgame')) {
       RAudio.ui(true);
+      this.noSave = false;
       this.save.unlocked = 1;
-      writeSave(this.save);
+      this.save.cleared = false;     // 진행도 초기화 ([N] NEW GAME — CLEAR PROGRESS)
+      this.persist();
       this.startRun(0);
       return;
     }
     if (Input.consume('confirm')) {
       RAudio.ui(true);
-      this.startRun(this.save.unlocked - 1);
+      // 완주한 저장 파일이면 Enter 는 처음부터 다시 (랭크 갱신용)
+      this.startRun(this.save.cleared ? 0 : this.save.unlocked - 1);
     }
   };
 
@@ -226,8 +243,13 @@
   Game.prototype.stepVictory = function (dt) {
     if (Input.consume('confirm')) {
       RAudio.ui(true);
-      if (this.bossIndex + 1 >= this.defs.length) this.setScene('ENDING');
-      else this.startBoss(this.bossIndex + 1);
+      if (this.bossIndex + 1 >= this.defs.length) {
+        if (!this.noSave) {                // 완주 — 타이틀 문구가 바뀐다
+          this.save.cleared = true;
+          this.persist();
+        }
+        this.setScene('ENDING');
+      } else this.startBoss(this.bossIndex + 1);
     }
     if (Input.consume('back')) this.goTitle();
   };
@@ -248,6 +270,9 @@
     var b = this.boss;
 
     if (this.ko) {
+      // KO 슬로모 중에도 R / Esc 는 살아 있어야 한다 (연출을 기다리게 만들지 않는다)
+      if (Input.consume('back')) { this.goTitle(); return; }
+      if (Input.consume('restart')) { this.restartBoss(); return; }
       // 카운트다운은 update() 가 실제 시간으로 처리한다. 여기서는 연출만 계속 굴린다.
       this.stepWorld(dt, 0, true);
       return;
@@ -260,9 +285,12 @@
 
     var axis = Input.axis();
 
-    // 패리
-    if (Input.consume('parry')) {
-      if (p.canParry()) { p.startParry(); RAudio.swing(); }
+    // 패리 (짧은 입력 버퍼 — 대시/패리 락 중에 눌린 입력을 흘려버리지 않는다)
+    if (Input.consume('parry')) p.parryBuffer = C.COMBAT.INPUT_BUFFER;
+    if (p.parryBuffer > 0 && p.canParry()) {
+      p.parryBuffer = 0;
+      p.startParry();
+      RAudio.swing();
     }
     // 대시 — 방향은 이동 입력, 없으면 보스 반대쪽
     if (Input.consume('dash')) {
@@ -275,7 +303,7 @@
       }
     }
     // 리포스트 (짧은 입력 버퍼)
-    if (Input.consume('riposte')) p.riposteBuffer = C.COMBAT.RIPOSTE_BUFFER;
+    if (Input.consume('riposte')) p.riposteBuffer = C.COMBAT.INPUT_BUFFER;
     if (p.riposteBuffer > 0 && p.canRiposte()) { p.riposteBuffer = 0; this.doRiposte(); }
 
     this.stepWorld(dt, axis, false);
@@ -302,7 +330,8 @@
           owner: 'player',
           color: C.COLORS.PLAYER,
           shape: rp.skill.kind === 'shot' && rp.skill.id === 'SHOCKWAVE' ? 'wave' : 'arrow',
-          damage: this.riposteDamage(rp)
+          damage: this.riposteDamage(rp),
+          fromHand: rp.skill          // 무적에 막혀 0딜이면 손패로 되돌려준다
         }));
         RAudio.swing();
       }
@@ -322,7 +351,8 @@
         this.pendingShots.splice(i, 1);
         var proj = ps.make();
         this.spawnProjectile(proj);
-        if (ps.cue && b && !b.dead) b.flash(proj.tell);
+        // 연사 후속탄은 "예고"가 아니라 "발사"다 — 텔 플래시가 아니라 작은 발사 스파크
+        if (ps.cue && b && !b.dead) b.releaseSpark(proj.tell);
       }
     }
 
@@ -347,6 +377,19 @@
     return Math.round(rp.skill.damage * mult);
   };
 
+  /** 무적/포효로 0딜이 났을 때 손패를 돌려준다 (슬롯을 헛되이 태우지 않는다) */
+  Game.prototype.refundHand = function (skill) {
+    if (!skill) return;
+    var h = this.player.hand;
+    if (h.length < C.HAND.SIZE) h.unshift(skill);
+  };
+
+  /** 보스가 무적(페이즈 전환 포효 포함)이라 타격이 통하지 않았음을 알린다 */
+  Game.prototype.immunePop = function (b) {
+    FX.pop('IMMUNE', b.x, V.FLOOR_Y - C.BOSS.HEIGHT * 0.55, C.COLORS.GREY, { size: 15, rise: 26 });
+    RAudio.parryBlock();
+  };
+
   Game.prototype.resolveRiposteHit = function (rp, fromProjectile) {
     var b = this.boss;
     if (!b || b.dead) return;
@@ -361,11 +404,21 @@
     var dmg = Math.round(rp.skill.damage * mult);
     var applied = b.takeDamage(dmg);
 
+    // 무적(포효 중)에 막혔다 — 손패를 태우지 않고 "IMMUNE" 만 띄운다
+    if (applied <= 0) {
+      this.refundHand(rp.skill);
+      this.immunePop(b);
+      return;
+    }
+
     // 밀림이 붙은 기술(KICK)은 보스를 밀어낸다
     if (rp.skill.push && !b.armor) {
       var pushDir = (b.x >= this.player.x) ? 1 : -1;
       b.x = Math.max(C.VIEW.MIN_X, Math.min(C.VIEW.MAX_X, b.x + pushDir * rp.skill.push));
     }
+
+    // 이 타격이 Phase 2 를 열었다면 포효/무적이 우선한다 — 경직도 히트 연출도 덮어쓰지 않는다
+    if (this.bossIsInvulnerable(b)) return;
 
     var canInterrupt = !b.armor || rp.empowered;
     if (!b.dead) {
@@ -389,11 +442,24 @@
     RAudio.riposteHit(rp.empowered);
   };
 
+  /** 보스가 지금 타격을 받아들이지 않는 상태인가 (페이즈 전환 포효 포함) */
+  Game.prototype.bossIsInvulnerable = function (b) {
+    return !!b && !b.dead && (b.invuln > 0 || b.state === 'roar');
+  };
+
   /* ---- 판정: 보스 근접/돌진 히트 ------------------------------------------ */
 
   Game.prototype.resolveBossHit = function (boss, a) {
     var p = this.player;
     if (this.ko) return;
+
+    // 패리 판정을 무적 프레임보다 먼저 본다 — 피격 무적 중에도 퍼펙트 패리는 성립한다
+    // (투사체 경로가 이미 그렇게 동작하므로 근접도 같은 규칙을 쓴다)
+    if (a.tell === 'gold') {
+      var win = p.parryWindow();
+      if (win === 'perfect') { this.onPerfectParry(a.def, boss); return; }
+      if (win === 'block') { this.onBlock(a.def, boss); return; }
+    }
 
     if (p.isInvulnerable()) {
       // 대시 통과 성공
@@ -403,12 +469,8 @@
       return;
     }
 
-    if (a.tell === 'gold') {
-      var win = p.parryWindow();
-      if (win === 'perfect') { this.onPerfectParry(a.def, boss); return; }
-      if (win === 'block') { this.onBlock(a.def, boss); return; }
-    }
-    this.damagePlayer(a.damage, boss.x, a.def.push);
+    this.damagePlayer(a.damage, boss.x, a.def.push,
+      { label: a.def.label || a.id, tell: a.tell, kind: a.def.kind });
   };
 
   Game.prototype.onZoneStrike = function (zone) {
@@ -423,7 +485,8 @@
       if (this.tut && !this.tut.dashDone) this.tut.dashDone = true;
       return;
     }
-    this.damagePlayer(zone.damage, zone.x);
+    this.damagePlayer(zone.damage, zone.x, 0,
+      { label: zone.label, tell: zone.tell, kind: 'zone' });
   };
 
   Game.prototype.onChargeWall = function (boss, ch) {
@@ -467,7 +530,9 @@
     }
 
     if (projectile) projectile.reflect();
-    else if (boss && !boss.dead) boss.stagger(C.PARRY.FLINCH, false);
+    else if (boss && !boss.dead && !this.bossIsInvulnerable(boss)) {
+      boss.stagger(C.PARRY.FLINCH, false);   // 포효 중이면 경직으로 덮어쓰지 않는다
+    }
 
     if (this.tut && !this.tut.parryDone) this.tut.parryDone = true;
   };
@@ -493,12 +558,16 @@
 
   /* ---- 피해 -------------------------------------------------------------- */
 
-  Game.prototype.damagePlayer = function (dmg, fromX, extraPush) {
+  /**
+   * @param {object} [src] 무엇에 맞았는지 {label, tell, kind} — 패배 화면이 이걸로 가르친다
+   */
+  Game.prototype.damagePlayer = function (dmg, fromX, extraPush, src) {
     var p = this.player;
     if (this.ko || p.isInvulnerable()) return;
 
     p.takeDamage(dmg);
     this.hits++;
+    if (src) this.lastHitBy = src;
 
     var away = (p.x >= fromX) ? 1 : -1;
     p.knock = away * (C.PLAYER.HURT_KNOCKBACK + (extraPush || 0)) * C.PLAYER.KNOCK_DECAY;
@@ -535,6 +604,7 @@
             var win = p.parryWindow();
             if (win === 'perfect') {
               // 반사 — 투사체는 살아서 보스 쪽으로 되돌아간다 (스펙 §2.3)
+              // (성공 유예 PARRY.SUCCESS_GRACE 덕분에 같은 스텝에 겹쳐 온 두 번째 탄도 함께 받는다)
               this.onPerfectParry({ steal: pr.skill }, b, pr);
               continue;
             }
@@ -545,7 +615,8 @@
               pr.pierced = true;
               if (pr.tell === 'red' && this.tut && !this.tut.dashDone) this.tut.dashDone = true;
             } else {
-              this.damagePlayer(pr.damage, pr.x);
+              this.damagePlayer(pr.damage, pr.x, 0,
+                { label: pr.label || 'SHOT', tell: pr.tell, kind: 'projectile' });
               pr.dead = true;
             }
           }
@@ -569,6 +640,15 @@
     var mult = counter ? C.COMBAT.COUNTER_MULT : 1;
     var dmg = Math.round(pr.damage * mult);
     var applied = b.takeDamage(dmg);
+
+    // 무적(포효)에 막힘 — 손패에서 쓴 탄이면 슬롯을 돌려준다
+    if (applied <= 0) {
+      this.refundHand(pr.fromHand);
+      this.immunePop(b);
+      return;
+    }
+    // 이 타격이 Phase 2 를 열었다면 포효/무적이 우선한다
+    if (this.bossIsInvulnerable(b)) return;
 
     if (!b.dead) {
       var canInterrupt = !b.armor || empowered;
@@ -631,7 +711,9 @@
     this.koT = C.SLOWMO.DEFEAT_TIME;
     this.result = {
       boss: this.boss ? this.boss.name : '',
-      time: this.time, hits: this.hits, perfects: this.perfects
+      key: this.boss ? this.boss.key : null,
+      time: this.time, hits: this.hits, perfects: this.perfects,
+      slainBy: this.lastHitBy          // 무엇에 죽었는지 → 패배 화면이 대응법을 가르친다
     };
     FX.setSlowmo(C.SLOWMO.DEFEAT_SCALE, C.SLOWMO.DEFEAT_TIME);
     FX.addShake(C.SHAKE.PLAYER_HIT);
@@ -648,13 +730,15 @@
     this.run.ranks.push(r.rank);
     this.run.bosses.push({ name: r.boss, time: r.time, hits: r.hits, perfects: r.perfects, rank: r.rank });
 
-    // 저장 — 진행도 + 보스별 최고 랭크
-    this.save.unlocked = clamp(Math.max(this.save.unlocked, this.bossIndex + 2), 1, this.defs.length);
-    var prev = this.save.ranks[r.key];
-    if (!prev || C.RANK.VALUE[r.rank] > C.RANK.VALUE[prev]) this.save.ranks[r.key] = r.rank;
-    var bt = this.save.bestTimes[r.key];
-    if (!bt || r.time < bt) this.save.bestTimes[r.key] = r.time;
-    writeSave(this.save);
+    // 저장 — 진행도 + 보스별 최고 랭크 (?boss=N 판은 메모리 상태도 건드리지 않는다)
+    if (!this.noSave) {
+      this.save.unlocked = clamp(Math.max(this.save.unlocked, this.bossIndex + 2), 1, this.defs.length);
+      var prev = this.save.ranks[r.key];
+      if (!prev || C.RANK.VALUE[r.rank] > C.RANK.VALUE[prev]) this.save.ranks[r.key] = r.rank;
+      var bt = this.save.bestTimes[r.key];
+      if (!bt || r.time < bt) this.save.bestTimes[r.key] = r.time;
+      this.persist();
+    }
 
     FX.setZoom(1);
     this.setScene('VICTORY');

@@ -68,6 +68,11 @@ const state = () => window.__RIPOSTE.getState();
   const s0 = await page.evaluate(state);
   check('scene === TITLE', s0.scene === 'TITLE', `(got ${s0.scene})`);
 
+  // 타이틀은 CONFIG.TITLE.FADE(0.6s) 동안 페이드 인한다 — 다 뜬 뒤에 픽셀을 센다
+  await waitFor(page,
+    () => window.__RIPOSTE.game.sceneT > window.__RIPOSTE.CONFIG.TITLE.FADE + 0.2,
+    4000, 'title fade-in');
+
   // 타이틀이 실제로 픽셀을 그리는지 (전부 배경색이면 실패)
   const painted = await page.evaluate(() => {
     const c = document.getElementById('game');

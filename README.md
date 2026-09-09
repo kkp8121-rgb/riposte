@@ -9,6 +9,12 @@ weapon in your hands was taken out of someone else's — a perfect parry doesn't
 a strike, it *steals* it. Four bosses, four stolen movesets, one mirror waiting at the end
 that gives all of it back.
 
+![Title screen](docs/media/title.png)
+
+| A perfect parry steals the attack | The mirror turns your own hand on you |
+|---|---|
+| ![Perfect parry](docs/media/perfect-parry.png) | ![Mirror phase 2](docs/media/mirror-phase2.png) |
+
 ---
 
 ## Controls
@@ -81,8 +87,10 @@ Rank per boss: **S** = no hits *and* under par · **A** = ≤1 hit *or* under pa
 | `?boss=1..4` | Jump straight to a boss |
 | `?seed=N` | Seed the pattern RNG |
 | `?mute=1` | Start muted |
-| `?nofx=1` | Disable particles (judgement is unaffected) |
+| `?nofx=1` | Disable particles, rings, after-images and text pops. **Hit-stop, screen shake and slow-motion stay on** — they are part of the timing, not decoration, so judgement is identical with or without it |
 | `?speed=0.5` | Time scale |
+
+A run started with `?boss=N` never writes to your saved progress.
 
 ### Run it locally
 
@@ -97,10 +105,13 @@ That's it — double-click the file. No server needed.
 ```
 node tests/smoke.mjs        # headless boot, title -> fight, 60s idle -> defeat, 0 page errors
 node tests/bot.mjs --all    # a reactive bot beats all four bosses; a passive bot loses
+node tests/state.mjs        # boss definition tables stay byte-identical across a whole fight
+node tests/audio-smoke.mjs  # one keypress -> AudioContext running; every sound path callable
+node tools/shots.mjs        # re-capture the README screenshots into docs/media/
 ```
 
-Both use `playwright-core` with the bundled Chromium and drive the game through the debug
-hook `window.__RIPOSTE`. Screenshots land in `tests/shots/`.
+All of them use `playwright-core` with the bundled Chromium and drive the game through the
+debug hook `window.__RIPOSTE`. Test screenshots land in `tests/shots/`.
 
 ---
 

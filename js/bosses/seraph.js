@@ -19,7 +19,7 @@
     title: 'THE ARCHER',
     color: '#b78cff',
     silhouette: 'bow',          // 후드를 쓴 궁수
-    hp: 120,
+    hp: 190,
     par: 70,
     armor: false,
     spawnX: 760,
