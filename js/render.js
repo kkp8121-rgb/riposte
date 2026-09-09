@@ -1,0 +1,801 @@
+/* =============================================================================
+ * RIPOSTE — js/render.js
+ * 아레나(패럴랙스 기둥 · 바닥 반사) · 벡터 실루엣 캐릭터(절차 애니메이션) ·
+ * 텔 플래시 · 투사체 · 존 (스펙 §4)
+ * ========================================================================== */
+(function (global) {
+  'use strict';
+
+  var C = CONFIG;
+  var V = C.VIEW;
+  var TAU = Math.PI * 2;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  /* 실루엣 체형 표 — 보스마다 명확히 다른 실루엣 (스펙 §4) */
+  var BUILD = {
+    player:  { h: 76,  w: 15, head: 0.085, hood: false, weapon: 'none',   thick: 7 },
+    mirror:  { h: 76,  w: 15, head: 0.085, hood: false, weapon: 'none',   thick: 7 },
+    rapier:  { h: 84,  w: 13, head: 0.078, hood: false, weapon: 'rapier', thick: 6 },
+    bow:     { h: 84,  w: 16, head: 0.095, hood: true,  weapon: 'bow',    thick: 7 },
+    hammer:  { h: 98,  w: 27, head: 0.090, hood: false, weapon: 'hammer', thick: 12 }
+  };
+
+  /* 포즈별 무기팔 각도(rad). 0 = 정면(facing 방향), 음수 = 위. */
+  var POSE_ARM = {
+    idle:    -0.35,
+    walk:    -0.30,
+    windup:  -2.30,
+    hold:    -2.05,
+    active:   0.05,
+    recover: -0.75,
+    parry:   -1.25,
+    dash:    -1.90,
+    stagger: -0.10,
+    roar:    -1.95,
+    dead:     0.30
+  };
+
+  /* 무기 길이 (실루엣 기준 비율) — 텔 버스트를 무기 "끝"에 정확히 찍기 위해 필요 */
+  var WEAPON_LEN = {
+    none: 0.10, rapier: 0.62, blade: 0.50, hammer: 0.52, bow: 0.26, spear: 0.66
+  };
+
+  var Render = {
+    pillars: null,
+    stars: null
+  };
+
+  /**
+   * 특정 포즈에서 무기 끝의 로컬 좌표 (발밑 원점, y 는 위가 음수).
+   * boss.js 가 텔 플래시 위치를 잡을 때 쓴다 — 그림과 완전히 같은 식.
+   */
+  Render.tipOf = function (buildKey, facing, poseName, weaponKind) {
+    var b = BUILD[buildKey] || BUILD.player;
+    var f = facing >= 0 ? 1 : -1;
+    var h = b.h, w = b.w;
+    var armA = POSE_ARM[poseName] === undefined ? POSE_ARM.idle : POSE_ARM[poseName];
+    var armLen = h * 0.30;
+    var shY = -h * 0.82;
+    var handX = f * w * 0.22 + Math.cos(armA) * armLen * f;
+    var handY = shY + Math.sin(armA) * armLen;
+    var wl = h * (WEAPON_LEN[weaponKind || b.weapon] === undefined ? 0.1 : WEAPON_LEN[weaponKind || b.weapon]);
+    return { x: handX + Math.cos(armA) * wl * f, y: handY + Math.sin(armA) * wl };
+  };
+
+  /* ---- 배경 생성 (고정 레이아웃) ------------------------------------------ */
+  Render.initScene = function () {
+    var r = new RNG(20260909);
+    var far = [], near = [];
+    var i, x;
+    for (i = 0, x = -120; x < V.W + 220; i++, x += 118) {
+      far.push({ x: x + r.range(-18, 18), w: r.range(38, 62), h: r.range(150, 260) });
+    }
+    for (i = 0, x = -200; x < V.W + 340; i++, x += 214) {
+      near.push({ x: x + r.range(-24, 24), w: r.range(56, 96), h: r.range(210, 330) });
+    }
+    Render.pillars = { far: far, near: near };
+    var st = [];
+    for (i = 0; i < 60; i++) st.push({ x: r.range(0, V.W), y: r.range(10, V.HORIZON_Y - 20), a: r.range(0.06, 0.3), s: r.range(0.6, 1.6) });
+    Render.stars = st;
+  };
+
+  /* ---- 아레나 ------------------------------------------------------------- */
+
+  function drawBackground(ctx, camX) {
+    var g = ctx.createLinearGradient(0, 0, 0, V.FLOOR_Y);
+    g.addColorStop(0, C.COLORS.BG_FAR);
+    g.addColorStop(0.62, C.COLORS.BG);
+    g.addColorStop(1, '#0e1220');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, V.W, V.FLOOR_Y);
+
+    // 먼 입자
+    var i, s;
+    ctx.save();
+    for (i = 0; i < Render.stars.length; i++) {
+      s = Render.stars[i];
+      ctx.globalAlpha = s.a;
+      ctx.fillStyle = '#9fb3d9';
+      ctx.fillRect(s.x - camX * 0.02, s.y, s.s, s.s);
+    }
+    ctx.restore();
+
+    // 패럴랙스 기둥 2층
+    drawPillars(ctx, Render.pillars.far, camX * 0.06, C.COLORS.PILLAR_FAR, 0.9);
+    drawPillars(ctx, Render.pillars.near, camX * 0.16, C.COLORS.PILLAR_NEAR, 1);
+
+    function drawPillars(c2, list, off, color, alpha) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      for (var k = 0; k < list.length; k++) {
+        var p = list[k];
+        var px = p.x - off;
+        ctx.fillRect(px, V.FLOOR_Y - p.h, p.w, p.h);
+        // 기둥 상단 캡
+        ctx.fillRect(px - 5, V.FLOOR_Y - p.h - 8, p.w + 10, 8);
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawFloor(ctx) {
+    ctx.fillStyle = C.COLORS.FLOOR;
+    ctx.fillRect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
+
+    // 바닥 반사 그라디언트
+    var g = ctx.createLinearGradient(0, V.FLOOR_Y, 0, V.H);
+    g.addColorStop(0, 'rgba(94,230,255,0.07)');
+    g.addColorStop(0.45, 'rgba(10,13,22,0.0)');
+    g.addColorStop(1, 'rgba(6,8,14,0.55)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
+
+    ctx.strokeStyle = C.COLORS.FLOOR_LINE;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, V.FLOOR_Y + 0.5);
+    ctx.lineTo(V.W, V.FLOOR_Y + 0.5);
+    ctx.stroke();
+
+    // 아레나 경계 표시
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = C.COLORS.FLOOR_LINE;
+    ctx.lineWidth = 1;
+    [V.MIN_X, V.MAX_X].forEach(function (bx) {
+      ctx.beginPath();
+      ctx.moveTo(bx, V.FLOOR_Y - 14);
+      ctx.lineTo(bx, V.FLOOR_Y + 14);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  /* ---- 캐릭터 실루엣 ------------------------------------------------------ */
+
+  /**
+   * 벡터 실루엣 + 절차 애니메이션.
+   * o = { x, facing, color, build, t, pose, poseP, vx, moving, alpha, flash, scale, weaponOverride }
+   */
+  function drawFighter(ctx, o) {
+    var b = BUILD[o.build] || BUILD.player;
+    var h = b.h * (o.scale || 1);
+    var w = b.w * (o.scale || 1);
+    var f = o.facing >= 0 ? 1 : -1;
+    var pose = o.pose || 'idle';
+
+    var moving = !!o.moving;
+    var breath = Math.sin(o.t * C.PLAYER.BREATH_RATE) * C.PLAYER.BREATH_AMP * (moving ? 0.35 : 1);
+    var lean = clamp((o.vx || 0) / C.PLAYER.SPEED, -1, 1) * C.PLAYER.LEAN_MAX;
+    if (pose === 'stagger') lean = -f * 0.22;
+    if (pose === 'dead') lean = -f * 0.5;
+
+    var stride = moving ? Math.sin(o.t * 9.5) : 0;
+    var hipY = -h * 0.45 - breath * 0.4;
+    var shY = -h * 0.82 - breath;
+    var headY = -h * 0.93 - breath;
+    var headR = h * b.head;
+
+    // 접지 그림자 — 캐릭터를 바닥에 붙여준다
+    if (!o.noShadow) {
+      ctx.save();
+      ctx.globalAlpha = (o.alpha === undefined ? 1 : o.alpha) * 0.35;
+      ctx.fillStyle = '#04060c';
+      ctx.beginPath();
+      ctx.ellipse(o.x, V.FLOOR_Y + 2, w * 1.5, 5, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(o.x, V.FLOOR_Y);
+    ctx.rotate(lean);
+    if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
+
+    var col = o.color;
+    var flash = o.flash || 0;
+    var bodyCol = flash > 0 ? C.COLORS.WHITE : col;
+
+    ctx.strokeStyle = bodyCol;
+    ctx.fillStyle = bodyCol;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // 글로우
+    ctx.shadowColor = bodyCol;
+    ctx.shadowBlur = flash > 0 ? 26 : 12;
+
+    /* 다리 */
+    ctx.lineWidth = Math.max(3, b.thick * 0.62);
+    var legSwing = stride * w * 1.5;
+    leg(f * (w * 0.55) + legSwing, f * (w * 0.95) + legSwing * 1.4);
+    leg(-f * (w * 0.45) - legSwing, -f * (w * 0.85) - legSwing * 1.4);
+    function leg(kneeX, footX) {
+      ctx.beginPath();
+      ctx.moveTo(0, hipY);
+      ctx.quadraticCurveTo(kneeX, hipY * 0.45, footX, -Math.abs(stride) * 3);
+      ctx.stroke();
+    }
+
+    /* 몸통 */
+    ctx.lineWidth = b.thick;
+    ctx.beginPath();
+    ctx.moveTo(0, hipY);
+    ctx.lineTo(f * w * 0.12, shY);
+    ctx.stroke();
+
+    // 어깨 라인
+    ctx.lineWidth = Math.max(3, b.thick * 0.7);
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.55, shY + 2);
+    ctx.lineTo(w * 0.55, shY - 2);
+    ctx.stroke();
+
+    /* 머리 (후드면 각진 실루엣) */
+    var hx = f * w * 0.18;
+    if (b.hood) {
+      ctx.beginPath();
+      ctx.moveTo(hx - f * headR * 1.1, headY + headR * 0.9);
+      ctx.lineTo(hx - f * headR * 0.5, headY - headR * 1.3);
+      ctx.lineTo(hx + f * headR * 1.4, headY + headR * 0.2);
+      ctx.lineTo(hx + f * headR * 0.6, headY + headR * 1.0);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(hx, headY, headR, 0, TAU);
+      ctx.fill();
+    }
+
+    /* 팔 + 무기 */
+    var baseA = POSE_ARM[pose] === undefined ? POSE_ARM.idle : POSE_ARM[pose];
+    var p = o.poseP === undefined ? 0 : o.poseP;
+    var armA = baseA;
+    if (pose === 'windup') armA = lerp(POSE_ARM.windup, POSE_ARM.hold, p);
+    if (pose === 'active') armA = lerp(POSE_ARM.hold, POSE_ARM.active, Math.min(1, p * 2.4));
+
+    var armLen = h * 0.30;
+    var shoulderX = f * w * 0.22;
+    var handX = shoulderX + Math.cos(armA) * armLen * f;
+    var handY = shY + Math.sin(armA) * armLen;
+
+    // 뒷팔
+    ctx.lineWidth = Math.max(3, b.thick * 0.55);
+    ctx.globalAlpha = (o.alpha === undefined ? 1 : o.alpha) * 0.65;
+    ctx.beginPath();
+    ctx.moveTo(shoulderX, shY);
+    ctx.quadraticCurveTo(-f * w * 0.5, shY + armLen * 0.55, -f * w * 0.75, shY + armLen * 0.9);
+    ctx.stroke();
+    ctx.globalAlpha = (o.alpha === undefined ? 1 : o.alpha);
+
+    // 앞팔
+    ctx.lineWidth = Math.max(3, b.thick * 0.62);
+    ctx.beginPath();
+    ctx.moveTo(shoulderX, shY);
+    ctx.quadraticCurveTo(shoulderX + Math.cos(armA - 0.5) * armLen * 0.55 * f,
+                         shY + Math.sin(armA - 0.5) * armLen * 0.55,
+                         handX, handY);
+    ctx.stroke();
+
+    // 패리 자세면 반대팔도 앞으로 올린다
+    if (pose === 'parry') {
+      ctx.beginPath();
+      ctx.moveTo(shoulderX, shY);
+      ctx.quadraticCurveTo(f * w * 0.9, shY - armLen * 0.2, f * w * 1.5, shY - armLen * 0.55);
+      ctx.stroke();
+    }
+
+    /* 무기 */
+    var weapon = o.weaponOverride || b.weapon;
+    drawWeapon(ctx, weapon, handX, handY, armA, f, h, bodyCol, pose, p);
+
+    ctx.restore();
+  }
+
+  function drawWeapon(ctx, kind, hx, hy, angle, f, h, color, pose, p) {
+    if (kind === 'none') return;
+    ctx.save();
+    ctx.translate(hx, hy);
+    // scale → rotate 순서여야 손 방향 벡터 (cos*f, sin) 와 일치한다
+    ctx.scale(f, 1);
+    ctx.rotate(angle);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineCap = 'round';
+
+    switch (kind) {
+      case 'rapier':
+        ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(h * 0.62, 0); ctx.stroke();
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(2, -7); ctx.lineTo(2, 7); ctx.stroke();
+        break;
+      case 'blade':
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(-6, 0);
+        ctx.quadraticCurveTo(h * 0.30, -h * 0.10, h * 0.50, -h * 0.02);
+        ctx.stroke();
+        break;
+      case 'hammer':
+        ctx.lineWidth = 7;
+        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(h * 0.44, 0); ctx.stroke();
+        ctx.fillRect(h * 0.40, -h * 0.15, h * 0.17, h * 0.30);
+        break;
+      case 'bow':
+        ctx.lineWidth = 3.4;
+        ctx.beginPath();
+        ctx.arc(h * 0.12, 0, h * 0.26, -1.15, 1.15);
+        ctx.stroke();
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(h * 0.12 + Math.cos(-1.15) * h * 0.26, Math.sin(-1.15) * h * 0.26);
+        ctx.lineTo(h * 0.12 + Math.cos(1.15) * h * 0.26, Math.sin(1.15) * h * 0.26);
+        ctx.stroke();
+        break;
+      case 'spear':
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(h * 0.66, 0); ctx.stroke();
+        break;
+    }
+    ctx.restore();
+  }
+
+  /* 스윙 종류별 궤적 파라미터 — 찌르기와 베기가 확실히 달라 보이도록 */
+  var SWING = {
+    thrust: { from: -0.25, to: 0.05 },
+    arc:    { from: -1.95, to: 0.55 },
+    slam:   { from: -2.25, to: -0.05 }
+  };
+  var SWING_BY_KIND = { lunge: 'thrust', slash: 'arc', slam: 'slam', shot: 'arc' };
+
+  /**
+   * 무기 호 궤적 글로우 (active 중).
+   * thrust 는 호 대신 직선 랜스로 그린다.
+   */
+  function drawSwing(ctx, x, faceDir, h, color, kind, reach, k, alpha) {
+    var sw = SWING[kind] || SWING.arc;
+    var radius = Math.min(reach, 220) * (kind === 'slam' ? 0.52 : 0.58);
+    ctx.save();
+    ctx.translate(x, V.FLOOR_Y - h * 0.82);
+    ctx.scale(faceDir, 1);
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 20;
+
+    if (kind === 'thrust') {
+      var len = Math.min(reach, 240) * Math.min(1, k * 1.8);
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(len, h * 0.04);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(len, h * 0.04, 6, 0, TAU);
+      ctx.fill();
+    } else {
+      var a1 = sw.from + (sw.to - sw.from) * Math.min(1, k * 1.15);
+      // 스윕 궤적
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, sw.from, a1);
+      ctx.stroke();
+      // 궤적을 어깨에 붙여주는 "칼날" 선 — 공중에 뜬 초승달로 보이지 않게 한다
+      ctx.lineWidth = 3.5;
+      ctx.globalAlpha = alpha * 0.85;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a1) * radius * 0.12, Math.sin(a1) * radius * 0.12);
+      ctx.lineTo(Math.cos(a1) * radius, Math.sin(a1) * radius);
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
+      if (kind === 'slam' && k > 0.55) {
+        // 지면 충격 라인
+        ctx.globalAlpha = alpha * (1 - (k - 0.55) / 0.45);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.82);
+        ctx.lineTo(Math.min(reach, 240), h * 0.82);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /* ---- 캐릭터 상태 → 포즈 ------------------------------------------------- */
+
+  function playerPose(p) {
+    if (p.hp <= 0) return { pose: 'dead', p: 0 };
+    if (p.dashT > 0) return { pose: 'dash', p: 1 - p.dashT / C.DASH.DURATION };
+    if (p.riposte) {
+      var rp = p.riposte;
+      if (rp.stage === 'startup') return { pose: 'windup', p: 1 - rp.t / rp.k.startup };
+      if (rp.stage === 'active') return { pose: 'active', p: 1 - rp.t / rp.k.active };
+      return { pose: 'recover', p: 1 - rp.t / rp.k.recover };
+    }
+    if (p.parryPose > 0) return { pose: 'parry', p: 1 - p.parryPose / C.PARRY.POSE_TIME };
+    if (Math.abs(p.vx) > 20) return { pose: 'walk', p: 0 };
+    return { pose: 'idle', p: 0 };
+  }
+
+  function bossPose(b) {
+    if (b.dead) return { pose: 'dead', p: 0 };
+    if (b.state === 'roar') return { pose: 'roar', p: 0 };
+    if (b.state === 'stagger') return { pose: 'stagger', p: 0 };
+    if (b.state === 'charging') return { pose: 'active', p: 1 };
+    if (b.attack) {
+      var a = b.attack;
+      if (a.stage === 'windup') return { pose: 'windup', p: 1 - a.t / a.windupTotal };
+      if (a.stage === 'active') return { pose: 'active', p: 1 - a.t / Math.max(0.01, a.def.active) };
+      return { pose: 'recover', p: 1 - a.t / Math.max(0.01, a.def.recover) };
+    }
+    if (Math.abs(b.vx) > 20) return { pose: 'walk', p: 0 };
+    return { pose: 'idle', p: 0 };
+  }
+
+  /** 플레이어가 리포스트 중이면 훔친 무기를 손에 들고 있는 것으로 그린다 */
+  function playerWeapon(p) {
+    if (!p.riposte) return 'none';
+    switch (p.riposte.kind) {
+      case 'lunge': return 'rapier';
+      case 'slash': return 'blade';
+      case 'shot':  return 'bow';
+      case 'slam':  return 'hammer';
+    }
+    return 'none';
+  }
+
+  /* ---- 투사체 / 존 -------------------------------------------------------- */
+
+  function drawProjectile(ctx, pr) {
+    var col = pr.owner === 'player' ? C.COLORS.PLAYER
+            : (pr.tell === 'red' ? C.COLORS.RED : C.COLORS.GOLD);
+    var dir = pr.vx >= 0 ? 1 : -1;
+
+    ctx.save();
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = col;
+    ctx.fillStyle = col;
+
+    // 트레일
+    ctx.globalAlpha = 0.28;
+    ctx.lineWidth = pr.r * 0.7;
+    ctx.beginPath();
+    for (var i = 0; i < pr.trail.length; i++) {
+      if (i === 0) ctx.moveTo(pr.trail[i], pr.y); else ctx.lineTo(pr.trail[i], pr.y);
+    }
+    if (pr.trail.length) { ctx.lineTo(pr.x, pr.y); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+
+    if (pr.shape === 'wave') {
+      // 지면 충격파 — 반원 리플
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(pr.x, V.FLOOR_Y, pr.r * 1.9, Math.PI, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.arc(pr.x, V.FLOOR_Y, pr.r * 3.1, Math.PI, TAU);
+      ctx.stroke();
+    } else if (pr.shape === 'bolt') {
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(pr.x - dir * pr.r * 3.2, pr.y);
+      ctx.lineTo(pr.x + dir * pr.r * 1.6, pr.y);
+      ctx.stroke();
+    } else {
+      // 화살 — 길쭉한 다이아
+      ctx.beginPath();
+      ctx.moveTo(pr.x + dir * pr.r * 2.0, pr.y);
+      ctx.lineTo(pr.x, pr.y - pr.r * 0.7);
+      ctx.lineTo(pr.x - dir * pr.r * 2.0, pr.y);
+      ctx.lineTo(pr.x, pr.y + pr.r * 0.7);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawZone(ctx, z) {
+    var x0 = z.x - z.w / 2;
+    ctx.save();
+    if (!z.struck) {
+      var prog = 1 - clamp(z.t / z.delay, 0, 1);
+      // 바닥 경고 스트립
+      ctx.globalAlpha = 0.30 + 0.35 * Math.abs(Math.sin(prog * 14));
+      ctx.fillStyle = C.COLORS.RED;
+      ctx.fillRect(x0, V.FLOOR_Y - C.ZONE.STRIP_H, z.w, C.ZONE.STRIP_H);
+      // 채워지는 게이지
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(x0, V.FLOOR_Y - C.ZONE.STRIP_H, z.w * prog, C.ZONE.STRIP_H);
+      // 위쪽 예고 기둥
+      ctx.globalAlpha = C.ZONE.COLUMN_ALPHA * (0.4 + prog * 0.6);
+      var g = ctx.createLinearGradient(0, V.FLOOR_Y - 240, 0, V.FLOOR_Y);
+      g.addColorStop(0, 'rgba(255,59,59,0)');
+      g.addColorStop(1, 'rgba(255,59,59,0.9)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x0, V.FLOOR_Y - 240, z.w, 240);
+      // 경계선
+      ctx.globalAlpha = 0.8;
+      ctx.strokeStyle = C.COLORS.RED;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x0, V.FLOOR_Y - 240); ctx.lineTo(x0, V.FLOOR_Y);
+      ctx.moveTo(x0 + z.w, V.FLOOR_Y - 240); ctx.lineTo(x0 + z.w, V.FLOOR_Y);
+      ctx.stroke();
+    } else {
+      var k = clamp(z.strikeT / C.ZONE.STRIKE_TIME, 0, 1);
+      ctx.globalAlpha = k;
+      ctx.fillStyle = C.COLORS.RED;
+      ctx.shadowColor = C.COLORS.RED;
+      ctx.shadowBlur = 30;
+      ctx.fillRect(x0, 0, z.w, V.FLOOR_Y);
+    }
+    ctx.restore();
+  }
+
+  /* ---- 파티클 / 링 / 텔 버스트 -------------------------------------------- */
+
+  function drawParticles(ctx) {
+    var i, p;
+    ctx.save();
+    // 파티클은 shadowBlur 대신 가산 합성으로 발광시킨다 (수백 개일 때 훨씬 싸다)
+    ctx.globalCompositeOperation = 'lighter';
+    for (i = 0; i < FX.particles.length; i++) {
+      p = FX.particles[i];
+      var a = clamp(p.life / p.life0, 0, 1);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    for (i = 0; i < FX.rings.length; i++) {
+      var r = FX.rings[i];
+      var k = 1 - r.life / r.life0;
+      ctx.globalAlpha = (1 - k) * 0.9;
+      ctx.strokeStyle = r.color;
+      ctx.shadowColor = r.color;
+      ctx.shadowBlur = 16;
+      ctx.lineWidth = r.width * (1 - k * 0.6);
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, lerp(r.r0, r.r1, k), 0, TAU);
+      ctx.stroke();
+    }
+    for (i = 0; i < FX.bursts.length; i++) {
+      var b = FX.bursts[i];
+      var t = 1 - b.life / b.life0;
+      ctx.globalAlpha = (1 - t) * 0.95;
+      ctx.strokeStyle = b.color;
+      ctx.fillStyle = b.color;
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 22;
+      // 원형 버스트
+      ctx.lineWidth = 3 * (1 - t);
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, C.TELL.BURST_R * (0.3 + t * 1.5), 0, TAU);
+      ctx.stroke();
+      // 방사선
+      ctx.lineWidth = 2.2 * (1 - t);
+      for (var k2 = 0; k2 < b.rays; k2++) {
+        var ang = b.seed + (k2 / b.rays) * TAU;
+        var r0 = C.TELL.BURST_R * (0.5 + t * 1.1);
+        var r1 = r0 + C.TELL.RAY_LEN * (1 - t) * 0.9;
+        ctx.beginPath();
+        ctx.moveTo(b.x + Math.cos(ang) * r0, b.y + Math.sin(ang) * r0);
+        ctx.lineTo(b.x + Math.cos(ang) * r1, b.y + Math.sin(ang) * r1);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawPops(ctx) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (var i = 0; i < FX.pops.length; i++) {
+      var p = FX.pops[i];
+      var k = 1 - p.life / p.life0;
+      var scale = k < 0.18 ? lerp(0.4, 1.15, k / 0.18) : lerp(1.15, 1, Math.min(1, (k - 0.18) / 0.2));
+      var jitter = p.shake ? (Math.random() - 0.5) * 3 * (1 - k) : 0;
+      ctx.globalAlpha = k > 0.7 ? (1 - k) / 0.3 : 1;
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 12;
+      ctx.font = C.font(p.weight, Math.round(p.size * scale));
+      ctx.fillText(p.text, p.x + jitter, p.y - p.rise * k + jitter);
+    }
+    ctx.restore();
+  }
+
+  /* ---- 전체 드로우 -------------------------------------------------------- */
+
+  /** 배경 + 바닥만 (타이틀/엔딩 배경으로도 쓴다) */
+  Render.drawArena = function (ctx, camX) {
+    if (!Render.pillars) Render.initScene();
+    drawBackground(ctx, camX || 0);
+    drawFloor(ctx);
+  };
+
+  Render.drawWorld = function (ctx, game) {
+    var p = game.player;
+    var b = game.boss;
+    var camX = p.x - V.W / 2;
+
+    Render.drawArena(ctx, camX);
+
+    // 존 (바닥 경고)
+    for (var i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
+
+    var pp = playerPose(p);
+    var bp = b ? bossPose(b) : null;
+
+    // 바닥 반사 (실루엣을 위아래로 뒤집어 옅게)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
+    ctx.clip();
+    ctx.translate(0, V.FLOOR_Y * 2);
+    ctx.scale(1, -1);
+    if (b) drawBoss(ctx, b, bp, true);
+    drawPlayer(ctx, p, pp, true);
+    ctx.restore();
+
+    // 반사는 아래로 갈수록 사라진다 (하단 HUD 와 겹치지 않게)
+    ctx.save();
+    var fade = ctx.createLinearGradient(0, V.FLOOR_Y, 0, V.H);
+    fade.addColorStop(0, 'rgba(11,13,20,0)');
+    fade.addColorStop(0.55, 'rgba(11,13,20,0.55)');
+    fade.addColorStop(1, 'rgba(8,10,16,0.95)');
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
+    ctx.restore();
+
+    // 대시 잔상
+    for (i = 0; i < FX.ghosts.length; i++) {
+      var g = FX.ghosts[i];
+      drawFighter(ctx, {
+        x: g.x, facing: g.facing, color: g.color, build: 'player',
+        t: 0, pose: 'dash', poseP: 0.5, vx: 0, moving: false,
+        alpha: (g.life / g.life0) * 0.32
+      });
+    }
+
+    if (b) drawBoss(ctx, b, bp, false);
+    drawPlayer(ctx, p, pp, false);
+
+    for (i = 0; i < game.projectiles.length; i++) drawProjectile(ctx, game.projectiles[i]);
+
+    drawParticles(ctx);
+    drawPops(ctx);
+  };
+
+  function drawPlayer(ctx, p, pose, isReflection) {
+    var alpha = 1;
+    if (p.iframes > 0 && !isReflection) {
+      alpha = (Math.floor(p.animT * 22) % 2) ? 0.35 : 1;
+    }
+    if (p.dashInvuln()) alpha *= 0.8;
+
+    drawFighter(ctx, {
+      x: p.x, facing: p.facing, color: C.COLORS.PLAYER, build: 'player',
+      t: p.animT, pose: pose.pose, poseP: pose.p, vx: p.vx,
+      moving: Math.abs(p.vx) > 20 && p.dashT <= 0,
+      alpha: isReflection ? 0.17 : alpha,
+      noShadow: isReflection,
+      flash: p.parryFlash > 0 ? 1 : 0,
+      weaponOverride: playerWeapon(p)
+    });
+
+    // 패리 창 표시 — 몸 앞의 반원 가드
+    if (p.parryT >= 0 && !isReflection) {
+      var win = p.parryWindow();
+      var col = win === 'perfect' ? C.COLORS.GOLD : C.COLORS.GREY;
+      var k = 1 - clamp(p.parryT / C.PARRY.BLOCK_WINDOW, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = 0.25 + k * 0.55;
+      ctx.strokeStyle = col;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 16;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(p.x, V.FLOOR_Y - C.PLAYER.HEIGHT * 0.5, 34,
+              p.facing > 0 ? -1.2 : Math.PI - 1.2 - 0.2,
+              p.facing > 0 ? 1.2 : Math.PI + 1.2 + 0.2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 리포스트 무기 호 궤적
+    if (p.riposte && p.riposte.stage === 'active' && !isReflection && p.riposte.kind !== 'shot') {
+      var rp = p.riposte;
+      var kk = 1 - rp.t / Math.max(0.01, rp.k.active);
+      drawSwing(ctx, p.x, p.facing, C.PLAYER.HEIGHT,
+        p.isEmpowered() ? C.COLORS.EMPOWER : C.COLORS.PLAYER,
+        SWING_BY_KIND[rp.kind] || 'arc', rp.k.reach, kk, 0.8);
+    }
+  }
+
+  function drawBoss(ctx, b, pose, isReflection) {
+    var alpha = 1;
+    if (b.invuln > 0 && !isReflection) alpha = (Math.floor(b.animT * 18) % 2) ? 0.5 : 1;
+    if (b.dead) alpha *= 0.5;
+
+    drawFighter(ctx, {
+      x: b.x, facing: b.facing, color: b.color, build: b.silhouette,
+      t: b.animT, pose: pose.pose, poseP: pose.p, vx: b.vx,
+      moving: Math.abs(b.vx) > 20,
+      alpha: isReflection ? 0.17 : alpha,
+      noShadow: isReflection,
+      flash: b.hurtFlash > 0 ? 1 : 0
+    });
+
+    // 텔 플래시가 살아있는 동안 무기 끝 글로우
+    if (b.flashT > 0 && !isReflection) {
+      var tip = b.weaponTip();
+      var k = b.flashT / C.BOSS.FLASH_TIME;
+      ctx.save();
+      ctx.globalAlpha = k;
+      ctx.fillStyle = b.flashColor;
+      ctx.shadowColor = b.flashColor;
+      ctx.shadowBlur = 30;
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, 7 + (1 - k) * 6, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 공격 active 중 무기 호 궤적
+    if (b.attack && b.attack.stage === 'active' && !isReflection &&
+        b.attack.def.kind === 'melee') {
+      var a = b.attack;
+      var kk = 1 - a.t / Math.max(0.01, a.def.active);
+      var bh = BUILD[b.silhouette] ? BUILD[b.silhouette].h : 84;
+      var sk = a.def.swing || (a.def.steal ? SWING_BY_KIND[a.def.steal.kind] : 'thrust');
+      drawSwing(ctx, b.x, b.facing, bh,
+        a.tell === 'red' ? C.COLORS.RED : C.COLORS.GOLD,
+        sk, a.def.reach, kk, 0.75);
+    }
+
+    // charge 중 잔상
+    if (b.state === 'charging' && !isReflection) {
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(b.x - b.chargeDir * 90, V.FLOOR_Y - C.BOSS.HEIGHT, 90, C.BOSS.HEIGHT);
+      ctx.restore();
+    }
+  }
+
+  /* ---- 화면 전체 플래시 / 비네트 ------------------------------------------ */
+
+  Render.drawOverlay = function (ctx) {
+    if (FX.whiteFlash > 0) {
+      ctx.save();
+      ctx.globalAlpha = clamp(FX.whiteFlash / FX.whiteFlashMax, 0, 1) * 0.85;
+      ctx.fillStyle = C.COLORS.WHITE;
+      ctx.fillRect(0, 0, V.W, V.H);
+      ctx.restore();
+    }
+    if (FX.tintFlash > 0) {
+      var a = clamp(FX.tintFlash / FX.tintFlashMax, 0, 1);
+      var g = ctx.createRadialGradient(V.W / 2, V.H / 2, V.W * 0.28, V.W / 2, V.H / 2, V.W * 0.62);
+      g.addColorStop(0, 'rgba(255,34,51,0)');
+      g.addColorStop(0.55, 'rgba(255,34,51,' + (a * 0.22).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,34,51,' + (a * 0.8).toFixed(3) + ')');
+      ctx.save();
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, V.W, V.H);
+      ctx.restore();
+    }
+  };
+
+  Render.drawFighter = drawFighter;
+  Render.BUILD = BUILD;
+  global.Render = Render;
+})(window);

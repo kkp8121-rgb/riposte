@@ -1,0 +1,13 @@
+{
+  "name": "riposte",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RIPOSTE - a keyboard-only side-view boss-rush parry duel. You have no sword; parry perfectly and their attack becomes yours.",
+  "scripts": {
+    "smoke": "node tests/smoke.mjs",
+    "bot": "node tests/bot.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}
