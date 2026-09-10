@@ -29,14 +29,14 @@
     color: '#ffffff',
     silhouette: 'mirror',       // 플레이어 실루엣, 백색
     hp: 320,
-    par: 100,
+    par: 50,
     armor: false,
     spawnX: 680,
     droneHz: 49.0,              // G1
     weaponTip: { dx: 46, dy: 56 },
 
     prefer: { close: 120, far: 300, back: 200 },
-    gap: { 1: 0.7, 2: 0.45 },
+    gap: { 1: 0.85, 2: 0.55 },
 
     /* feint 타이밍 (스펙 §3.4): 1차 플래시 → windup → 무기가 0.45s 멈춤 →
        2차 플래시 → 같은 windup → 실제 타격.

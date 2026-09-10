@@ -39,7 +39,7 @@ Two colors, two verbs. **Gold = parry. Red = dash.** That's the whole language.
 1. **Read the flash.** Every attack telegraphs with a burst at the weapon tip and an audio
    cue. The time from flash to impact is *constant per attack* — you learn a rhythm, not a
    reaction test.
-2. **Parry on the beat.** A press opens a 0.15 s **perfect** window, then a 0.30 s **block**
+2. **Parry on the beat.** A press opens a 0.18 s **perfect** window, then a 0.34 s **block**
    window. Perfect = no damage, the boss flinches, and the attack lands in your **hand**
    (3 slots, FIFO). Projectiles get reflected straight back. Block = safe but empty-handed.
    Whiff and you're wide open for 0.4 s.

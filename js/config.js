@@ -76,8 +76,8 @@
 
     /* ---- 패리 (스펙 §2.3) ------------------------------------------------ */
     PARRY: {
-      PERFECT_WINDOW: 0.15,
-      BLOCK_WINDOW: 0.30,
+      PERFECT_WINDOW: 0.18,
+      BLOCK_WINDOW: 0.34,
       RECOVERY: 0.40,           // 헛친 패리 = 0.40s 무방비
       RECOVERY_ON_SUCCESS: 0.10, // 성공 시 즉시 회복 (연속 패리 허용 — 스펙 §3.2 triple 대응)
       SUCCESS_GRACE: 0.05,      // 패리 성공 직후 유예 — 같은 스텝에 겹쳐 온 두 번째 투사체도 받아낸다

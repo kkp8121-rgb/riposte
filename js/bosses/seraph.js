@@ -20,7 +20,7 @@
     color: '#b78cff',
     silhouette: 'bow',          // 후드를 쓴 궁수
     hp: 190,
-    par: 70,
+    par: 35,
     armor: false,
     spawnX: 760,
     droneHz: 58.27,             // B♭1

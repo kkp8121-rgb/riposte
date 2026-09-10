@@ -14,7 +14,7 @@
     color: '#ffb347',
     silhouette: 'hammer',       // 거대한 망치를 든 거한
     hp: 250,
-    par: 80,
+    par: 40,
     armor: true,
     spawnX: 700,
     droneHz: 43.65,             // F1

@@ -10,6 +10,11 @@
  *   node tests/bot.mjs --all           -> 보스 1..4 순차 + 무입력 패배 검증
  *   node tests/bot.mjs --seed=7
  *
+ * "human-like" 모드 (기본값 0 = 기존 동작과 완전히 동일):
+ *   --jitter=<s>   패리/대시 입력 시점에 균등분포 오프셋 [-jitter,+jitter] (초)
+ *   --miss=<0..1>  텔을 잘못 읽어 패리/대시를 아예 누르지 않을 확률
+ *   --think=<s>    손패가 찬 뒤 리포스트를 누르기까지의 사고 지연(초)
+ *
  * installBot / TUNE 은 export 되어 tools/shots.mjs 가 같은 봇으로 스크린샷을 찍는다.
  * (직접 실행할 때만 테스트 본체가 돈다 — import 해도 브라우저가 뜨지 않는다.)
  *
@@ -39,6 +44,9 @@ const arg = (k, d) => {
 const ALL = argv.includes('--all');
 const BOSS = parseInt(arg('boss', '1'), 10);
 const SEED = parseInt(arg('seed', '7'), 10);
+const JITTER = parseFloat(arg('jitter', '0')) || 0;
+const MISS = parseFloat(arg('miss', '0')) || 0;
+const THINK = parseFloat(arg('think', '0')) || 0;
 
 const VIEWPORT = { width: 960, height: 540 };
 const LAUNCH_ARGS = [
@@ -63,7 +71,11 @@ export const TUNE = {
   REACH_MARGIN: 0.82,
   APPROACH_MIN: 150,      // 손패가 비었을 때 이 거리보다 멀면 붙는다
   STUCK_MELEE: 2.5,       // 근접 기술이 이만큼 안 닿으면 흘려보내 큐를 돌린다
-  TAP_MS: 40
+  TAP_MS: 40,
+  SEED,                   // 봇 내부 RNG 시드 (게임 판정용 RNG와는 별개 스트림)
+  JITTER,                 // 패리/대시 입력 시점 균등분포 오프셋 ±s (기본 0 = 지터 없음)
+  MISS,                   // 텔을 놓쳐 패리/대시를 안 누를 확률 [0,1] (기본 0 = 항상 반응)
+  THINK                   // 손패가 찬 뒤 리포스트까지의 사고 지연 s (기본 0 = 즉시)
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -99,6 +111,12 @@ export function installBot(TUNE) {
 
   const stats = { parries: 0, dashes: 0, ripostes: 0, ticks: 0 };
   let lastParry = -9, lastDash = -9, lastRiposte = -9, meleeStuckSince = null;
+  let handSince = null;
+
+  /* human-like 모드: 게임 자체 RNG(패턴 선택)와 분리된 봇 전용 스트림.
+   * 같은 --seed 면 같은 지터/미스 시퀀스 -> 재현 가능. */
+  const hrng = window.makeRNG(TUNE.SEED);
+  let lockKey = null, lockJitter = 0, lockMiss = false, lockLastT = null;
 
   function tick() {
     const s = R.getState();
@@ -134,6 +152,20 @@ export function installBot(TUNE) {
     threats.sort(function (a, b) { return a.t - b.t; });
     const th = threats[0];
 
+    /* --- human-like: 이번 텔에 대한 지터/미스를 한 번만 뽑아 잠그기 --------
+     * (같은 텔인데 매 tick 다시 뽑으면 "이른 쪽"으로 쏠린다 — 텔이 바뀔 때만 갱신) */
+    if (th) {
+      const key = th.kind + ':' + th.src;
+      if (key !== lockKey || lockLastT === null || th.t > lockLastT + 0.05) {
+        lockKey = key;
+        lockJitter = hrng.range(-TUNE.JITTER, TUNE.JITTER);
+        lockMiss = hrng.chance(TUNE.MISS);
+      }
+      lockLastT = th.t;
+    } else {
+      lockKey = null; lockLastT = null;
+    }
+
     /* --- 이동 ------------------------------------------------------------ */
     // charge 는 안으로 파고들어 대시로 통과한다 (스펙 §2.4)
     const charging = ca && ca.id === 'charge';
@@ -147,12 +179,12 @@ export function installBot(TUNE) {
 
     /* --- 방어 ------------------------------------------------------------ */
     let acted = false;
-    if (th && th.t > 0) {
-      if (th.kind === 'parry' && th.t <= TUNE.PARRY_LEAD &&
+    if (th && th.t > 0 && !lockMiss) {
+      if (th.kind === 'parry' && th.t <= TUNE.PARRY_LEAD + lockJitter &&
           now - lastParry > TUNE.PARRY_COOLDOWN &&
           (th.src !== 'proj' || th.gap <= TUNE.PROJ_PARRY_DIST)) {
         tap('KeyK'); lastParry = now; stats.parries++; acted = true;
-      } else if (th.kind === 'dash' && th.t <= TUNE.DASH_LEAD &&
+      } else if (th.kind === 'dash' && th.t <= TUNE.DASH_LEAD + lockJitter &&
                  now - lastDash > TUNE.DASH_COOLDOWN &&
                  (th.src !== 'proj' || th.gap <= TUNE.PROJ_DASH_DIST + 40)) {
         tap('Space'); lastDash = now; stats.dashes++; acted = true;
@@ -160,7 +192,10 @@ export function installBot(TUNE) {
     }
 
     /* --- 리포스트 -------------------------------------------------------- */
-    if (!acted && s.hand.length && now - lastRiposte > TUNE.RIPOSTE_COOLDOWN) {
+    // human-like: 손패가 빈 상태 -> 찬 상태로 바뀐 시점부터 THINK 초는 누르지 않는다
+    if (s.hand.length) { if (handSince === null) handSince = now; } else handSince = null;
+    const thinkOk = handSince !== null && now - handSince >= TUNE.THINK;
+    if (!acted && s.hand.length && now - lastRiposte > TUNE.RIPOSTE_COOLDOWN && thinkOk) {
       const bossOpen = !ca || ca.stage === 'recover';
       const safe = !th || th.t > TUNE.SAFE_GAP;
       if (bossOpen && safe && inReach) {
@@ -270,6 +305,7 @@ if (IS_MAIN) (async () => {
   const list = ALL ? [1, 2, 3, 4] : [BOSS];
 
   log(`RIPOSTE bot test — bosses [${list.join(', ')}]  seed=${SEED}`);
+  if (JITTER || MISS || THINK) log(`  human-like: jitter=${JITTER}s miss=${MISS} think=${THINK}s`);
   log('');
 
   for (const n of list) {
