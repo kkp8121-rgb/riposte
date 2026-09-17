@@ -71,6 +71,8 @@
     this.dead = false;
     this.animT = 0;
     this.chargeDir = -1;
+    /* 약탈 보스(스펙 §3.8)가 빼앗아 간 손패. 정의 테이블(def)이 아니라 인스턴스에만 둔다. */
+    this.loot = [];
 
     if (this.def.onReset) this.def.onReset(this, this.game);
   };
@@ -135,9 +137,10 @@
     if (step.feint) { this.beginAttack(step.feint, { feint: true }); return; }
 
     if (step.mirror) {
-      var ids = this.def.mirrorIds ? this.def.mirrorIds(this, this.game) : null;
+      // 'all' = 플레이어 손패 전부, 'loot' = 빼앗은 손패 전부, 그 외 = 손패 맨 앞 하나
+      var ids = this.def.mirrorIds ? this.def.mirrorIds(this, this.game, step.mirror) : null;
       if (!ids || !ids.length) { this.beginAttack(this.def.fallbackAttack || 'thrust', {}); return; }
-      if (step.mirror === 'all') {
+      if (step.mirror === 'all' || step.mirror === 'loot') {
         var ins = [];
         for (var i = 0; i < ids.length; i++) {
           ins.push({ atk: ids[i] });
@@ -234,6 +237,7 @@
       lungeDone: 0,
       hasHit: false,
       zones: [],                    // 이 공격이 깐 존 — 취소되면 같이 사라져야 한다
+      hitsDone: 0,                  // 근접 연타(volley) — 끝난 타격 수
       damage: def.damage === undefined ? 1 : def.damage
     };
     this.attack = a;
@@ -322,6 +326,21 @@
       if (def.kind === 'melee' && !a.hasHit) this.testMelee(a);
       a.t -= dt;
       if (a.t <= 0) {
+        a.hitsDone++;
+        // 근접 연타(스펙 §3.6): recover 대신 짧은 windup 으로 되돌아가 새 플래시를 찍는다.
+        // 각 타격이 예고되므로 전부 패리·훔침 가능하다 (텔 문법 §2.2 유지).
+        if (def.kind === 'melee' && def.volley && a.hitsDone < def.volley.count) {
+          var gap = Math.max(B.MIN_VOLLEY_GAP, def.volley.interval);
+          a.stage = 'windup';
+          a.t = gap;
+          a.windupTotal = gap;
+          a.hitAt = this.game.time + gap;
+          a.hasHit = false;
+          a.lungeDone = 0;
+          a.feintFlashed = true;
+          this.flash(def.tell);
+          return;
+        }
         a.stage = 'recover';
         a.t = def.recover * (this.phase === 2 ? 0.9 : 1);
       }
@@ -617,6 +636,50 @@
     this.x += dir * step;
     this.vx = dir * speed;
     return false;
+  };
+
+  /* ---- 되받아치기 (스펙 §3.7) --------------------------------------------- */
+
+  /**
+   * 플레이어 쪽에서 되돌아오는 투사체를 되받아친다. true 면 투사체는 다시 보스 것이 됐다.
+   * 조건: def.deflect, 살아 있음, 무적 아님, idle/wait/move 또는 공격 recover 중.
+   * 랠리(pr.rally)가 DEFLECT_FORCE_RALLY 회째부터는 반드시 되받는다.
+   * 되받은 직후 DEFLECT_RECOVER 만큼 경직 = 모든 리포스트가 카운터 판정(stagger counter).
+   */
+  Boss.prototype.tryDeflect = function (pr) {
+    if (!this.def.deflect || this.dead || this.invuln > 0) return false;
+    var open = this.state === 'idle' || this.state === 'wait' || this.state === 'move' ||
+               (this.state === 'attack' && this.attack && this.attack.stage === 'recover');
+    if (!open) return false;
+
+    var rally = pr.rally || 0;
+    var chance = (rally + 1 >= B.DEFLECT_FORCE_RALLY) ? 1
+               : (this.phase === 2 ? B.DEFLECT_CHANCE_P2 : B.DEFLECT_CHANCE_P1);
+    if (!this.game.rng.chance(chance)) return false;
+
+    pr.rally = rally + 1;
+    var speed = Math.min(B.DEFLECT_SPEED_MAX, Math.abs(pr.vx) * B.DEFLECT_SPEED_MULT);
+    pr.vx = (pr.vx > 0 ? -1 : 1) * speed;      // 플레이어 쪽으로 되돌린다
+    pr.owner = 'boss';
+    pr.tell = 'gold';                          // 다시 패리 가능 (텔 문법 유지)
+    pr.color = C.COLORS.GOLD;
+    pr.skill = pr.fromHand || pr.skill || null; // 다시 퍼펙트 패리하면 훔친다
+    pr.reflectDamage = pr.damage;              // 되돌리면 같은 피해로 보스에게 간다
+    pr.damage = 1;                             // 보스 투사체 피해 = 하트 1
+    pr.fromHand = null;
+    pr.pierced = false;
+    pr.trail.length = 0;
+
+    this.cancelAttackSpawns();
+    this.attack = null;
+    this.pendingAttack = null;
+    this.stagger(B.DEFLECT_RECOVER, true);      // 되받은 직후 = 카운터 창
+
+    var tip = this.weaponTip();
+    FX.sparks(tip.x, tip.y, C.FX.BLOCK_SPARKS, C.COLORS.GOLD, { speed: 240, life: 0.32, size: 2.2 });
+    FX.pop('DEFLECT', this.x, V.FLOOR_Y - B.HEIGHT - 14, C.COLORS.GOLD, { size: 15 });
+    RAudio.parryBlock();
+    return true;
   };
 
   /* ---- 디버그 훅용 상태 --------------------------------------------------- */

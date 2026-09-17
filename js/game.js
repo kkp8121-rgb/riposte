@@ -21,9 +21,14 @@
       if (!raw) return fallback;
       var o = JSON.parse(raw);
       if (!o || typeof o !== 'object') return fallback;
+      var unlocked = clamp(o.unlocked || 1, 1, n);   // 보스 수는 테이블이 결정한다
+      var cleared = !!o.cleared;
+      // 챕터 2 추가(2026-09-17) 전에 챕터 1 을 완주한 세이브: 4보스 기준 cleared 였으면
+      // 5번째 보스부터 이어 간다 (스펙 §6 "Continue — CHAPTER II")
+      if (cleared && unlocked < n) { cleared = false; unlocked = Math.min(n, unlocked + 1); }
       return {
-        unlocked: clamp(o.unlocked || 1, 1, n),   // 보스 수는 테이블이 결정한다
-        cleared: !!o.cleared,
+        unlocked: unlocked,
+        cleared: cleared,
         ranks: o.ranks || {},
         bestTimes: o.bestTimes || {}
       };
@@ -74,6 +79,7 @@
     this.noSave = false;
     this.save = loadSave(this.defs.length);
     this.run = this.newRun();
+    this.endingHand = [];
 
     this.skillTable = this.buildSkillTable();
   }
@@ -211,6 +217,7 @@
       case 'INTRO':   this.stepIntro(dt); break;
       case 'FIGHT':   this.stepFight(dt); break;
       case 'VICTORY': this.stepVictory(dt); break;
+      case 'INTERLUDE': this.stepInterlude(dt); break;
       case 'DEFEAT':  this.stepDefeat(dt); break;
       case 'ENDING':  this.stepEnding(dt); break;
     }
@@ -241,17 +248,86 @@
   };
 
   Game.prototype.stepVictory = function (dt) {
-    if (Input.consume('confirm')) {
+    if (Input.consume('confirm')) { RAudio.ui(true); this.afterVictory(); }
+    if (Input.consume('back')) this.goTitle();
+  };
+
+  /** 승리 카드 다음 — Task 4 에서 STORY(after) 분기가 앞에 붙는다 */
+  Game.prototype.afterVictory = function () {
+    this.advanceAfterBoss();
+  };
+
+  /** 다음 보스 / 챕터 카드 / 엔딩 (스펙 §2.6) */
+  Game.prototype.advanceAfterBoss = function () {
+    if (this.bossIndex + 1 >= this.defs.length) {
+      if (!this.noSave) {                // 완주 — 타이틀 문구가 바뀐다
+        this.save.cleared = true;
+        this.persist();
+      }
+      this.endingHand = this.snapshotHand();
+      this.setScene('ENDING');
+      return;
+    }
+    if (this.isChapterEnd(this.bossIndex)) { this.setScene('INTERLUDE'); return; }
+    this.startBoss(this.bossIndex + 1);
+  };
+
+  Game.prototype.stepInterlude = function (dt) {
+    if (this.sceneT >= C.SCENE.INTERLUDE_MIN && Input.consume('confirm')) {
       RAudio.ui(true);
-      if (this.bossIndex + 1 >= this.defs.length) {
-        if (!this.noSave) {                // 완주 — 타이틀 문구가 바뀐다
-          this.save.cleared = true;
-          this.persist();
-        }
-        this.setScene('ENDING');
-      } else this.startBoss(this.bossIndex + 1);
+      this.startBoss(this.bossIndex + 1);
+      return;
     }
     if (Input.consume('back')) this.goTitle();
+  };
+
+  /* ---- 챕터 (config.CHAPTERS) -------------------------------------------- */
+
+  Game.prototype.chapterOf = function (index) {
+    var def = this.defs[index];
+    if (!def) return null;
+    for (var i = 0; i < C.CHAPTERS.length; i++) {
+      if (C.CHAPTERS[i].bosses.indexOf(def.key) >= 0) return C.CHAPTERS[i];
+    }
+    return null;
+  };
+
+  /** 이 보스가 챕터의 마지막이고 뒤에 보스가 더 있으면 true (엔딩 직전은 false) */
+  Game.prototype.isChapterEnd = function (index) {
+    var ch = this.chapterOf(index);
+    if (!ch) return false;
+    var last = ch.bosses[ch.bosses.length - 1] === this.defs[index].key;
+    return last && index + 1 < this.defs.length;
+  };
+
+  /** 챕터에 속한 이번 런의 보스 결과들 */
+  Game.prototype.chapterResults = function (ch) {
+    var out = [];
+    for (var i = 0; i < this.run.bosses.length; i++) {
+      var r = this.run.bosses[i];
+      if (ch.bosses.indexOf(r.key) >= 0) out.push(r);
+    }
+    return out;
+  };
+
+  Game.prototype.chapterRank = function (ch) {
+    var rs = this.chapterResults(ch);
+    if (!rs.length) return 'C';
+    var sum = 0;
+    for (var i = 0; i < rs.length; i++) sum += C.RANK.VALUE[rs[i].rank];
+    return C.RANK.LETTERS[clamp(Math.round(sum / rs.length) - 1, 0, 3)];
+  };
+
+  /** 엔딩 카드용 손패 스냅샷 — 3칸을 채워 "비어 가는" 연출이 항상 보이게 한다 */
+  Game.prototype.snapshotHand = function () {
+    var labels = [];
+    var h = this.player.hand;
+    for (var i = 0; i < h.length && labels.length < C.HAND.SIZE; i++) labels.push(h[i].label || h[i].id);
+    var keys = Object.keys(this.skillTable);
+    for (var k = 0; k < keys.length && labels.length < C.HAND.SIZE; k++) {
+      if (labels.indexOf(keys[k]) < 0) labels.push(keys[k]);
+    }
+    return labels;
   };
 
   Game.prototype.stepDefeat = function (dt) {
@@ -470,7 +546,7 @@
     }
 
     this.damagePlayer(a.damage, boss.x, a.def.push,
-      { label: a.def.label || a.id, tell: a.tell, kind: a.def.kind });
+      { label: a.def.label || a.id, tell: a.tell, kind: a.def.kind, plunder: !!a.def.plunder });
   };
 
   Game.prototype.onZoneStrike = function (zone) {
@@ -569,6 +645,17 @@
     this.hits++;
     if (src) this.lastHitBy = src;
 
+    // 약탈(스펙 §3.8): 이 보스는 피격마다 손패 맨 앞을 빼앗아 되돌려 쓴다. plunder 는 전부.
+    var b = this.boss;
+    if (b && !b.dead && b.def.stealOnHit && p.hand.length) {
+      var n = (src && src.plunder) ? p.hand.length : 1;
+      var taken = null;
+      for (var i = 0; i < n; i++) { taken = p.hand.shift(); b.loot.push(taken); }
+      FX.pop('TAKEN: ' + (taken.label || taken.id) + (n > 1 ? '  +' + (n - 1) : ''),
+        b.x, V.FLOOR_Y - C.BOSS.HEIGHT - 16, b.color, { size: 17, rise: 30 });
+      RAudio.steal();
+    }
+
     var away = (p.x >= fromX) ? 1 : -1;
     p.knock = away * (C.PLAYER.HURT_KNOCKBACK + (extraPush || 0)) * C.PLAYER.KNOCK_DECAY;
 
@@ -622,6 +709,11 @@
           }
         }
       } else if (pr.owner === 'player' && b && !b.dead) {
+        // 되받아치기(스펙 §3.7): 사거리에 들어온 첫 스텝에 한 번만 판정한다
+        if (!pr.deflectTried && Math.abs(pr.x - b.x) <= C.BOSS.DEFLECT_REACH) {
+          pr.deflectTried = true;
+          if (b.tryDeflect(pr)) continue;
+        }
         if (Math.abs(pr.x - b.x) <= C.BOSS.HALF_W + pr.r + 6) {
           pr.dead = true;
           this.resolveProjectileHitBoss(pr);
@@ -728,7 +820,7 @@
     this.run.hits += r.hits;
     this.run.perfects += r.perfects;
     this.run.ranks.push(r.rank);
-    this.run.bosses.push({ name: r.boss, time: r.time, hits: r.hits, perfects: r.perfects, rank: r.rank });
+    this.run.bosses.push({ key: r.key, name: r.boss, time: r.time, hits: r.hits, perfects: r.perfects, rank: r.rank });
 
     // 저장 — 진행도 + 보스별 최고 랭크 (?boss=N 판은 메모리 상태도 건드리지 않는다)
     if (!this.noSave) {
@@ -798,9 +890,14 @@
       zones.push({ x: z.x, w: z.w, tRemain: Math.max(0, z.t) });
     }
 
+    var loot = [];
+    if (b && b.loot) for (i = 0; i < b.loot.length; i++) loot.push(b.loot[i].id);
+    var ch = this.chapterOf(this.bossIndex);
+
     return {
       scene: this.scene,
       bossId: this.bossIndex + 1,
+      chapter: ch ? ch.id : 0,
       bossHp: b ? b.hp : 0,
       bossMaxHp: b ? b.maxHp : 0,
       phase: b ? b.phase : 1,
@@ -808,6 +905,7 @@
       playerX: p.x,
       bossX: b ? b.x : 0,
       hand: hand,
+      loot: loot,
       streak: p.streak,
       time: this.time,
       hits: this.hits,

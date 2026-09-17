@@ -241,6 +241,8 @@
     this.label = o.label || null;        // 패배 화면 "SLAIN BY ..." 용
     this.reflectDamage = o.reflectDamage || 0;
     this.shape = o.shape || 'arrow';     // 'arrow' | 'wave' | 'bolt'
+    this.rally = 0;                      // 되받아치기(deflect) 횟수 — 스펙 §3.7
+    this.deflectTried = false;           // 이번 왕복에서 deflect 판정을 이미 했는가
     this.dead = false;
     this.age = 0;
     this.trail = [];
@@ -261,6 +263,7 @@
     this.color = C.COLORS.PLAYER;
     this.damage = this.reflectDamage || this.damage;
     this.trail.length = 0;
+    this.deflectTried = false;           // 새 왕복 — 보스가 다시 되받을 수 있다
   };
 
   /* =========================================================================
