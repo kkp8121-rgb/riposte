@@ -3,8 +3,9 @@
  * README 용 스크린샷 3장을 헤드리스로 찍어 docs/media/ 에 저장한다.
  *
  *   1. title.png         — 타이틀 (실루엣 대치 + 금색 펄스)
- *   2. perfect-parry.png — VESPER 전, 퍼펙트 패리 스파크가 터진 순간
- *   3. mirror-phase2.png — MIRROR Phase II 진입
+ *   2. story.png         — STORY 콜드 오픈(VESPER before, 첫 줄)
+ *   3. perfect-parry.png — VESPER 전, 퍼펙트 패리 스파크가 터진 순간
+ *   4. mirror-phase2.png — MIRROR Phase II 진입
  *
  * 결정적인 순간을 잡기 위해 "페이지 안에서" 조건을 감지한 뒤 그 프레임에서
  * game.update / FX.update 를 정지시킨다(드로우는 계속 돈다). Node -> CDP 왕복이
@@ -29,7 +30,7 @@ const SEED = 7;
 const MAX_KB = 250;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/* --only=title|parry|mirror 로 한 장만 다시 찍을 수 있다 */
+/* --only=title|story|parry|mirror 로 한 장만 다시 찍을 수 있다 */
 const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').split('=')[1] || null;
 const want = (name) => !ONLY || ONLY === name;
 
@@ -99,7 +100,17 @@ async function newPage(browser, query) {
     await page.close();
   }
 
-  /* --- 2. 퍼펙트 패리 (VESPER) ------------------------------------------ */
+  /* --- 2. STORY 콜드 오픈 ------------------------------------------------ */
+  if (want('story')) {
+    const page = await newPage(browser, `?mute=1&seed=${SEED}`);
+    await page.keyboard.press('Enter'); // TITLE -> STORY (VESPER before, 첫 진입)
+    await sleep(1500);
+    sizes.push(await shot(page, 'story.png'));
+    errors.push(...page.__errors);
+    await page.close();
+  }
+
+  /* --- 3. 퍼펙트 패리 (VESPER) ------------------------------------------ */
   if (want('parry')) {
     const page = await newPage(browser, `?boss=1&mute=1&seed=${SEED}`);
     await until(page, () => window.__RIPOSTE.getState().scene === 'FIGHT', 8000);
@@ -119,7 +130,7 @@ async function newPage(browser, query) {
     await page.close();
   }
 
-  /* --- 3. MIRROR Phase II ------------------------------------------------ */
+  /* --- 4. MIRROR Phase II ------------------------------------------------ */
   if (want('mirror')) {
     const page = await newPage(browser, `?boss=4&mute=1&seed=${SEED}`);
     await until(page, () => window.__RIPOSTE.getState().scene === 'FIGHT', 8000);
@@ -147,7 +158,7 @@ async function newPage(browser, query) {
     console.log(`\nFAILED — ${over.length} shot(s) over ${MAX_KB} KB`);
     process.exit(1);
   }
-  console.log(`\nOK — 3 screenshots written to docs/media/ (all under ${MAX_KB} KB)`);
+  console.log(`\nOK — 4 screenshots written to docs/media/ (all under ${MAX_KB} KB)`);
   process.exit(0);
 })().catch((e) => {
   console.error('screenshot tool crashed:', e);

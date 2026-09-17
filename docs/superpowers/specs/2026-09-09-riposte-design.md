@@ -182,7 +182,7 @@
 - P1 패턴: `[thrust]`, `[feint-thrust]`, `[slash, thrust]`, `[arrow, close, slash]`, `[slam]`
 - P2 패턴: `[mirror ×hand.length]`, `[feint-slash, thrust]`, `[execution]`, `[arrow, arrow, slam]`
 
-### 3.5 LANTERN — 환술사 (HP 280, par 40s) — 챕터 2 · 색 읽기 (2026-09-17)
+### 3.5 LANTERN — 환술사 (HP 280, par 60s) — 챕터 2 · 색 읽기 (2026-09-17)
 
 실루엣 `blade`(기존 무기 재사용), 색 `#7dff9a`. 엔진 변경 0.
 
@@ -199,27 +199,27 @@
 
 ### 3.6 CHORUS — 쌍검 (HP 300, par 45s) — 챕터 2 · 연속 패리
 
-실루엣 `spear`(기존 무기 재사용), 색 `#4d9dff`. 엔진 변경: 상수 1개(`BOSS.MIN_VOLLEY_GAP`).
+실루엣 `spear`(기존 무기 재사용), 색 `#4d9dff`. 엔진 변경: 상수 1개(`BOSS.MIN_VOLLEY_GAP`) + 공격 정의 필드 `volley`.
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
-| twin | 금 ×2 (0.32s 간격) | 0.45 | 근접 2연타 = 스텝 `[twin, wait .32, twin]`. 각각 패리·훔침 가능 | TWIN (slash, 13) |
+| twin | 금 ×2 | 0.45 | `volley: { count: 2, interval: 0.35 }` — 근접 2연타. 각각 패리·훔침 가능 | TWIN (slash, 13) |
 | bolt | 금 (투사체, 속도 600) | 0.42 | 패리 시 반사 | BOLT (shot, 11) |
-| triad (P2) | 금 ×3 (0.30s 간격) | 0.50 | 근접 3연타 | TWIN |
+| triad (P2) | 금 ×3 | 0.50 | `volley: { count: 3, interval: 0.35 }` — 근접 3연타 | TWIN |
 | lance (P2) | **적** (charge 900) | 0.65 | Graven charge 재사용, wallStun 0.7 | — |
 
 - P1 패턴: `[twin]`, `[bolt]`, `[bolt, wait .35, twin]`, `[close, twin]`
 - P2 패턴: `[triad]`, `[lance]`, `[lance, triad]`, `[bolt, wait .3, bolt, close, twin]`
-- **근접 볼리 간격 하한 `BOSS.MIN_VOLLEY_GAP`(0.30s)**: `PARRY_PERFECT_WINDOW`(0.18) + `RECOVERY_ON_SUCCESS`(0.10) 보다 커야 두 번째 타격을 물리적으로 받을 수 있다. (SERAPH triple 의 0.22s 는 투사체라 도착 시차가 있어 성립.) 성공 시 단축 리커버리(§2.3)를 몸으로 익히는 보스.
+- **근접 연타(volley): active 뒤 recover 대신 재-windup**: `[atk, wait N, atk]`처럼 패턴 스텝을 나누면 공격 생명주기(windup→active→recover) 때문에 실제 타격 간격이 너무 벌어진다(recover 만 최소 0.4~0.6s). 그래서 `twin`/`triad`처럼 한 공격 정의 안에 `volley: { count, interval }`을 두고, `active` 직후 `recover` 대신 `interval`(0.35) 만큼의 windup(= 새 플래시)을 거쳐 다음 타격으로 넘어간다(재-windup). 하한 `BOSS.MIN_VOLLEY_GAP`(0.35): `PARRY_PERFECT_WINDOW`(0.18) + `RECOVERY_ON_SUCCESS`(0.10) 보다 커야 두 번째 타격을 물리적으로 받을 수 있다. (SERAPH triple 의 0.22s 는 투사체라 도착 시차가 있어 성립.) 성공 시 단축 리커버리(§2.3)를 몸으로 익히는 보스.
 
-### 3.7 BASTION — 수문장 (HP 340, par 50s) — 챕터 2 · 아머 + 되받아치기
+### 3.7 BASTION — 수문장 (HP 310, par 50s) — 챕터 2 · 아머 + 되받아치기
 
 실루엣 `hammer`(기존 재사용, 색으로 구분), 색 `#a8b8c8`, armor: true. 엔진 변경: **deflect** 신규.
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
-| ward | 금 | 0.80 | reach 170, slam 계열 | WARD (slam, 26) |
-| volley | 금 (지면 투사체, 속도 280) | 0.65 | 패리 시 반사. **반사되면 deflect 대상** | VOLLEY (shot, 16) |
+| ward | 금 | 0.80 | reach 170, slam 계열 | WARD (slam, 30) |
+| volley | 금 (지면 투사체, 속도 280) | 0.65 | 패리 시 반사. **반사되면 deflect 대상** | VOLLEY (shot, 20) |
 | bulwark (P2) | **적** (charge 880) | 0.70 | Graven charge 재사용 | — |
 
 - P1 패턴: `[ward]`, `[volley]`, `[volley, wait .4, ward]`, `[close, ward]`
@@ -227,7 +227,7 @@
 - **deflect(신규, `boss.js`)**: 플레이어 쪽에서 오는 투사체가 보스 `BOSS.DEFLECT_REACH`(120px) 안에 들어오고 보스가 idle/recover 상태이면 `DEFLECT_CHANCE`(P1 0.6 / P2 0.9)로 되받아친다. 랠리 3회째부터는 확률 1.0(`DEFLECT_FORCE_RALLY`). 되받은 투사체는 금 텔(패리 가능), 속도 ×`DEFLECT_SPEED_MULT`(1.25, 상한 `DEFLECT_SPEED_MAX` 720). 되받은 직후 보스는 `DEFLECT_RECOVER`(0.45s) 경직 = **카운터 창**. 속도 상한에 닿으면 플레이어가 블록으로 랠리를 끊게 유도된다.
 - 아머: Graven 규칙 계승(엠파워 리포스트만 interrupt). 가르침 — "반사만으로는 못 이긴다. 되받는 순간을 찔러라."
 
-### 3.8 AVARICE — 약탈자 (HP 400, par 60s) — 챕터 2 보스 · 빼앗김
+### 3.8 AVARICE — 약탈자 (HP 400, par 55s) — 챕터 2 보스 · 빼앗김
 
 실루엣 `mirror`(플레이어형), 색 `#ff2fa6`. 엔진 변경: **stealOnHit** 신규 + mirror 훅 재사용.
 
@@ -244,7 +244,7 @@
 - P2 패턴: `[mirror:'all']`, `[plunder]`, `[mirror:'loot', thrust]`, `[bolt, wait .3, bolt, wait .35, slam]`
 - 결말: 챕터 1 은 "내 손패가 비쳐 돌아온다", 챕터 2 는 "내 손패를 빼앗겨 맞는다". 스토리 결말(§10)과 맞물린다.
 
-**챕터 2 수치는 출발점이다.** 챕터 1 과 같은 3프로파일(완벽·숙련·평균) 봇 실측 후 par/HP 를 확정한다. HP 는 길이 레버가 아니다(handover 교훈 3) — 레버는 엠파워·카운터 배수 스택과 패턴 간격(gap).
+**챕터 2 수치는 확정값이다(2026-09-17)** — 챕터 1 과 같은 3프로파일(완벽·숙련·평균) 봇 실측으로 par/HP 를 확정했다. HP 는 길이 레버가 아니다(handover 교훈 3) — 레버는 엠파워·카운터 배수 스택과 패턴 간격(gap). 실측·레버 기록은 `docs/qa/balance-2026-09-17.md`.
 
 ---
 
@@ -296,7 +296,7 @@
 
 - 바닐라 JS + Canvas 2D, **classic `<script>` 태그** (ES module 금지 — `file://`에서도 열려야 함). 외부 CDN·폰트·이미지 0.
 - 논리 해상도 960×540, 창에 맞춰 letterbox 스케일, DPR 대응. 고정 스텝 업데이트(1/120s 누적기), 렌더는 rAF.
-- 결정론: 시드 RNG (`?seed=N`). 보스 패턴 선택만 RNG 사용.
+- 결정론: 시드 RNG (`?seed=N`). 보스 패턴 선택과 되받아치기(deflect) 확률만 RNG 사용.
 - 파일 구조:
 
 ```
@@ -362,5 +362,5 @@ README.md
 - **침묵행**: 본문이 `……` 뿐인 줄은 타자기 없이 즉시 표시, Enter 로 넘긴다.
 - **엔딩 연출**: AVARICE 정답 반응은 마지막 글자 전에 실루엣 알파를 0 으로(`DISSOLVE` 0.8s), 문장은 미완결로 남긴다. ENDING 카드 "NOTHING IS GIVEN. / EVERYTHING IS TAKEN. / NOTHING IS KEPT." 와 함께 손패 HUD 3칸이 `ENDING_SLOT_DROP`(0.4s) 간격으로 비어 간다.
 - **스킵**: `?boss=N` · `?story=0` · `startBoss(opts.noStory)`. 봇·스모크 하네스는 `?story=0` 로 진입하고, smoke 만 기본 경로로 STORY 통과를 1회 검증한다(§8-1).
-- **데이터**: `js/story.js` — `window.STORY[bossKey] = { before: [line…], after: [line…], choice?: { at, prompt, K: { text, ok, reply }, J: { text, ok, reply } } }`. line 은 문자열 또는 `{ text, hideSpeaker: true }`. 정의 테이블이므로 불변(§8-5). i18n 이 필요해지면 line 을 `{ ko, en }` 으로 바꾸고 조회 함수 하나만 추가한다.
+- **데이터**: `js/story.js` — `window.STORY[bossKey] = { before: [line…], after: [line…], choice?: { at, K: { text, ok, reply }, J: { text, ok, reply, dissolve? } } }`. `prompt` 필드는 없다 — 장면의 마지막 줄이 곧 질문이다. `dissolve: true` 는 정답 쪽에만 붙는(AVARICE `after` 선택지의 K) 연출 플래그. line 은 문자열 또는 `{ text, hideSpeaker: true }`. 정의 테이블이므로 불변(§8-5). i18n 이 필요해지면 line 을 `{ ko, en }` 으로 바꾸고 조회 함수 하나만 추가한다.
 - **줄기**(요약): 모든 보스의 기술도 빼앗은 것이고 원점은 "빌려줄 뿐 주지 않는" AVARICE. 챕터 1 = 되찾기(MIRROR), 챕터 2 = 빚의 주인. 결말 — 전부 쥔 채 "빈손" 이라 답하면 가져갈 것이 없어진다. 별명 "빈손" 은 VESPER 가 붙이고 SERAPH·LANTERN 을 거쳐 퍼진다.

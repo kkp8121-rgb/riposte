@@ -6,8 +6,9 @@
 
 A keyboard-only, side-view 1:1 boss-rush parry duel. You start with **zero attacks**. Every
 weapon in your hands was taken out of someone else's — a perfect parry doesn't just deflect
-a strike, it *steals* it. Four bosses, four stolen movesets, one mirror waiting at the end
-that gives all of it back.
+a strike, it *steals* it. Eight bosses across two chapters: a mirror waits at the end of
+chapter one to give everything back, and a taker waits at the end of chapter two to take it
+all first.
 
 ![Title screen](docs/media/title.png)
 
@@ -59,10 +60,28 @@ Rank per boss: **S** = no hits *and* under par · **A** = ≤1 hit *or* under pa
 
 | # | Boss | | What it teaches | What you take |
 |---|---|---|---|---|
+| — | **CHAPTER I — THE HAND** | | | |
 | 1 | **VESPER** | *The Duelist* | The parry itself. Opens slowly, flashes unmistakably. | `THRUST` `SLASH` |
 | 2 | **SERAPH** | *The Archer* | Reading projectiles and reflecting them. Keeps its distance. | `ARROW` `KICK` |
 | 3 | **GRAVEN** | *The Bulwark* | Armor — only an **empowered** riposte interrupts it. Dash *into* the charge. | `SLAM` `SHOCKWAVE` |
 | 4 | **MIRROR** | *Your Reflection* | Patience. It feints, and in Phase II it replays **your own hand** back at you. | everything |
+| — | **CHAPTER II — THE DEBT** | | | |
+| 5 | **LANTERN** | *The Illusionist* | Reading the colour, not the beat — gold and red twins share one rhythm. | `FLICKER` `SWEEP` |
+| 6 | **CHORUS** | *The Twin Blades* | Chained parries — two- and three-hit volleys. | `TWIN` `BOLT` |
+| 7 | **BASTION** | *The Warden* | Armor and deflection — it bats your reflected shots back; strike the recovery. | `WARD` `VOLLEY` |
+| 8 | **AVARICE** | *The Taker* | Every hit you take, it takes a card from your hand and uses it. | everything |
+
+---
+
+## Between fights
+
+Every boss opens and closes with a short scene — four lines or fewer, in Korean, first line
+always an unlabeled `???`. Three of them put a choice in your mouth: `K` to parry, `J` to
+riposte, and the wrong answer earns a `TAKEN.` card before the same choice comes back around.
+Retry a boss with `R` and the scene doesn't play again — only your first attempt sees it.
+`?story=0` skips every line if you just want the fights.
+
+![Story](docs/media/story.png)
 
 ---
 
@@ -76,7 +95,8 @@ Rank per boss: **S** = no hits *and* under par · **A** = ≤1 hit *or* under pa
   sub-path. All paths are relative.
 - Logical resolution 960×540, letterboxed to the window with device-pixel-ratio scaling.
   Fixed-step simulation at 1/120 s with an accumulator; rendering on `requestAnimationFrame`.
-- Deterministic: boss pattern selection is the only consumer of RNG, and it's seeded.
+- Deterministic: boss pattern selection and deflect chance are the only consumers of RNG,
+  and it's seeded.
 - Constants live in tables — `js/config.js` globally, `js/bosses/*.js` per boss. No magic
   numbers in the logic.
 
@@ -84,7 +104,8 @@ Rank per boss: **S** = no hits *and* under par · **A** = ≤1 hit *or* under pa
 
 | Param | Effect |
 |---|---|
-| `?boss=1..4` | Jump straight to a boss |
+| `?boss=1..8` | Jump straight to a boss (skips its story scene too) |
+| `?story=0` | Skip every story scene |
 | `?seed=N` | Seed the pattern RNG |
 | `?mute=1` | Start muted |
 | `?nofx=1` | Disable particles, rings, after-images and text pops. **Hit-stop, screen shake and slow-motion stay on** — they are part of the timing, not decoration, so judgement is identical with or without it |
@@ -103,15 +124,19 @@ That's it — double-click the file. No server needed.
 ### Tests
 
 ```
-node tests/smoke.mjs        # headless boot, title -> fight, 60s idle -> defeat, 0 page errors
-node tests/bot.mjs --all    # a reactive bot beats all four bosses; a passive bot loses
+npm install                 # playwright-core, once
+
+node tests/smoke.mjs        # headless boot, title -> story -> fight, 60s idle -> defeat, 0 page errors
+node tests/bot.mjs --all    # a reactive bot beats all eight bosses; a passive bot loses
 node tests/state.mjs        # boss definition tables stay byte-identical across a whole fight
 node tests/audio-smoke.mjs  # one keypress -> AudioContext running; every sound path callable
+node tests/story.mjs        # dialogue table rules: line/length limits, choice shape
 node tools/shots.mjs        # re-capture the README screenshots into docs/media/
 ```
 
-All of them use `playwright-core` with the bundled Chromium and drive the game through the
-debug hook `window.__RIPOSTE`. Test screenshots land in `tests/shots/`.
+All but `story.mjs` (a plain Node check of the dialogue table) use `playwright-core` with the
+bundled Chromium and drive the game through the debug hook `window.__RIPOSTE`. Test
+screenshots land in `tests/shots/`.
 
 ---
 
