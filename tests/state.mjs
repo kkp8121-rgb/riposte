@@ -33,10 +33,11 @@ function check(name, cond, detail = '') {
   else { console.log(`  FAIL  ${name}${detail ? '  ' + detail : ''}`); failures.push(name); }
 }
 
-/** 정의 테이블 스냅샷 — 함수는 JSON 에 안 실리므로 키 목록도 같이 찍는다 */
+/** 정의 테이블 스냅샷 — 함수는 JSON 에 안 실리므로 키 목록도 같이 찍는다. 대사 테이블도 불변이다. */
 const snapshot = () => JSON.stringify({
   defs: window.BOSSES,
-  shape: window.BOSSES.map((b) => Object.keys(b).sort().join(','))
+  shape: window.BOSSES.map((b) => Object.keys(b).sort().join(',')),
+  story: window.STORY
 });
 
 async function until(page, fn, timeoutMs) {
@@ -78,7 +79,17 @@ async function runBoss(browser, n) {
   console.log('RIPOSTE state test — boss definition tables must stay immutable');
   const browser = await chromium.launch({ headless: true });
 
-  for (const n of [1, 2, 3, 4]) {
+  const count = await (async () => {
+    const p = await browser.newPage();
+    await p.goto(pathToFileURL(join(ROOT, 'index.html')).href + '?mute=1', { waitUntil: 'load' });
+    await until(p, () => !!window.__RIPOSTE, 5000);
+    const n = await p.evaluate(() => window.BOSSES.length);
+    await p.close();
+    return n;
+  })();
+  check('8 bosses registered', count === 8, `(got ${count})`);
+
+  for (let n = 1; n <= count; n++) {
     const r = await runBoss(browser, n);
     check(`boss ${n}: fight reached an end scene`, r.ended, `(scene ${r.scene})`);
 
@@ -103,7 +114,7 @@ async function runBoss(browser, n) {
     console.log(`STATE FAILED (${failures.length}): ${failures.join(', ')}  [${secs}s]`);
     process.exit(1);
   }
-  console.log(`STATE PASSED — boss definitions immutable across all four fights  [${secs}s]`);
+  console.log(`STATE PASSED — boss & story definitions immutable across all ${count} fights  [${secs}s]`);
   process.exit(0);
 })().catch((e) => {
   console.error('state test crashed:', e);
