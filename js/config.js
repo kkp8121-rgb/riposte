@@ -50,8 +50,9 @@
     },
 
     FONT: {
-      UI: '"Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif',
-      TITLE: '"Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif',
+      /* 한글 대사(스펙 §10)를 위해 OS 한글 폰트를 폴백에 둔다 — 외부 폰트 로드는 없다 */
+      UI: '"Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Helvetica Neue", Helvetica, Arial, sans-serif',
+      TITLE: '"Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Helvetica Neue", Helvetica, Arial, sans-serif',
       MONO: 'ui-monospace, Consolas, "Courier New", monospace'
     },
 
@@ -103,7 +104,13 @@
       SLOT_W: 92,
       SLOT_H: 40,
       SLOT_GAP: 10,
-      BOTTOM_MARGIN: 18
+      BOTTOM_MARGIN: 18,
+      /* 약탈 보스(스펙 §3.8)가 빼앗아 간 손패 — 보스 HP 바 아래 작은 슬롯 */
+      LOOT_SLOT_W: 64,
+      LOOT_SLOT_H: 20,
+      LOOT_GAP: 6,
+      LOOT_Y: 56,
+      LOOT_LABEL: 'TAKEN'
     },
 
     COMBAT: {
@@ -146,7 +153,18 @@
       /* feint 2차 플래시 → 타격 간격은 그 공격의 "정상 windup" 과 같다.
          (고정 상수를 쓰면 배운 리듬과 어긋난다 — 스펙 §2.2) */
       FLASH_TIME: 0.16,
-      HURT_FLASH: 0.12
+      HURT_FLASH: 0.12,
+      /* 근접 연타(volley) — active 가 끝나면 recover 대신 이 간격의 짧은 windup 으로 되돌아가
+         새 플래시를 찍는다 (스펙 §3.6). MIN_WINDUP(0.34)·PERFECT_WINDOW+RECOVERY_ON_SUCCESS(0.28) 보다 커야 한다. */
+      MIN_VOLLEY_GAP: 0.35,
+      /* 되받아치기(deflect) — 스펙 §3.7. 플레이어 쪽 투사체가 이 거리 안이면 판정 */
+      DEFLECT_REACH: 120,
+      DEFLECT_CHANCE_P1: 0.6,
+      DEFLECT_CHANCE_P2: 0.9,
+      DEFLECT_FORCE_RALLY: 3,     // 랠리 3회째부터는 반드시 되받는다
+      DEFLECT_SPEED_MULT: 1.25,
+      DEFLECT_SPEED_MAX: 720,
+      DEFLECT_RECOVER: 0.45       // 되받은 직후 경직 = 카운터 창
     },
 
     /* ---- 텔 / 투사체 / 존 ------------------------------------------------ */
@@ -234,7 +252,8 @@
     /* ---- 화면 (스펙 §6) -------------------------------------------------- */
     SCENE: {
       INTRO_TIME: 1.2,
-      PHASE2_BANNER: 1.4
+      PHASE2_BANNER: 1.4,
+      INTERLUDE_MIN: 0.4        // 챕터 카드가 뜬 직후 Enter 를 받지 않는 시간 (연타 방지)
     },
 
     /* ---- 타이틀 연출 (플레이어 vs VESPER 실루엣 대치) --------------------- */
@@ -276,7 +295,8 @@
       STEAL_ARPEGGIO: [523.25, 659.25, 783.99], // C5 E5 G5
       STEAL_GAP_MS: 60,
       /* Phase 2 심박 킥 BPM (보스별) */
-      BPM: { vesper: 96, seraph: 104, graven: 84, mirror: 116 }
+      BPM: { vesper: 96, seraph: 104, graven: 84, mirror: 116,
+             lantern: 100, chorus: 120, bastion: 88, avarice: 124 }
     },
 
     /* ---- 저장 ------------------------------------------------------------ */
@@ -291,6 +311,45 @@
       DASH: 'SPACE  —  DASH THROUGH RED',
       Y: 132,
       PULSE_HZ: 2.4
+    },
+
+    /* ---- 챕터 (스펙 §3 공통) — 진행은 BOSSES 순서, 경계만 여기서 정한다 ------- */
+    CHAPTERS: [
+      { id: 1, name: 'CHAPTER I',  subtitle: 'THE HAND', bosses: ['vesper', 'seraph', 'graven', 'mirror'] },
+      { id: 2, name: 'CHAPTER II', subtitle: 'THE DEBT', bosses: ['lantern', 'chorus', 'bastion', 'avarice'] }
+    ],
+
+    /* ---- 스토리 (스펙 §10) ---------------------------------------------- */
+    STORY: {
+      CPS: 24,                 // 타자기 속도 (한글 글자/초)
+      SKIP_HOLD: 0.6,          // Enter 를 이만큼 누르고 있으면 장면 스킵
+      MAX_LINES: 4,
+      TAKEN_FLASH: 0.4,        // 오답 카드 붉은 비네트
+      ENDING_SLOT_DROP: 0.4,   // 엔딩에서 손패가 한 칸씩 비는 간격
+      DISSOLVE: 0.8,           // AVARICE 정답 반응 중 실루엣 소멸 시간
+      SCALE: 1.6,              // 대화 장면 실루엣 배율
+      PLAYER_X: 250,
+      BOSS_X: 710,
+      BOX_X: 90, BOX_Y: 386, BOX_W: 780, BOX_H: 124,
+      TEXT_X: 130, TEXT_Y: 448,
+      SPEAKER_Y: 412,
+      TEXT_SIZE: 19,
+      SPEAKER_SIZE: 12,
+      CHOICE_Y: 440, CHOICE_GAP: 28,
+      UNKNOWN_SPEAKER: '???',
+      TAKEN_TEXT: 'TAKEN.',
+      PROMPT_NEXT: 'ENTER',
+      PROMPT_SKIP: 'HOLD ENTER  —  SKIP',
+      VOICE_SPLIT: ' / '       // CHORUS 두 목소리 교대 구분자
+    },
+
+    /* ---- 엔딩 카드 (스펙 §10) ------------------------------------------- */
+    ENDING: {
+      LINES: ['NOTHING IS GIVEN.', 'EVERYTHING IS TAKEN.', 'NOTHING IS KEPT.'],
+      LINE_Y: [54, 84, 114],
+      ROWS_Y: 152,
+      ROW_H: 22,
+      SLOTS_Y: 438
     }
   };
 

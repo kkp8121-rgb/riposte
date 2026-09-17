@@ -19,7 +19,10 @@
     mirror:  { h: 76,  w: 15, head: 0.085, hood: false, weapon: 'none',   thick: 7 },
     rapier:  { h: 84,  w: 13, head: 0.078, hood: false, weapon: 'rapier', thick: 6 },
     bow:     { h: 84,  w: 16, head: 0.095, hood: true,  weapon: 'bow',    thick: 7 },
-    hammer:  { h: 98,  w: 27, head: 0.090, hood: false, weapon: 'hammer', thick: 12 }
+    hammer:  { h: 98,  w: 27, head: 0.090, hood: false, weapon: 'hammer', thick: 12 },
+    /* 챕터 2 (스펙 §3.5~3.6) — 무기 그리기(blade/spear)는 drawWeapon 에 이미 있다 */
+    blade:   { h: 84,  w: 14, head: 0.082, hood: false, weapon: 'blade',  thick: 6 },
+    spear:   { h: 86,  w: 14, head: 0.080, hood: true,  weapon: 'spear',  thick: 6 }
   };
 
   /* 포즈별 무기팔 각도(rad). 0 = 정면(facing 방향), 음수 = 위. */
