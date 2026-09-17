@@ -62,7 +62,7 @@
       2: [
         { name: 'triad',       steps: [{ atk: 'triad' }] },
         { name: 'lance',       steps: [{ atk: 'lance' }] },
-        { name: 'lance-triad', steps: [{ atk: 'lance' }, { atk: 'triad' }] },
+        { name: 'bolt-triad',  steps: [{ atk: 'bolt' }, { wait: 0.3 }, { atk: 'triad' }] },
         { name: 'bolt-bolt-twin', steps: [{ atk: 'bolt' }, { wait: 0.3 }, { atk: 'bolt' }, { move: 'close' }, { atk: 'twin' }] }
       ]
     }

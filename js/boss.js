@@ -700,14 +700,14 @@
         tRemain = Math.abs(wall - this.x) / a.def.charge.speed;
       }
       return {
-        id: a.id, tell: a.tell,
+        id: a.id, kind: a.def.kind, tell: a.tell,
         stage: (this.state === 'charging') ? 'active' : a.stage,
         tRemain: tRemain,
         hitAt: this.game.time + windupRemain + travel
       };
     }
 
-    return { id: a.id, tell: a.tell, stage: a.stage, tRemain: tRemain, hitAt: a.hitAt };
+    return { id: a.id, kind: a.def.kind, tell: a.tell, stage: a.stage, tRemain: tRemain, hitAt: a.hitAt };
   };
 
   global.Boss = Boss;

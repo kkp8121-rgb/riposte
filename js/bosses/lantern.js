@@ -14,7 +14,7 @@
     color: '#7dff9a',
     silhouette: 'blade',
     hp: 280,
-    par: 40,
+    par: 60,
     armor: false,
     spawnX: 660,
     droneHz: 61.74,            // B1

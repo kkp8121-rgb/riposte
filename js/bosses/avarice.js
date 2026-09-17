@@ -25,7 +25,7 @@
     color: '#ff2fa6',
     silhouette: 'mirror',
     hp: 400,
-    par: 60,
+    par: 55,
     armor: false,
     stealOnHit: true,
     spawnX: 680,

@@ -109,7 +109,8 @@ export function installBot(TUNE) {
   }
   function releaseAll() { for (const c in held) { delete held[c]; fire(c, false); } }
 
-  const stats = { parries: 0, dashes: 0, ripostes: 0, ticks: 0 };
+  const stats = { parries: 0, dashes: 0, ripostes: 0, ticks: 0, hitLog: [] };
+  let lastHp = null;
   let lastParry = -9, lastDash = -9, lastRiposte = -9, meleeStuckSince = null;
   let handSince = null;
 
@@ -121,6 +122,8 @@ export function installBot(TUNE) {
   function tick() {
     const s = R.getState();
     stats.ticks++;
+    if (lastHp !== null && s.playerHp < lastHp) { const hb = window.__RIPOSTE.game.lastHitBy; stats.hitLog.push((hb ? hb.label : '?') + '@p' + s.phase + '@' + s.time.toFixed(1)); }
+    lastHp = s.playerHp;
     if (s.scene !== 'FIGHT') { releaseAll(); return; }
 
     const now = s.time;
@@ -168,7 +171,7 @@ export function installBot(TUNE) {
 
     /* --- 이동 ------------------------------------------------------------ */
     // charge 는 안으로 파고들어 대시로 통과한다 (스펙 §2.4)
-    const charging = ca && ca.id === 'charge';
+    const charging = ca && ca.kind === 'charge';   // id 가 아니라 kind — 챕터 2 는 lance/bulwark 로 이름이 다르다
     const front = s.hand.length ? skills[s.hand[0]] : null;
     const reach = front ? front.reach : 0;
     const inReach = front ? (reach === Infinity || dist <= reach * TUNE.REACH_MARGIN) : false;
@@ -329,6 +332,8 @@ if (IS_MAIN) (async () => {
       `hits ${res.hits ?? '?'}  perfects ${res.perfects ?? '?'}  rank ${res.rank ?? '-'}` +
       (r.stats ? `   [parry ${r.stats.parries} dash ${r.stats.dashes} riposte ${r.stats.ripostes}]` : '')
     );
+    if (r.stats && r.stats.hitLog && r.stats.hitLog.length) log(`        hits: ${r.stats.hitLog.join(', ')}`);
+    if (!won && res.slainBy) log(`        slain by ${res.slainBy.label} (${res.slainBy.tell}/${res.slainBy.kind})`);
     if (r.errors && r.errors.length) {
       log(`        page errors (${r.errors.length}): ${r.errors.slice(0, 3).join(' | ')}`);
       fail.push(`boss ${n} page errors`);
