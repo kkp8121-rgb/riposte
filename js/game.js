@@ -368,7 +368,7 @@
       beat: beat, lines: lines, index: 0, shown: 0,
       choice: (s.choice && s.choice.at === beat) ? s.choice : null,
       choiceState: null, reply: null, replyShown: 0,
-      holdT: 0, takenT: 0, dissolveT: 0, bossAlpha: 1
+      holdT: 0, holdArmed: false, takenT: 0, dissolveT: 0, bossAlpha: 1
     };
     this.setScene('STORY');
   };
@@ -379,7 +379,9 @@
     if (!st) { this.finishStory(); return; }
 
     // 스킵: Esc 또는 Enter 길게. 선택지가 남아 있어도 스킵은 정답으로 간주한다.
-    if (Input.pressed('confirm')) st.holdT += dt; else st.holdT = 0;
+    // 이전 장면에서 누른 채 넘어온 Enter 는 세지 않는다 — 장면 안에서 새로 눌러 유지할 때만.
+    if (!Input.pressed('confirm')) st.holdArmed = true;
+    if (st.holdArmed && Input.pressed('confirm')) st.holdT += dt; else st.holdT = 0;
     if (Input.consume('back') || st.holdT >= S.SKIP_HOLD) { this.finishStory(); return; }
 
     if (st.choiceState === 'taken') {

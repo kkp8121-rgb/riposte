@@ -89,9 +89,15 @@ const state = () => window.__RIPOSTE.getState();
   await page.screenshot({ path: join(SHOTS, 'smoke-title.png') });
 
   // --- Enter -> STORY -> (Enter 연타, 선택지는 K) -> FIGHT -------------------
-  await page.keyboard.press('Enter');
+  // 타이틀에서 누른 Enter 를 놓지 않고 1초 유지 — 그 Enter 는 STORY 의 스킵 홀드로 세면 안 된다
+  await page.keyboard.down('Enter');
   const inStory = await waitFor(page, () => window.__RIPOSTE.getState().scene === 'STORY', 3000, 'STORY');
   check('Enter enters STORY (boss 1 dialogue) within 3s', inStory);
+  await sleep(1000);
+  const sHold = await page.evaluate(state);
+  await page.keyboard.up('Enter');
+  check('held-over Enter does not skip STORY', sHold.scene === 'STORY',
+    `(scene ${sHold.scene}, line ${sHold.story ? sHold.story.line : '-'})`);
 
   let presses = 0;
   for (; presses < 40; presses++) {
