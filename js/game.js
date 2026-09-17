@@ -124,6 +124,7 @@
   Game.prototype.goTitle = function () {
     this.setScene('TITLE');
     this.boss = null;
+    this.story = null;
     this.clearWorld();
     FX.reset();
   };
@@ -368,7 +369,7 @@
       beat: beat, lines: lines, index: 0, shown: 0,
       choice: (s.choice && s.choice.at === beat) ? s.choice : null,
       choiceState: null, reply: null, replyShown: 0,
-      holdT: 0, holdArmed: false, takenT: 0, dissolveT: 0, bossAlpha: 1
+      holdT: 0, holdArmed: false, dissolveT: 0, bossAlpha: 1
     };
     this.setScene('STORY');
   };
@@ -385,7 +386,6 @@
     if (Input.consume('back') || st.holdT >= S.SKIP_HOLD) { this.finishStory(); return; }
 
     if (st.choiceState === 'taken') {
-      st.takenT += dt;
       if (Input.consume('confirm')) { RAudio.ui(true); st.choiceState = 'pending'; st.reply = null; }
       return;
     }
@@ -396,7 +396,6 @@
       var opt = st.choice[key];
       st.reply = { key: key, text: opt.reply, ok: !!opt.ok, dissolve: !!opt.dissolve };
       st.replyShown = 0;
-      st.takenT = 0;
       if (opt.ok) { st.choiceState = 'reply'; RAudio.parryPerfect(); }
       else { st.choiceState = 'taken'; FX.flashTint(S.TAKEN_FLASH); RAudio.playerHit(); }
       return;

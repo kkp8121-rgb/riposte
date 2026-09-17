@@ -100,10 +100,28 @@ const state = () => window.__RIPOSTE.getState();
     `(scene ${sHold.scene}, line ${sHold.story ? sHold.story.line : '-'})`);
 
   let presses = 0;
+  let triedWrong = false;
   for (; presses < 40; presses++) {
     const s = await page.evaluate(state);
     if (s.scene === 'FIGHT' || s.scene === 'INTRO') break;
-    if (s.story && s.story.choice === 'pending') await page.keyboard.press('KeyK');
+    if (s.story && s.story.choice === 'pending') {
+      if (!triedWrong) {
+        // 첫 선택지에서는 일부러 오답(J)을 짚어 TAKEN 카드 → Enter 복귀 루프를 검증한다
+        triedWrong = true;
+        await page.keyboard.press('KeyJ');
+        await sleep(150);
+        const sTaken = await page.evaluate(state);
+        check('wrong answer shows TAKEN card', sTaken.story && sTaken.story.choice === 'taken',
+          `(choice ${sTaken.story ? sTaken.story.choice : '-'})`);
+        await page.keyboard.press('Enter');
+        await sleep(150);
+        const sPending = await page.evaluate(state);
+        check('Enter after TAKEN returns to the choice', sPending.story && sPending.story.choice === 'pending',
+          `(choice ${sPending.story ? sPending.story.choice : '-'})`);
+        continue;
+      }
+      await page.keyboard.press('KeyK');
+    }
     else await page.keyboard.press('Enter');
     await sleep(120);
   }

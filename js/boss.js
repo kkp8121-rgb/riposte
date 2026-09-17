@@ -670,10 +670,7 @@
     pr.pierced = false;
     pr.trail.length = 0;
 
-    this.cancelAttackSpawns();
-    this.attack = null;
-    this.pendingAttack = null;
-    this.stagger(B.DEFLECT_RECOVER, true);      // 되받은 직후 = 카운터 창
+    this.stagger(B.DEFLECT_RECOVER, true);      // 경직이 공격 취소까지 맡는다 — 되받은 직후 = 카운터 창
 
     var tip = this.weaponTip();
     FX.sparks(tip.x, tip.y, C.FX.BLOCK_SPARKS, C.COLORS.GOLD, { speed: 240, life: 0.32, size: 2.2 });

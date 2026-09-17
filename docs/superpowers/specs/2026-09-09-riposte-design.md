@@ -209,7 +209,7 @@
 | lance (P2) | **적** (charge 900) | 0.65 | Graven charge 재사용, wallStun 0.7 | — |
 
 - P1 패턴: `[twin]`, `[bolt]`, `[bolt, wait .35, twin]`, `[close, twin]`
-- P2 패턴: `[triad]`, `[lance]`, `[lance, triad]`, `[bolt, wait .3, bolt, close, twin]`
+- P2 패턴: `[triad]`, `[lance]`, `[bolt, wait .3, triad]`(bolt-triad), `[bolt, wait .3, bolt, close, twin]`(2026-09-17 밸런스 실측으로 P2 돌진 밀도 2/4→1/4 — docs/qa/balance-2026-09-17.md)
 - **근접 연타(volley): active 뒤 recover 대신 재-windup**: `[atk, wait N, atk]`처럼 패턴 스텝을 나누면 공격 생명주기(windup→active→recover) 때문에 실제 타격 간격이 너무 벌어진다(recover 만 최소 0.4~0.6s). 그래서 `twin`/`triad`처럼 한 공격 정의 안에 `volley: { count, interval }`을 두고, `active` 직후 `recover` 대신 `interval`(0.35) 만큼의 windup(= 새 플래시)을 거쳐 다음 타격으로 넘어간다(재-windup). 하한 `BOSS.MIN_VOLLEY_GAP`(0.35): `PARRY_PERFECT_WINDOW`(0.18) + `RECOVERY_ON_SUCCESS`(0.10) 보다 커야 두 번째 타격을 물리적으로 받을 수 있다. (SERAPH triple 의 0.22s 는 투사체라 도착 시차가 있어 성립.) 성공 시 단축 리커버리(§2.3)를 몸으로 익히는 보스.
 
 ### 3.7 BASTION — 수문장 (HP 310, par 50s) — 챕터 2 · 아머 + 되받아치기
@@ -223,7 +223,7 @@
 | bulwark (P2) | **적** (charge 880) | 0.70 | Graven charge 재사용 | — |
 
 - P1 패턴: `[ward]`, `[volley]`, `[volley, wait .4, ward]`, `[close, ward]`
-- P2 패턴: `[bulwark]`, `[volley, volley]`, `[bulwark, ward]`, `[ward, wait .35, ward]`
+- P2 패턴: `[bulwark]`, `[volley, volley]`, `[volley, wait .4, ward]`(salvo-ward), `[ward, wait .35, ward]`(2026-09-17 밸런스 실측으로 P2 돌진 밀도 2/4→1/4 — docs/qa/balance-2026-09-17.md)
 - **deflect(신규, `boss.js`)**: 플레이어 쪽에서 오는 투사체가 보스 `BOSS.DEFLECT_REACH`(120px) 안에 들어오고 보스가 idle/recover 상태이면 `DEFLECT_CHANCE`(P1 0.6 / P2 0.9)로 되받아친다. 랠리 3회째부터는 확률 1.0(`DEFLECT_FORCE_RALLY`). 되받은 투사체는 금 텔(패리 가능), 속도 ×`DEFLECT_SPEED_MULT`(1.25, 상한 `DEFLECT_SPEED_MAX` 720). 되받은 직후 보스는 `DEFLECT_RECOVER`(0.45s) 경직 = **카운터 창**. 속도 상한에 닿으면 플레이어가 블록으로 랠리를 끊게 유도된다.
 - 아머: Graven 규칙 계승(엠파워 리포스트만 interrupt). 가르침 — "반사만으로는 못 이긴다. 되받는 순간을 찔러라."
 
@@ -279,7 +279,7 @@
 | 드론(BGM) | 디튠 saw 2개 + lowpass + LFO. Phase 2에서 cutoff 상승 + 심박 킥 추가(보스별 BPM 테이블) |
 
 - 첫 사용자 입력에서 AudioContext resume. M 음소거. `?mute=1` 지원. AudioContext 없으면 no-op.
-- 챕터 2 보스는 `AUDIO.BPM` 에 4키 추가(lantern 100 / chorus 120 / bastion 88 / avarice 124)와 각 보스 파일의 `droneHz` 만 정한다. 신규 합성 없음. STORY 장면은 드론만 유지(효과음 없음).
+- 챕터 2 보스는 `AUDIO.BPM` 에 4키 추가(lantern 100 / chorus 120 / bastion 88 / avarice 124)와 각 보스 파일의 `droneHz` 만 정한다. 신규 합성 없음. STORY 장면은 드론 없음. 줄 넘김 `RAudio.ui`, 정답 `parryPerfect`, 오답 `playerHit` 효과음만 쓴다.
 
 ## 6. 화면 흐름
 
@@ -287,7 +287,7 @@
 4번째 `STORY`(after) → `INTERLUDE`(CHAPTER I 랭크·시간 카드) → (Enter) → 5번째 `STORY`(before) … → 8번째 `STORY`(after, 선택지) → `ENDING` → (Enter) → `TITLE`
 `FIGHT` → HP 0 → `DEFEAT` → (R) 같은 보스 `INTRO`(**STORY 없음**) / (Esc) `TITLE`
 
-- TITLE: 제목, 한 줄 Hook, 조작표, "PRESS ENTER". 저장 진행도가 있으면 "[Enter] Continue — CH.II BOSS 2 / [N] New Game". 챕터 1 을 이미 클리어한 기존 세이브(`cleared=true`)는 "[Enter] Continue — CHAPTER II" 로 이어 붙인다(마이그레이션 불필요 — `unlocked` 는 테이블 길이로 clamp).
+- TITLE: 제목, 한 줄 Hook, 조작표, "PRESS ENTER". 저장 진행도가 있으면 "[Enter] Continue — CH.II BOSS 2 / [N] New Game". 챕터 1 을 이미 클리어한 기존 세이브(`cleared=true`)는 "[Enter] Continue — CHAPTER II" 로 이어 붙인다(`loadSave` 가 4보스 시절 cleared 세이브를 `cleared=false, unlocked+1` 로 옮긴다 — 디스크에 쓰지 않는 멱등 마이그레이션. 8보스 완주 세이브는 건드리지 않는다).
 - STORY: 좌 플레이어 실루엣, 우 보스 실루엣(×1.6, idle), 하단 텍스트 박스. 첫 줄은 화자 라벨 `???`(콜드 오픈). 선택지는 `[K] …` / `[J] …` 두 줄. 오답 → `TAKEN.` 카드(붉은 비네트) → Enter → 선택지 복귀.
 - INTERLUDE: 챕터 제목, 4보스 랭크, 챕터 시간, "ENTER — CHAPTER II".
 - HUD: 상단 보스 이름·HP바(50% 마커), 좌상단 하트 5, 하단 중앙 손패 3슬롯(맨 앞 강조, 엠파워 시 금테), 우하단 스트릭 "×N", 우상단 타이머.
@@ -327,7 +327,7 @@ README.md
 - 디버그 훅: `window.__RIPOSTE = { game, CONFIG, getState(), setTimeScale(n) }`.
   `getState()` → `{ scene, bossId, bossHp, bossMaxHp, phase, playerHp, playerX, bossX, hand:[id], streak, time, hits, perfects, currentAttack: { id, tell, stage:'windup'|'active'|'recover', tRemain, hitAt } | null, projectiles:[{x,vx,tell}], zones:[{x,w,tRemain}] }`
 - URL 파라미터: `?boss=1..8` (해당 보스로 바로 — STORY 건너뜀, 저장 안 함), `?story=0`(대화 전부 건너뜀), `?seed=N`, `?mute=1`, `?nofx=1`, `?speed=0.5`(타임스케일).
-- `getState().scene` 에 `'STORY'`, `'INTERLUDE'` 추가. STORY 중에는 `story: { bossId, beat:'before'|'after', line, choice: null | 'pending' | 'taken' }` 를 함께 준다(테스트가 Enter 진행을 확인하는 데 쓴다).
+- `getState().scene` 에 `'STORY'`, `'INTERLUDE'` 추가. STORY 중에는 `story: { beat:'before'|'after', line, total, choice: null | 'pending' | 'taken' }` 를 함께 준다(`bossId` 는 최상위 필드; 테스트가 Enter 진행을 확인하는 데 쓴다).
 - 상수: `config.CHAPTERS`(§3 공통), `config.STORY = { CPS: 24, SKIP_HOLD: 0.6, MAX_LINES: 4, TAKEN_FLASH: 0.4, ENDING_SLOT_DROP: 0.4, DISSOLVE: 0.8 }`, `config.BOSS` 에 `MIN_VOLLEY_GAP` · `DEFLECT_*`(§3.6~3.7). `config.FONT.UI` 에 한글 폴백 `"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR"` 추가(외부 폰트 로드 없음).
 
 ## 8. 성공 기준 (검증 방법)

@@ -12,6 +12,9 @@
  * 검증: 각 보스의 전투를 끝까지 굴린 뒤 JSON.stringify(window.BOSSES) 가
  *       부팅 직후와 완전히 동일한지 본다.
  *
+ * STORY 장면 실행은 smoke 가 맡고, 여기서는 테이블 직렬화 불변만 본다
+ * (`?boss=N` 진입은 noStory 라 STORY 코드 자체가 실행되지 않는다 — 설계).
+ *
  *   node tests/state.mjs
  * ========================================================================== */
 import { chromium } from 'playwright-core';
@@ -63,6 +66,12 @@ async function runBoss(browser, n) {
   const before = await page.evaluate(snapshot);
   await page.evaluate((s) => window.__RIPOSTE.setTimeScale(s), SPEED);
 
+  // 손패를 심어 두면 약탈 보스(AVARICE)의 loot 큐와 {mirror:'loot'} 가 실데이터로 돈다 — 그래야 뒤의 불변 비교가 의미를 갖는다
+  await page.evaluate(() => {
+    const g = window.__RIPOSTE.game;
+    Object.keys(g.skillTable).slice(0, 3).forEach((k) => g.player.pushHand(g.skillTable[k]));
+  });
+
   // 무입력으로 전투를 끝까지 굴린다 (approach / 패턴 실행기를 충분히 돌린다)
   const ended = await until(page,
     () => ['DEFEAT', 'VICTORY', 'ENDING'].indexOf(window.__RIPOSTE.getState().scene) >= 0,
@@ -101,7 +110,7 @@ async function runBoss(browser, n) {
       detail = `\n        before: ...${r.before.slice(Math.max(0, i - 70), i + 70)}` +
                `\n        after : ...${r.after.slice(Math.max(0, i - 70), i + 70)}`;
     }
-    check(`boss ${n}: window.BOSSES unchanged after a full fight`, r.before === r.after, detail);
+    check(`boss ${n}: window.BOSSES / window.STORY unchanged after a full fight`, r.before === r.after, detail);
     check(`boss ${n}: zero page/console errors`, r.errors.length === 0,
       r.errors.length ? r.errors.slice(0, 3).join(' | ') : '');
   }
