@@ -16,11 +16,11 @@
 - 주제(자체 선정): **"빼앗은 것만이 내 것이다" (Nothing is given, everything is taken)**
   - 규칙: 플레이어는 자기 공격이 0개. 모든 공격 수단은 보스의 공격을 **퍼펙트 패리**해서 훔친다.
   - 승패: 보스를 쓰러뜨리려면 반드시 먼저 보스의 공격을 받아내야 한다 → 공격과 방어가 한 동작.
-  - 진행: 보스마다 다른 공격을 훔치며, 마지막 보스는 플레이어가 훔친 기술을 그대로 되돌려 쓴다(거울).
+  - 진행: 보스마다 다른 공격을 훔친다. 챕터 1 의 마지막 보스는 훔친 기술을 그대로 되돌려 쓰고(거울), 챕터 2 의 마지막 보스는 손패를 빼앗아 되돌려 쓴다(약탈자). (2026-09-17 챕터 2 확장)
 - 장르: 사이드뷰 1:1 보스러시 액션 (패리 중심 듀얼). 점프 없음, 1차원 레인.
 - 입력: **키보드 전용**. 마우스 미사용.
 - 플레이어 판타지: "상대의 기술로 상대를 꺾는 무결점의 카운터 파이터".
-- 1회 플레이: 보스 4종 × 15~40초(숙련 기준, 재도전 포함 시 5~10분). 보스 단위 즉시 재시작. par는 숙련 인간형 봇 실측(15~24초)의 약 2배로 설정.
+- 1회 플레이: 보스 8종(챕터 2개 × 4) × 15~60초(숙련 기준, 재도전 포함 시 10~20분). 보스 단위 즉시 재시작. par는 숙련 인간형 봇 실측의 약 2배로 설정(챕터 1 실측 15~24초 · 챕터 2 는 구현 후 실측).
 
 ---
 
@@ -112,7 +112,7 @@
 - 보스 HP는 보스별 테이블. HP 50% 이하 시 **Phase 2** 진입(1.0s 포효, 무적, 화면 플래시, windup ×0.8, 신규 패턴 해금).
 - 보스 HP 0 → 슬로모 0.25× 1.4s + 줌인 → **VICTORY 카드**(시간, 피격, 퍼펙트 수, 랭크) → Enter로 다음 보스.
 - 플레이어 HP 0 → 슬로모 → **DEFEAT** ("R: 재도전", "Esc: 타이틀").
-- 4번째 보스 격파 → **ENDING** (총 시간, 총 피격, 총 퍼펙트, 종합 랭크). localStorage에 보스별 최고 랭크·진행도 저장.
+- 4번째 보스(챕터 1 마지막) 격파 → **INTERLUDE** (챕터 I 랭크·시간 카드) → Enter → 5번째 보스 STORY/INTRO. 8번째 보스 격파 → **ENDING** (총 시간, 총 피격, 총 퍼펙트, 종합 랭크). localStorage에 보스별 최고 랭크·진행도 저장. 챕터 경계는 `config.CHAPTERS` 테이블이 정한다(§3 공통).
 
 ### 2.7 랭크
 
@@ -123,13 +123,15 @@
 | B | 피격 ≤ 3 |
 | C | 그 외 |
 
-종합 랭크 = 보스 랭크 평균(S=4, A=3, B=2, C=1 → 반올림).
+챕터 랭크 = 그 챕터 4보스 랭크 평균, 종합 랭크 = 8보스 랭크 평균(S=4, A=3, B=2, C=1 → 반올림).
 
 ---
 
-## 3. 보스 4종 (모두 데이터 테이블로 정의)
+## 3. 보스 8종 — 챕터 2개 (모두 데이터 테이블로 정의)
 
 공통: 아레나 논리 해상도 960×540, 바닥 y=440, 플레이어 x∈[60, 900]. 보스는 선호 거리를 유지하려 이동.
+
+챕터(2026-09-17 확장): `config.CHAPTERS = [{ id: 1, name: 'CHAPTER I — THE HAND', bosses: ['vesper','seraph','graven','mirror'] }, { id: 2, name: 'CHAPTER II — THE DEBT', bosses: ['lantern','chorus','bastion','avarice'] }]`. 진행은 지금처럼 `window.BOSSES` 순서를 따르고, 챕터 마지막 보스 격파 시 INTERLUDE 카드가 끼어든다. 챕터 선택 화면은 만들지 않는다(`?boss=5..8` 로 충분). 챕터 1 이 "동사를 배운다"(패리→반사→강화→인내)면 챕터 2 는 "상대가 나를 안다" — 같은 동사를 상대가 역이용한다. 설계 근거·대안 비교는 `2026-09-17-riposte-chapter2-proposal.md`.
 
 공통 하한: **windup 은 배수(P2 ×0.8)를 먹여도 `BOSS.MIN_WINDUP`(0.34s) 아래로 내려가지 않는다** — 플래시를 보고 반응할 수 있는 최소 시간을 보장한다. 돌진(charge)은 진행 방향 벽까지 `BOSS.MIN_CHARGE_RUN`(260px)이 안 나오면 그 스텝을 건너뛴다(시작하자마자 자기 경직으로 끝나는 무의미한 돌진 방지).
 
@@ -171,7 +173,7 @@
 
 - 아머: 일반 리포스트에 flinch/interrupt 없음. 엠파워(스트릭 ≥3) 리포스트만 interrupt. 벽 충돌 경직 중에는 모든 리포스트가 카운터 판정.
 
-### 3.4 MIRROR — 거울 (HP 320, par 50s) — 최종
+### 3.4 MIRROR — 거울 (HP 320, par 50s) — 챕터 1 최종
 
 - 실루엣 = 플레이어와 동일(백색). 앞선 보스들의 thrust / slash / arrow / slam 을 windup ×0.85로 사용.
 - **feint**: 금색 플래시 → (가짜) windup → 무기가 `FEINT_HOLD`(0.45s) 동안 멈춤 → **두 번째 플래시** → 그 공격의 **정상 windup** → 실제 타격. 즉 2차 플래시부터 타격까지의 간격은 그 공격의 평소 리듬과 정확히 같다(§2.2의 약속을 페인트도 지킨다). 배운 박자대로 1차 플래시에 패리하면 허공을 치고(무피해·무보상), 2차 플래시를 기다린 사람만 받아낸다 — 인내를 가르친다.
@@ -179,6 +181,70 @@
 - **execution** (적): 0.95s windup 후 reach 240 잡기. 대시로만 회피. 피해 2.
 - P1 패턴: `[thrust]`, `[feint-thrust]`, `[slash, thrust]`, `[arrow, close, slash]`, `[slam]`
 - P2 패턴: `[mirror ×hand.length]`, `[feint-slash, thrust]`, `[execution]`, `[arrow, arrow, slam]`
+
+### 3.5 LANTERN — 환술사 (HP 280, par 40s) — 챕터 2 · 색 읽기 (2026-09-17)
+
+실루엣 `blade`(기존 무기 재사용), 색 `#7dff9a`. 엔진 변경 0.
+
+| 공격 | 텔 | windup | 비고 | 훔친 기술 |
+|---|---|---|---|---|
+| flicker | 금 | 0.55 | reach 160, lunge 계열 | FLICKER (lunge, 18) |
+| flicker-red | **적** | 0.55 | **flicker 와 동일 박자·리치.** 색만 다르다 | — |
+| sweep | 금 | 0.48 | reach 130 | SWEEP (slash, 15) |
+| sweep-red (P2) | **적** | 0.48 | sweep 와 동일 박자 | — |
+
+- P1 패턴: `[flicker]`, `[flicker-red]`, `[sweep, wait .3, flicker]`, `[close, sweep]`
+- P2 패턴: `[flicker, flicker-red]`, `[sweep-red, flicker]`, `[feint-flicker]`, `[back, flicker-red]`
+- §2.2 의 약속(플래시→타격 일정)은 지킨다. 리듬 암기가 통하지 않고 **색이 정보의 전부**가 되는 첫 보스.
+
+### 3.6 CHORUS — 쌍검 (HP 300, par 45s) — 챕터 2 · 연속 패리
+
+실루엣 `spear`(기존 무기 재사용), 색 `#4d9dff`. 엔진 변경: 상수 1개(`BOSS.MIN_VOLLEY_GAP`).
+
+| 공격 | 텔 | windup | 비고 | 훔친 기술 |
+|---|---|---|---|---|
+| twin | 금 ×2 (0.32s 간격) | 0.45 | 근접 2연타 = 스텝 `[twin, wait .32, twin]`. 각각 패리·훔침 가능 | TWIN (slash, 13) |
+| bolt | 금 (투사체, 속도 600) | 0.42 | 패리 시 반사 | BOLT (shot, 11) |
+| triad (P2) | 금 ×3 (0.30s 간격) | 0.50 | 근접 3연타 | TWIN |
+| lance (P2) | **적** (charge 900) | 0.65 | Graven charge 재사용, wallStun 0.7 | — |
+
+- P1 패턴: `[twin]`, `[bolt]`, `[bolt, wait .35, twin]`, `[close, twin]`
+- P2 패턴: `[triad]`, `[lance]`, `[lance, triad]`, `[bolt, wait .3, bolt, close, twin]`
+- **근접 볼리 간격 하한 `BOSS.MIN_VOLLEY_GAP`(0.30s)**: `PARRY_PERFECT_WINDOW`(0.18) + `RECOVERY_ON_SUCCESS`(0.10) 보다 커야 두 번째 타격을 물리적으로 받을 수 있다. (SERAPH triple 의 0.22s 는 투사체라 도착 시차가 있어 성립.) 성공 시 단축 리커버리(§2.3)를 몸으로 익히는 보스.
+
+### 3.7 BASTION — 수문장 (HP 340, par 50s) — 챕터 2 · 아머 + 되받아치기
+
+실루엣 `hammer`(기존 재사용, 색으로 구분), 색 `#a8b8c8`, armor: true. 엔진 변경: **deflect** 신규.
+
+| 공격 | 텔 | windup | 비고 | 훔친 기술 |
+|---|---|---|---|---|
+| ward | 금 | 0.80 | reach 170, slam 계열 | WARD (slam, 26) |
+| volley | 금 (지면 투사체, 속도 280) | 0.65 | 패리 시 반사. **반사되면 deflect 대상** | VOLLEY (shot, 16) |
+| bulwark (P2) | **적** (charge 880) | 0.70 | Graven charge 재사용 | — |
+
+- P1 패턴: `[ward]`, `[volley]`, `[volley, wait .4, ward]`, `[close, ward]`
+- P2 패턴: `[bulwark]`, `[volley, volley]`, `[bulwark, ward]`, `[ward, wait .35, ward]`
+- **deflect(신규, `boss.js`)**: 플레이어 쪽에서 오는 투사체가 보스 `BOSS.DEFLECT_REACH`(120px) 안에 들어오고 보스가 idle/recover 상태이면 `DEFLECT_CHANCE`(P1 0.6 / P2 0.9)로 되받아친다. 랠리 3회째부터는 확률 1.0(`DEFLECT_FORCE_RALLY`). 되받은 투사체는 금 텔(패리 가능), 속도 ×`DEFLECT_SPEED_MULT`(1.25, 상한 `DEFLECT_SPEED_MAX` 720). 되받은 직후 보스는 `DEFLECT_RECOVER`(0.45s) 경직 = **카운터 창**. 속도 상한에 닿으면 플레이어가 블록으로 랠리를 끊게 유도된다.
+- 아머: Graven 규칙 계승(엠파워 리포스트만 interrupt). 가르침 — "반사만으로는 못 이긴다. 되받는 순간을 찔러라."
+
+### 3.8 AVARICE — 약탈자 (HP 400, par 60s) — 챕터 2 보스 · 빼앗김
+
+실루엣 `mirror`(플레이어형), 색 `#ff2fa6`. 엔진 변경: **stealOnHit** 신규 + mirror 훅 재사용.
+
+- Mirror 세트(thrust / slash / arrow / slam)를 windup ×0.80 으로 계승하고, 챕터 2 기술(flicker / bolt / ward)도 ×0.80 으로 되돌린다. `mirrorMap` 확장: FLICKER→flicker, SWEEP→slash, TWIN→slash, BOLT→bolt, WARD→ward, VOLLEY→bolt.
+
+| 공격 | 텔 | windup | 비고 | 훔친 기술 |
+|---|---|---|---|---|
+| (Mirror 세트 + flicker/bolt/ward) | 금 | ×0.80 | 위 계승 | 각 원본과 동일 |
+| plunder (P2) | **적** (잡기 reach 230) | 0.95 | 피해 1 + **손패 전부 강탈**(loot 로 이동). 대시로만 회피 | — |
+
+- **stealOnHit(신규, `game.js` 피격 처리 + `boss.js` mirror 스텝)**: 보스 정의에 `stealOnHit: true` 가 있으면 플레이어 피격 시 `hand.shift()` 한 장이 **보스 인스턴스의 `loot` 큐**로 이동한다. 스텝 `{ mirror: 'loot' }` 는 loot 를 순서대로 사용(비면 `fallbackAttack` thrust). `loot` 는 정의 테이블(`def`)이 아니라 인스턴스에만 둔다 — `tests/state.mjs` 불변 검사 대상(handover 교훈 1).
+- 되찾기 = 그 공격을 다시 퍼펙트 패리(기존 훔치기 규칙 그대로, 새 규칙 0). HUD: 보스 HP 바 아래 loot 슬롯("TAKEN: THRUST").
+- P1 패턴: `[thrust]`, `[mirror:'loot']`, `[feint-flicker]`, `[arrow, close, slash]`, `[ward]`
+- P2 패턴: `[mirror:'all']`, `[plunder]`, `[mirror:'loot', thrust]`, `[bolt, wait .3, bolt, wait .35, slam]`
+- 결말: 챕터 1 은 "내 손패가 비쳐 돌아온다", 챕터 2 는 "내 손패를 빼앗겨 맞는다". 스토리 결말(§10)과 맞물린다.
+
+**챕터 2 수치는 출발점이다.** 챕터 1 과 같은 3프로파일(완벽·숙련·평균) 봇 실측 후 par/HP 를 확정한다. HP 는 길이 레버가 아니다(handover 교훈 3) — 레버는 엠파워·카운터 배수 스택과 패턴 간격(gap).
 
 ---
 
@@ -196,7 +262,7 @@
 
 - 캐릭터는 스프라이트 없이 **벡터 실루엣 + 절차 애니메이션**(이동 기울기, 호흡 바운스, 무기 호 궤적 글로우).
 - 아레나: 어두운 배경 `#0b0d14`, 바닥선 `#1a1f2e`, 원거리 기둥 패럴랙스 2층, 바닥 반사 그라디언트.
-- 색: 플레이어 `#5ee6ff`, Vesper `#ff4d6d`, Seraph `#b78cff`, Graven `#ffb347`, Mirror `#ffffff`, 금 텔 `#ffd166`, 적 텔 `#ff3b3b`.
+- 색: 플레이어 `#5ee6ff`, Vesper `#ff4d6d`, Seraph `#b78cff`, Graven `#ffb347`, Mirror `#ffffff`, 금 텔 `#ffd166`, 적 텔 `#ff3b3b`. 챕터 2 — Lantern `#7dff9a`, Chorus `#4d9dff`, Bastion `#a8b8c8`, Avarice `#ff2fa6`.
 
 ## 5. 오디오 (WebAudio 합성, 외부 파일 0)
 
@@ -213,13 +279,17 @@
 | 드론(BGM) | 디튠 saw 2개 + lowpass + LFO. Phase 2에서 cutoff 상승 + 심박 킥 추가(보스별 BPM 테이블) |
 
 - 첫 사용자 입력에서 AudioContext resume. M 음소거. `?mute=1` 지원. AudioContext 없으면 no-op.
+- 챕터 2 보스는 `AUDIO.BPM` 에 4키 추가(lantern 100 / chorus 120 / bastion 88 / avarice 124)와 각 보스 파일의 `droneHz` 만 정한다. 신규 합성 없음. STORY 장면은 드론만 유지(효과음 없음).
 
 ## 6. 화면 흐름
 
-`TITLE` → (Enter) → `INTRO`(보스 이름 배너 1.2s) → `FIGHT` → `VICTORY`(카드) → (Enter) → 다음 `INTRO` … → `ENDING` → (Enter) → `TITLE`
-`FIGHT` → HP 0 → `DEFEAT` → (R) 같은 보스 `INTRO` / (Esc) `TITLE`
+`TITLE` → (Enter) → `STORY`(before, §10) → `INTRO`(보스 이름 배너 1.2s) → `FIGHT` → `VICTORY`(카드) → (Enter) → `STORY`(after) → 다음 `STORY`(before) → `INTRO` …
+4번째 `STORY`(after) → `INTERLUDE`(CHAPTER I 랭크·시간 카드) → (Enter) → 5번째 `STORY`(before) … → 8번째 `STORY`(after, 선택지) → `ENDING` → (Enter) → `TITLE`
+`FIGHT` → HP 0 → `DEFEAT` → (R) 같은 보스 `INTRO`(**STORY 없음**) / (Esc) `TITLE`
 
-- TITLE: 제목, 한 줄 Hook, 조작표, "PRESS ENTER". 저장 진행도가 있으면 "[Enter] Continue — Boss N / [N] New Game".
+- TITLE: 제목, 한 줄 Hook, 조작표, "PRESS ENTER". 저장 진행도가 있으면 "[Enter] Continue — CH.II BOSS 2 / [N] New Game". 챕터 1 을 이미 클리어한 기존 세이브(`cleared=true`)는 "[Enter] Continue — CHAPTER II" 로 이어 붙인다(마이그레이션 불필요 — `unlocked` 는 테이블 길이로 clamp).
+- STORY: 좌 플레이어 실루엣, 우 보스 실루엣(×1.6, idle), 하단 텍스트 박스. 첫 줄은 화자 라벨 `???`(콜드 오픈). 선택지는 `[K] …` / `[J] …` 두 줄. 오답 → `TAKEN.` 카드(붉은 비네트) → Enter → 선택지 복귀.
+- INTERLUDE: 챕터 제목, 4보스 랭크, 챕터 시간, "ENTER — CHAPTER II".
 - HUD: 상단 보스 이름·HP바(50% 마커), 좌상단 하트 5, 하단 중앙 손패 3슬롯(맨 앞 강조, 엠파워 시 금테), 우하단 스트릭 "×N", 우상단 타이머.
 
 ## 7. 기술
@@ -237,15 +307,18 @@ js/audio.js           window.RAudio (합성)
 js/fx.js              파티클·흔들림·히트스톱·플래시·슬로모·텍스트 팝
 js/input.js           키 상태 / justPressed / 리매핑 테이블
 js/entities.js        Player, Projectile, Zone
-js/boss.js            Boss 베이스: 패턴 실행기, 공격 생명주기(windup→active→recover), feint/charge/zone/projectile/armor/mirror 지원
-js/bosses/vesper.js  seraph.js  graven.js  mirror.js   — 데이터 정의 + 훅, window.BOSSES 등록
+js/boss.js            Boss 베이스: 패턴 실행기, 공격 생명주기(windup→active→recover), feint/charge/zone/projectile/armor/mirror 지원 (+ deflect, mirror:'loot' — 2026-09-17)
+js/bosses/vesper.js  seraph.js  graven.js  mirror.js   — 챕터 1 데이터 정의 + 훅, window.BOSSES 등록
+js/bosses/lantern.js chorus.js  bastion.js avarice.js  — 챕터 2 (2026-09-17). 로딩 순서 = 진행 순서
+js/story.js           대사 테이블 window.STORY (보스 key → before/after/choice). 정본: 2026-09-17-riposte-story-bible.md
 js/render.js          아레나·캐릭터·텔·투사체 드로잉
-js/ui.js              HUD·화면(타이틀/인트로/승리/패배/엔딩)
-js/game.js            상태 머신·업데이트·판정·점수·저장
+js/ui.js              HUD·화면(타이틀/인트로/승리/패배/엔딩 + 스토리 박스/TAKEN 카드/인터루드)
+js/game.js            상태 머신·업데이트·판정·점수·저장 (+ STORY/INTERLUDE 장면, stealOnHit)
 js/main.js            부트·리사이즈·루프·디버그 훅
-tests/smoke.mjs       playwright-core 헤드리스: 콘솔 에러 0, 타이틀→FIGHT 진입, 스크린샷
-tests/bot.mjs         반응형 봇: 텔을 읽고 패리/대시/리포스트 → 각 보스 승리 가능 검증 + 무입력 봇은 패배 검증
-tests/state.mjs       보스 정의 테이블 불변 검증 (전투 전후 window.BOSSES 동일)
+tests/smoke.mjs       playwright-core 헤드리스: 콘솔 에러 0, 타이틀→STORY→FIGHT 진입, 스크린샷
+tests/bot.mjs         반응형 봇: 텔을 읽고 패리/대시/리포스트 → 각 보스 승리 가능 검증 + 무입력 봇은 패배 검증 (?story=0 로 진입)
+tests/state.mjs       정의 테이블 불변 검증 (전투 전후 window.BOSSES · window.STORY 동일)
+tests/story.mjs       대사 테이블 검사: 한 장면 ≤4줄, 느낌표 0, 보스별 전속 어미 교차 0 (바이블 §6.9 스크립트 이식)
 tests/audio-smoke.mjs 오디오: 제스처 후 AudioContext running + 전 사운드 경로 호출 무예외
 tools/shots.mjs       README 용 스크린샷 3장 → docs/media/
 README.md
@@ -253,19 +326,41 @@ README.md
 
 - 디버그 훅: `window.__RIPOSTE = { game, CONFIG, getState(), setTimeScale(n) }`.
   `getState()` → `{ scene, bossId, bossHp, bossMaxHp, phase, playerHp, playerX, bossX, hand:[id], streak, time, hits, perfects, currentAttack: { id, tell, stage:'windup'|'active'|'recover', tRemain, hitAt } | null, projectiles:[{x,vx,tell}], zones:[{x,w,tRemain}] }`
-- URL 파라미터: `?boss=1..4` (해당 보스로 바로), `?seed=N`, `?mute=1`, `?nofx=1`, `?speed=0.5`(타임스케일).
+- URL 파라미터: `?boss=1..8` (해당 보스로 바로 — STORY 건너뜀, 저장 안 함), `?story=0`(대화 전부 건너뜀), `?seed=N`, `?mute=1`, `?nofx=1`, `?speed=0.5`(타임스케일).
+- `getState().scene` 에 `'STORY'`, `'INTERLUDE'` 추가. STORY 중에는 `story: { bossId, beat:'before'|'after', line, choice: null | 'pending' | 'taken' }` 를 함께 준다(테스트가 Enter 진행을 확인하는 데 쓴다).
+- 상수: `config.CHAPTERS`(§3 공통), `config.STORY = { CPS: 24, SKIP_HOLD: 0.6, MAX_LINES: 4, TAKEN_FLASH: 0.4, ENDING_SLOT_DROP: 0.4, DISSOLVE: 0.8 }`, `config.BOSS` 에 `MIN_VOLLEY_GAP` · `DEFLECT_*`(§3.6~3.7). `config.FONT.UI` 에 한글 폴백 `"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR"` 추가(외부 폰트 로드 없음).
 
 ## 8. 성공 기준 (검증 방법)
 
-1. `node tests/smoke.mjs` — pageerror 0, 타이틀 렌더, Enter로 FIGHT 진입, 60초 무입력 시 DEFEAT 도달(위협 존재 증명).
-2. `node tests/bot.mjs --boss=N` (N=1..4) — 반응형 봇이 각 보스에게 승리(루프가 닫혀 있음을 증명). 봇 승리 시간이 par의 2배를 넘으면 밸런스 경고.
-3. 헤드리스 스크린샷 육안 점검: 타이틀·전투·패리 스파크·승리 카드·엔딩. (`node tools/shots.mjs` → `docs/media/`)
+1. `node tests/smoke.mjs` — pageerror 0, 타이틀 렌더, Enter 로 STORY 진입 → Enter 연타로 FIGHT 진입(VESPER 선택지는 K 로 통과), 60초 무입력 시 DEFEAT 도달(위협 존재 증명). DEFEAT → R 이 STORY 를 거치지 않고 INTRO 로 가는지 확인.
+2. `node tests/bot.mjs --boss=N` (N=1..8) — 반응형 봇이 각 보스에게 승리(루프가 닫혀 있음을 증명). 봇 승리 시간이 par의 2배를 넘으면 밸런스 경고. `--all` 은 `BOSSES` 길이를 따르므로 8보스 자동 포함. deflect 는 봇의 반사가 자동 트리거하고, stealOnHit 는 봇이 손패를 상태에서 읽으므로 봇 수정 불필요.
+3. 헤드리스 스크린샷 육안 점검: 타이틀·전투·패리 스파크·승리 카드·스토리 박스·인터루드·엔딩. (`node tools/shots.mjs` → `docs/media/`)
 4. Pages 배포 후 `curl -I` 200, 헤드리스로 Pages URL 로드 시 pageerror 0.
-5. `node tests/state.mjs` — 전투를 끝까지 굴린 뒤 `window.BOSSES` 가 부팅 직후와 완전히 동일(정의 테이블 불변 = 재시작·결정론 보장).
+5. `node tests/state.mjs` — 전투를 끝까지 굴린 뒤 `window.BOSSES` · `window.STORY` 가 부팅 직후와 완전히 동일(정의 테이블 불변 = 재시작·결정론 보장. AVARICE 의 loot 큐가 def 를 오염하지 않는지 여기서 잡는다).
 6. `node tests/audio-smoke.mjs` — 음소거 없이 Enter 한 번으로 AudioContext 가 `running`, 모든 `RAudio` 공개 메서드 호출에 예외 0.
+7. `node tests/story.mjs` — 대사 테이블: 장면당 ≤4줄, 느낌표 0, 보스별 전속 어미 교차 0(바이블 §3 표), 선택지 3개에 각각 `ok:true` 하나·`ok:false` 하나.
+8. 밸런스: 챕터 2 보스 4종을 3프로파일(완벽·숙련 `--jitter=0.05 --miss=0.15 --think=0.25`·평균 `--miss=0.3 --jitter=0.09 --think=0.45`)로 실측해 par/HP 확정. 숙련 프로파일 전부 승리, 평균 프로파일은 사망이 챕터 1 과 같은 기준.
 
 ---
 
 ## 9. 비목표 (YAGNI)
 
-- 점프, 다단 레인, 콤보 트리, 장비/성장, 스토리 컷신, 멀티플레이, 모바일 터치 UI, 외부 에셋.
+- 점프, 다단 레인, 콤보 트리, 장비/성장, 긴 스토리 컷신, 멀티플레이, 모바일 터치 UI, 외부 에셋.
+- (2026-09-17 개정) 헬테이커식 단문 대화(전투 경계에서 한 화면 4줄 이하, R 재도전 시 미반복, 스킵 가능)는 허용. 정본: docs/superpowers/specs/2026-09-17-riposte-story-bible.md
+- 챕터 선택 화면, 새 플레이어 동사(가드 브레이크·홀드 패리 등), 대사 음성, 초상화 그림(실루엣 재사용으로 대신한다).
+
+---
+
+## 10. 스토리 — 헬테이커식 단문 대화 (2026-09-17 승인)
+
+**대사 SSoT 는 `2026-09-17-riposte-story-bible.md`** 다. 대사 본문·보이스 설계표·자체 점검은 그쪽만 본다. 여기에는 시스템이 지켜야 할 규칙만 둔다.
+
+- **배치**: 보스당 `before`(전투 전) 1장 + `after`(승리 후) 1장, 전투 경계에만. FIGHT 안 대사 0. `before` 는 그 보스 첫 진입 시만 — DEFEAT → R 은 INTRO 직행. Continue 로 들어오면 그 보스의 before 부터.
+- **분량**: 한 장면 = 한 화면 ≤ 4줄(`STORY.MAX_LINES`), 줄당 한글 30자 안팎. 타자기(`STORY.CPS` 24자/s)는 아무 키에 즉시 완성, 완성 상태에서 Enter 로 다음 줄. Enter 길게(`SKIP_HOLD` 0.6s) 또는 Esc = 장면 스킵.
+- **콜드 오픈**: `before` 1줄째는 화자 라벨 `???`. 2줄째부터 보스 이름·색.
+- **선택지**: 두 동사만 — `K = PARRY`(받아넘김) / `J = RIPOSTE`(되받아침). 플레이어 답은 항상 한 단어. 오답 → `TAKEN.` 카드(붉은 비네트 `TAKEN_FLASH`, HP 손실 0) → Enter → 같은 선택지 복귀. 보스당 최대 1회, 총 3회(VESPER before · LANTERN before · AVARICE after). 정답은 항상 "겸손/의심/빈손" 쪽 — 오만·습관·소유가 벌을 받는다.
+- **침묵행**: 본문이 `……` 뿐인 줄은 타자기 없이 즉시 표시, Enter 로 넘긴다.
+- **엔딩 연출**: AVARICE 정답 반응은 마지막 글자 전에 실루엣 알파를 0 으로(`DISSOLVE` 0.8s), 문장은 미완결로 남긴다. ENDING 카드 "NOTHING IS GIVEN. / EVERYTHING IS TAKEN. / NOTHING IS KEPT." 와 함께 손패 HUD 3칸이 `ENDING_SLOT_DROP`(0.4s) 간격으로 비어 간다.
+- **스킵**: `?boss=N` · `?story=0` · `startBoss(opts.noStory)`. 봇·스모크 하네스는 `?story=0` 로 진입하고, smoke 만 기본 경로로 STORY 통과를 1회 검증한다(§8-1).
+- **데이터**: `js/story.js` — `window.STORY[bossKey] = { before: [line…], after: [line…], choice?: { at, prompt, K: { text, ok, reply }, J: { text, ok, reply } } }`. line 은 문자열 또는 `{ text, hideSpeaker: true }`. 정의 테이블이므로 불변(§8-5). i18n 이 필요해지면 line 을 `{ ko, en }` 으로 바꾸고 조회 함수 하나만 추가한다.
+- **줄기**(요약): 모든 보스의 기술도 빼앗은 것이고 원점은 "빌려줄 뿐 주지 않는" AVARICE. 챕터 1 = 되찾기(MIRROR), 챕터 2 = 빚의 주인. 결말 — 전부 쥔 채 "빈손" 이라 답하면 가져갈 것이 없어진다. 별명 "빈손" 은 VESPER 가 붙이고 SERAPH·LANTERN 을 거쳐 퍼진다.
