@@ -302,7 +302,15 @@ const IS_MAIN = process.argv[1] &&
 
 if (IS_MAIN) (async () => {
   const browser = await chromium.launch({ headless: true, args: LAUNCH_ARGS });
-  const list = ALL ? [1, 2, 3, 4] : [BOSS];
+  const count = await (async () => {
+    const p = await browser.newPage();
+    await p.goto(pathToFileURL(join(ROOT, 'index.html')).href + '?mute=1', { waitUntil: 'load' });
+    await until(p, (s) => !!s, 5000);
+    const n = await p.evaluate(() => window.BOSSES.length);
+    await p.close();
+    return n;
+  })();
+  const list = ALL ? Array.from({ length: count }, (_, i) => i + 1) : [BOSS];
 
   log(`RIPOSTE bot test — bosses [${list.join(', ')}]  seed=${SEED}`);
   if (JITTER || MISS || THINK) log(`  human-like: jitter=${JITTER}s miss=${MISS} think=${THINK}s`);

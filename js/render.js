@@ -706,6 +706,39 @@
     ctx.restore();
   };
 
+  /* ---- 대화 장면 (스펙 §10) -----------------------------------------------
+   * 아레나 위에 플레이어(좌)와 보스(우) 실루엣을 STORY.SCALE 배로 세운다.
+   * 보스 알파는 game.story.bossAlpha (AVARICE 정답 반응에서 0 으로 내려간다).
+   * ---------------------------------------------------------------------- */
+  Render.drawStoryScene = function (ctx, game) {
+    Render.drawArena(ctx, 0);
+    drawReflectionFade(ctx);
+    var S = C.STORY;
+    var b = game.boss;
+    var t = game.sceneT;
+    var alpha = game.story ? game.story.bossAlpha : 1;
+
+    function bigFighter(o) {
+      ctx.save();
+      ctx.translate(o.x, V.FLOOR_Y);
+      ctx.scale(S.SCALE, S.SCALE);
+      ctx.translate(-o.x, -V.FLOOR_Y);
+      drawFighter(ctx, o);
+      ctx.restore();
+    }
+
+    bigFighter({
+      x: S.PLAYER_X, facing: 1, color: C.COLORS.PLAYER, build: 'player',
+      t: t, pose: 'idle', poseP: 0, vx: 0, moving: false, alpha: C.TITLE.ALPHA
+    });
+    if (b && alpha > 0) {
+      bigFighter({
+        x: S.BOSS_X, facing: -1, color: b.color, build: b.silhouette,
+        t: t * 0.87 + 1.4, pose: 'idle', poseP: 0, vx: 0, moving: false, alpha: C.TITLE.ALPHA * alpha
+      });
+    }
+  };
+
   Render.drawWorld = function (ctx, game) {
     var p = game.player;
     var b = game.boss;

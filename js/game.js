@@ -45,6 +45,9 @@
    * ====================================================================== */
   function Game(opts) {
     opts = opts || {};
+    this.storyOn = opts.story !== false;   // ?story=0 이면 false — 대화 전부 건너뜀
+    this.runStory = this.storyOn;          // 이번 런에서 대화를 트는가 (?boss=N 은 false)
+    this.story = null;                     // STORY 장면 상태 (아래 beginStory)
     this.seed = opts.seed === undefined ? 1337 : opts.seed;
     this.speed = opts.speed || 1;
     this.debugScale = 1;
@@ -131,14 +134,16 @@
     this.pendingShots.length = 0;
   };
 
-  /** opts.noSave = true 면 이 판의 결과를 localStorage 에 쓰지 않는다 (?boss=N) */
+  /** opts.noSave = true 면 저장하지 않고, opts.noStory = true 면 대화도 틀지 않는다 (?boss=N) */
   Game.prototype.startRun = function (fromIndex, opts) {
     this.noSave = !!(opts && opts.noSave);
+    this.runStory = this.storyOn && !(opts && opts.noStory);
     this.run = this.newRun();
     this.startBoss(fromIndex || 0);
   };
 
-  Game.prototype.startBoss = function (index) {
+  /** opts.skipBefore = true 면 전투 전 대화를 건너뛴다 (R 재도전) */
+  Game.prototype.startBoss = function (index, opts) {
     this.bossIndex = clamp(index, 0, this.defs.length - 1);
     var def = this.defs[this.bossIndex];
     this.boss = new Boss(def, this);
@@ -159,7 +164,8 @@
     this.tut = def.tutorial
       ? { parryDone: false, riposteDone: false, dashDone: false, redSeen: false, active: true }
       : null;
-    this.setScene('INTRO');
+    if (this.runStory && !(opts && opts.skipBefore) && this.storyFor('before')) this.beginStory('before');
+    else this.setScene('INTRO');
   };
 
   Game.prototype.beginFight = function () {
@@ -170,7 +176,7 @@
   };
 
   Game.prototype.restartBoss = function () {
-    this.startBoss(this.bossIndex);
+    this.startBoss(this.bossIndex, { skipBefore: true });
   };
 
   /* ---- 메인 업데이트 ------------------------------------------------------ */
@@ -217,6 +223,7 @@
       case 'INTRO':   this.stepIntro(dt); break;
       case 'FIGHT':   this.stepFight(dt); break;
       case 'VICTORY': this.stepVictory(dt); break;
+      case 'STORY':   this.stepStory(dt); break;
       case 'INTERLUDE': this.stepInterlude(dt); break;
       case 'DEFEAT':  this.stepDefeat(dt); break;
       case 'ENDING':  this.stepEnding(dt); break;
@@ -252,9 +259,10 @@
     if (Input.consume('back')) this.goTitle();
   };
 
-  /** 승리 카드 다음 — Task 4 에서 STORY(after) 분기가 앞에 붙는다 */
+  /** 승리 카드 다음 — 전투 후 대화가 있으면 먼저 튼다 (스펙 §10) */
   Game.prototype.afterVictory = function () {
-    this.advanceAfterBoss();
+    if (this.runStory && this.storyFor('after')) this.beginStory('after');
+    else this.advanceAfterBoss();
   };
 
   /** 다음 보스 / 챕터 카드 / 엔딩 (스펙 §2.6) */
@@ -337,6 +345,103 @@
 
   Game.prototype.stepEnding = function (dt) {
     if (Input.consume('confirm') || Input.consume('back')) { RAudio.ui(true); this.goTitle(); }
+  };
+
+  /* ---- STORY (스펙 §10) — 전투 경계의 단문 대화 --------------------------- */
+
+  /** 이 보스의 대사 테이블에 해당 장면이 있으면 그 테이블을 돌려준다 */
+  Game.prototype.storyFor = function (beat) {
+    var def = this.defs[this.bossIndex];
+    var s = global.STORY && def ? global.STORY[def.key] : null;
+    return (s && s[beat] && s[beat].length) ? s : null;
+  };
+
+  Game.prototype.beginStory = function (beat) {
+    var s = this.storyFor(beat);
+    var lines = [];
+    for (var i = 0; i < s[beat].length; i++) {
+      var raw = s[beat][i];
+      var t = (typeof raw === 'string') ? raw : raw.text;
+      lines.push({ text: t, hideSpeaker: !!(raw && raw.hideSpeaker), silent: t === '……' });
+    }
+    this.story = {
+      beat: beat, lines: lines, index: 0, shown: 0,
+      choice: (s.choice && s.choice.at === beat) ? s.choice : null,
+      choiceState: null, reply: null, replyShown: 0,
+      holdT: 0, takenT: 0, dissolveT: 0, bossAlpha: 1
+    };
+    this.setScene('STORY');
+  };
+
+  Game.prototype.stepStory = function (dt) {
+    var st = this.story;
+    var S = C.STORY;
+    if (!st) { this.finishStory(); return; }
+
+    // 스킵: Esc 또는 Enter 길게. 선택지가 남아 있어도 스킵은 정답으로 간주한다.
+    if (Input.pressed('confirm')) st.holdT += dt; else st.holdT = 0;
+    if (Input.consume('back') || st.holdT >= S.SKIP_HOLD) { this.finishStory(); return; }
+
+    if (st.choiceState === 'taken') {
+      st.takenT += dt;
+      if (Input.consume('confirm')) { RAudio.ui(true); st.choiceState = 'pending'; st.reply = null; }
+      return;
+    }
+
+    if (st.choiceState === 'pending') {
+      var key = Input.consume('parry') ? 'K' : (Input.consume('riposte') ? 'J' : null);
+      if (!key) return;
+      var opt = st.choice[key];
+      st.reply = { key: key, text: opt.reply, ok: !!opt.ok, dissolve: !!opt.dissolve };
+      st.replyShown = 0;
+      st.takenT = 0;
+      if (opt.ok) { st.choiceState = 'reply'; RAudio.parryPerfect(); }
+      else { st.choiceState = 'taken'; FX.flashTint(S.TAKEN_FLASH); RAudio.playerHit(); }
+      return;
+    }
+
+    if (st.choiceState === 'reply') {
+      var rlen = st.reply.text.length;
+      st.replyShown = Math.min(rlen, st.replyShown + S.CPS * dt);
+      if (st.reply.dissolve && st.replyShown >= rlen * 0.5) {
+        st.dissolveT += dt;
+        st.bossAlpha = 1 - clamp(st.dissolveT / S.DISSOLVE, 0, 1);
+      }
+      if (Input.consume('parry') || Input.consume('riposte') || Input.consume('dash')) st.replyShown = rlen;
+      if (Input.consume('confirm')) {
+        if (st.replyShown < rlen) { st.replyShown = rlen; return; }
+        if (st.reply.dissolve && st.bossAlpha > 0) { st.bossAlpha = 0; return; }
+        this.finishStory();
+      }
+      return;
+    }
+
+    // 일반 줄 — 타자기. 아무 액션 키로 즉시 완성, Enter 로 다음 줄.
+    var line = st.lines[st.index];
+    var len = line.text.length;
+    st.shown = line.silent ? len : Math.min(len, st.shown + S.CPS * dt);
+    if (Input.consume('parry') || Input.consume('riposte') || Input.consume('dash')) st.shown = len;
+    if (Input.consume('confirm')) {
+      RAudio.ui(true);
+      if (st.shown < len) { st.shown = len; return; }
+      st.index++;
+      st.shown = 0;
+      if (st.index >= st.lines.length) {
+        if (st.choice) st.choiceState = 'pending';
+        else this.finishStory();
+      }
+    }
+  };
+
+  Game.prototype.finishStory = function () {
+    var beat = this.story ? this.story.beat : 'before';
+    this.story = null;
+    if (beat === 'before') {
+      if (this.banner) this.banner.t = 0;      // 배너 시계는 STORY 동안에도 흘렀다 — 다시 0 부터
+      this.setScene('INTRO');
+    } else {
+      this.advanceAfterBoss();
+    }
   };
 
   /* ---- FIGHT -------------------------------------------------------------- */
@@ -898,6 +1003,10 @@
       scene: this.scene,
       bossId: this.bossIndex + 1,
       chapter: ch ? ch.id : 0,
+      story: this.story ? {
+        beat: this.story.beat, line: this.story.index, total: this.story.lines.length,
+        choice: this.story.choiceState
+      } : null,
       bossHp: b ? b.hp : 0,
       bossMaxHp: b ? b.maxHp : 0,
       phase: b ? b.phase : 1,

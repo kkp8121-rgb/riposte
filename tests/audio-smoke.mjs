@@ -56,7 +56,7 @@ async function until(page, fn, timeoutMs) {
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
 
-  const url = pathToFileURL(join(ROOT, 'index.html')).href + '?seed=7';
+  const url = pathToFileURL(join(ROOT, 'index.html')).href + '?seed=7&story=0';
   await page.goto(url, { waitUntil: 'load' });
   await until(page, () => !!window.__RIPOSTE, 5000);
 

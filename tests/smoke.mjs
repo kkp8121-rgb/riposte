@@ -88,10 +88,21 @@ const state = () => window.__RIPOSTE.getState();
 
   await page.screenshot({ path: join(SHOTS, 'smoke-title.png') });
 
-  // --- Enter -> FIGHT ------------------------------------------------------
+  // --- Enter -> STORY -> (Enter 연타, 선택지는 K) -> FIGHT -------------------
   await page.keyboard.press('Enter');
-  const inFight = await waitFor(page, () => window.__RIPOSTE.getState().scene === 'FIGHT', 3000, 'FIGHT');
-  check('Enter enters FIGHT within 3s', inFight);
+  const inStory = await waitFor(page, () => window.__RIPOSTE.getState().scene === 'STORY', 3000, 'STORY');
+  check('Enter enters STORY (boss 1 dialogue) within 3s', inStory);
+
+  let presses = 0;
+  for (; presses < 40; presses++) {
+    const s = await page.evaluate(state);
+    if (s.scene === 'FIGHT' || s.scene === 'INTRO') break;
+    if (s.story && s.story.choice === 'pending') await page.keyboard.press('KeyK');
+    else await page.keyboard.press('Enter');
+    await sleep(120);
+  }
+  const inFight = await waitFor(page, () => window.__RIPOSTE.getState().scene === 'FIGHT', 4000, 'FIGHT');
+  check('story advances to FIGHT with Enter/K', inFight, `(${presses} presses)`);
 
   await sleep(700);
   await page.screenshot({ path: join(SHOTS, 'smoke-fight.png') });
@@ -108,6 +119,12 @@ const state = () => window.__RIPOSTE.getState();
   check('60s of no input reaches DEFEAT', dead,
     `(scene ${s2.scene}, playerHp ${s2.playerHp}, t=${s2.time.toFixed(1)}s)`);
   await page.screenshot({ path: join(SHOTS, 'smoke-defeat.png') });
+
+  // --- R 재도전은 STORY 를 다시 틀지 않는다 (스펙 §10) -----------------------
+  await page.keyboard.press('KeyR');
+  await sleep(150);
+  const s3 = await page.evaluate(state);
+  check('R retry skips STORY (INTRO or FIGHT)', s3.scene === 'INTRO' || s3.scene === 'FIGHT', `(scene ${s3.scene})`);
 
   check('zero page/console errors', errors.length === 0, errors.length ? `\n        ${errors.slice(0, 6).join('\n        ')}` : '');
 

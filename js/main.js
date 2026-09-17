@@ -68,7 +68,8 @@
     }
     ctx.translate(FX.shakeX, FX.shakeY);
 
-    if (game.boss) Render.drawWorld(ctx, game);
+    if (game.scene === 'STORY') Render.drawStoryScene(ctx, game);
+    else if (game.boss) Render.drawWorld(ctx, game);
     else Render.drawTitleScene(ctx, game.sceneT);
 
     ctx.restore();
@@ -78,6 +79,8 @@
     // UI
     switch (game.scene) {
       case 'TITLE':   UI.drawTitle(ctx, game); break;
+      case 'STORY':   UI.drawStory(ctx, game); break;
+      case 'INTERLUDE': UI.drawInterlude(ctx, game); break;
       case 'INTRO':   UI.drawHUD(ctx, game); UI.drawIntro(ctx, game); break;
       case 'FIGHT':   UI.drawHUD(ctx, game); UI.drawPhaseBanner(ctx, game); break;
       case 'VICTORY': UI.drawVictory(ctx, game); break;
@@ -110,7 +113,8 @@
 
     game = new Game({
       seed: numParam(p, 'seed', 20260909),
-      speed: numParam(p, 'speed', 1)
+      speed: numParam(p, 'speed', 1),
+      story: p.story !== '0'                  // ?story=0 — 대화 전부 건너뜀 (테스트/봇)
     });
 
     if (p.nofx !== undefined) FX.enabled = false;
@@ -123,8 +127,8 @@
 
     if (p.boss !== undefined) {
       var bi = Math.round(numParam(p, 'boss', 1)) - 1;
-      // URL 로 바로 들어온 판은 진행도를 저장하지 않는다
-      game.startRun(Math.max(0, Math.min(global.BOSSES.length - 1, bi)), { noSave: true });
+      // URL 로 바로 들어온 판은 진행도를 저장하지 않고 대화도 틀지 않는다
+      game.startRun(Math.max(0, Math.min(global.BOSSES.length - 1, bi)), { noSave: true, noStory: true });
     }
 
     global.addEventListener('resize', resize);

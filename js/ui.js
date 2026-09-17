@@ -178,6 +178,27 @@
     ctx.strokeRect(x0 - 0.5, L.HP_Y - 0.5, L.HP_W + 1, L.HP_H + 1);
     ctx.restore();
 
+    /* 약탈 보스가 빼앗아 간 손패 (스펙 §3.8) — HP 바 아래 작은 슬롯 */
+    if (b.loot && b.loot.length) {
+      var H = C.HAND;
+      var lw = b.loot.length * H.LOOT_SLOT_W + (b.loot.length - 1) * H.LOOT_GAP;
+      var lx = (V.W - lw) / 2;
+      text(ctx, H.LOOT_LABEL, lx - 10, H.LOOT_Y + H.LOOT_SLOT_H / 2,
+        { size: 9, weight: '800', color: b.color, align: 'right', spacing: 2 });
+      for (var li = 0; li < b.loot.length; li++) {
+        var slotX = lx + li * (H.LOOT_SLOT_W + H.LOOT_GAP);
+        ctx.save();
+        ctx.fillStyle = 'rgba(12,16,26,0.72)';
+        ctx.fillRect(slotX, H.LOOT_Y, H.LOOT_SLOT_W, H.LOOT_SLOT_H);
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(slotX + 0.5, H.LOOT_Y + 0.5, H.LOOT_SLOT_W - 1, H.LOOT_SLOT_H - 1);
+        ctx.restore();
+        text(ctx, b.loot[li].label || b.loot[li].id, slotX + H.LOOT_SLOT_W / 2, H.LOOT_Y + H.LOOT_SLOT_H / 2,
+          { size: 10, weight: '800', color: b.color, spacing: 1 });
+      }
+    }
+
     /* 하트 (잃은 직후 한 칸은 깨짐 애니메이션) */
     for (var i = 0; i < C.PLAYER.HP; i++) {
       var alive = i < p.hp;
@@ -329,7 +350,10 @@
       text(ctx, '[N]  NEW GAME  —  CLEAR PROGRESS', V.W / 2, 480,
         { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2, alpha: fade });
     } else if (game.save.unlocked > 1) {
-      text(ctx, '[ENTER]  CONTINUE  —  BOSS ' + game.save.unlocked, V.W / 2, 452,
+      var ci = game.chapterOf(game.save.unlocked - 1);
+      var within = ci ? (ci.bosses.indexOf(game.defs[game.save.unlocked - 1].key) + 1) : game.save.unlocked;
+      var label = ci ? (ci.name.replace('CHAPTER ', 'CH.') + '  BOSS ' + within) : ('BOSS ' + game.save.unlocked);
+      text(ctx, '[ENTER]  CONTINUE  —  ' + label, V.W / 2, 452,
         { size: 19, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 2, glow: C.COLORS.PLAYER, blur: 12 });
       text(ctx, '[N]  NEW GAME', V.W / 2, 480,
         { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2, alpha: fade });
@@ -400,6 +424,117 @@
          : r === 'B' ? C.COLORS.TEXT
          : C.COLORS.TEXT_DIM;
   }
+
+  /* =========================================================================
+   * STORY (스펙 §10) — 하단 텍스트 박스 + 선택지 + TAKEN 카드
+   * ====================================================================== */
+
+  /** ' / ' 로 나뉜 두 목소리를 색을 번갈아 그린다 (CHORUS). 나뉘지 않으면 한 색. */
+  function voiceText(ctx, str, x, y, size, colorA, colorB) {
+    var parts = str.split(C.STORY.VOICE_SPLIT);
+    if (parts.length === 1) { text(ctx, str, x, y, { size: size, weight: '600', color: colorA, align: 'left' }); return; }
+    var cx = x;
+    ctx.save();
+    ctx.font = C.font('600', size);
+    for (var i = 0; i < parts.length; i++) {
+      var seg = parts[i] + (i < parts.length - 1 ? C.STORY.VOICE_SPLIT : '');
+      text(ctx, seg, cx, y, { size: size, weight: '600', color: i % 2 ? colorB : colorA, align: 'left' });
+      cx += ctx.measureText(seg).width;
+    }
+    ctx.restore();
+  }
+
+  UI.drawStory = function (ctx, game) {
+    var st = game.story;
+    var S = C.STORY;
+    if (!st) return;
+    var b = game.boss;
+    var bossColor = b ? b.color : C.COLORS.WHITE;
+
+    panel(ctx, S.BOX_X, S.BOX_Y, S.BOX_W, S.BOX_H, 1);
+    text(ctx, S.PROMPT_SKIP, S.BOX_X + S.BOX_W - 16, S.BOX_Y + 14,
+      { size: 9, weight: '700', color: C.COLORS.TEXT_DIM, align: 'right', spacing: 1, alpha: 0.7 });
+
+    if (st.choiceState === 'taken') { UI.drawTaken(ctx, game); return; }
+
+    if (st.choiceState === 'pending') {
+      // 두 동사 — K(받아넘김) / J(되받아침)
+      text(ctx, '[K]', S.TEXT_X, S.CHOICE_Y, { size: 14, weight: '800', color: C.COLORS.GOLD, align: 'left', spacing: 1 });
+      text(ctx, st.choice.K.text, S.TEXT_X + 44, S.CHOICE_Y, { size: S.TEXT_SIZE, weight: '600', color: C.COLORS.TEXT, align: 'left' });
+      text(ctx, '[J]', S.TEXT_X, S.CHOICE_Y + S.CHOICE_GAP, { size: 14, weight: '800', color: C.COLORS.PLAYER, align: 'left', spacing: 1 });
+      text(ctx, st.choice.J.text, S.TEXT_X + 44, S.CHOICE_Y + S.CHOICE_GAP, { size: S.TEXT_SIZE, weight: '600', color: C.COLORS.TEXT, align: 'left' });
+      return;
+    }
+
+    var speaker, body, shown;
+    if (st.choiceState === 'reply') {
+      speaker = b ? b.name : '';
+      body = st.reply.text; shown = st.replyShown;
+    } else {
+      var line = st.lines[st.index];
+      speaker = line.hideSpeaker ? S.UNKNOWN_SPEAKER : (b ? b.name : '');
+      body = line.text; shown = st.shown;
+    }
+    var hidden = speaker === S.UNKNOWN_SPEAKER;
+    text(ctx, speaker, S.TEXT_X, S.SPEAKER_Y,
+      { size: S.SPEAKER_SIZE, weight: '800', color: hidden ? C.COLORS.TEXT_DIM : bossColor, align: 'left', spacing: 3,
+        glow: hidden ? false : bossColor, blur: 8 });
+    voiceText(ctx, body.substring(0, Math.floor(shown)), S.TEXT_X, S.TEXT_Y, S.TEXT_SIZE, C.COLORS.TEXT, bossColor);
+
+    if (shown >= body.length) {
+      var blink = 0.45 + 0.45 * Math.sin(game.sceneT * 5);
+      text(ctx, S.PROMPT_NEXT, S.BOX_X + S.BOX_W - 18, S.BOX_Y + S.BOX_H - 16,
+        { size: 10, weight: '800', color: C.COLORS.TEXT_DIM, align: 'right', spacing: 2, alpha: blink });
+    }
+  };
+
+  /** 오답 카드 — 웃지 않고 덤덤하게 (바이블 §2 코미디 원리 M) */
+  UI.drawTaken = function (ctx, game) {
+    var st = game.story;
+    var S = C.STORY;
+    dim(ctx, 0.6);
+    text(ctx, S.TAKEN_TEXT, V.W / 2, 200,
+      { size: 60, weight: '800', color: C.COLORS.HEART, spacing: 10, glow: C.COLORS.HEART, blur: 24 });
+    text(ctx, st.reply.text, V.W / 2, 262, { size: S.TEXT_SIZE, weight: '600', color: C.COLORS.TEXT });
+    var blink = 0.5 + 0.5 * Math.sin(game.sceneT * 4);
+    text(ctx, 'ENTER', V.W / 2, 330, { size: 14, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
+  };
+
+  /* =========================================================================
+   * INTERLUDE — 챕터 카드 (스펙 §2.6)
+   * ====================================================================== */
+  UI.drawInterlude = function (ctx, game) {
+    dim(ctx, 0.72);
+    var t = game.sceneT;
+    var ch = game.chapterOf(game.bossIndex);
+    var next = game.chapterOf(game.bossIndex + 1);
+    if (!ch) return;
+    var rows = game.chapterResults(ch);
+
+    text(ctx, ch.name, V.W / 2, 120,
+      { size: 40, weight: '800', color: C.COLORS.WHITE, spacing: 8, glow: C.COLORS.GOLD, blur: 22 });
+    text(ctx, ch.subtitle, V.W / 2, 158, { size: 15, weight: '600', color: C.COLORS.GOLD, spacing: 4 });
+
+    var y = 214, total = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      total += r.time;
+      text(ctx, r.name, V.W / 2 - 180, y + i * 28, { size: 15, weight: '700', color: C.COLORS.TEXT, align: 'left', spacing: 2 });
+      text(ctx, fmtTime(r.time), V.W / 2 + 60, y + i * 28, { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right', family: C.FONT.MONO });
+      text(ctx, r.rank, V.W / 2 + 150, y + i * 28, { size: 19, weight: '800', color: rankColor(r.rank), align: 'left', glow: rankColor(r.rank), blur: 10 });
+    }
+    var cr = game.chapterRank(ch);
+    var k = clamp((t - 0.25) / C.RANK.CARD_SCALE_TIME, 0, 1);
+    var sc = k < 1 ? lerp(2.6, 1, k * k) : 1;
+    text(ctx, cr, V.W / 2, 388,
+      { size: Math.round(56 * sc), weight: '800', color: rankColor(cr), glow: rankColor(cr), blur: 26, alpha: clamp(k * 1.6, 0, 1) });
+    text(ctx, 'CHAPTER RANK   ·   ' + fmtTime(total), V.W / 2, 424,
+      { size: 10, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: k });
+
+    var blink = 0.5 + 0.5 * Math.sin(t * 4);
+    text(ctx, 'ENTER  —  ' + (next ? next.name : 'CONTINUE'), V.W / 2, V.H - 24,
+      { size: 15, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
+  };
 
   UI.drawVictory = function (ctx, game) {
     dim(ctx, 0.62);
@@ -489,51 +624,60 @@
       { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 
+  /** 엔딩 — 태그라인 3박 + 8보스 결과 + 종합 랭크 + 손패가 한 칸씩 비어 간다 (스펙 §10) */
   UI.drawEnding = function (ctx, game) {
     dim(ctx, 0.72);
     var t = game.sceneT;
     var run = game.run;
+    var E = C.ENDING;
 
-    text(ctx, 'EVERYTHING TAKEN', V.W / 2, 88,
-      { size: 42, weight: '800', color: C.COLORS.WHITE, spacing: 8, glow: C.COLORS.GOLD, blur: 22 });
-    text(ctx, 'You never drew a sword. You only took theirs.', V.W / 2, 126,
-      { size: 15, weight: '600', color: C.COLORS.GOLD });
-
-    // 보스별 결과
-    var y = 182;
-    for (var i = 0; i < run.bosses.length; i++) {
-      var b = run.bosses[i];
-      text(ctx, b.name, V.W / 2 - 200, y + i * 28,
-        { size: 15, weight: '700', color: C.COLORS.TEXT, align: 'left', spacing: 2 });
-      text(ctx, fmtTime(b.time), V.W / 2 + 20, y + i * 28,
-        { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right', family: C.FONT.MONO });
-      text(ctx, b.hits + ' hit', V.W / 2 + 100, y + i * 28,
-        { size: 13, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
-      text(ctx, b.perfects + ' perfect', V.W / 2 + 190, y + i * 28,
-        { size: 13, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
-      text(ctx, b.rank, V.W / 2 + 216, y + i * 28,
-        { size: 19, weight: '800', color: rankColor(b.rank), align: 'left', glow: rankColor(b.rank), blur: 10 });
+    for (var li = 0; li < E.LINES.length; li++) {
+      var last = li === E.LINES.length - 1;
+      text(ctx, E.LINES[li], V.W / 2, E.LINE_Y[li],
+        { size: last ? 26 : 20, weight: '800', color: last ? C.COLORS.GOLD : C.COLORS.WHITE, spacing: 6,
+          glow: last ? C.COLORS.GOLD : false, blur: 18, alpha: clamp((t - li * 0.5) / 0.4, 0, 1) });
     }
 
-    var ty = y + run.bosses.length * 28 + 26;
-    ctx.save();
-    ctx.globalAlpha = 0.25;
-    ctx.strokeStyle = C.COLORS.TEXT;
-    ctx.beginPath();
-    ctx.moveTo(V.W / 2 - 210, ty - 14); ctx.lineTo(V.W / 2 + 230, ty - 14);
-    ctx.stroke();
-    ctx.restore();
+    var y = E.ROWS_Y;
+    for (var i = 0; i < run.bosses.length; i++) {
+      var b = run.bosses[i];
+      text(ctx, b.name, V.W / 2 - 200, y + i * E.ROW_H, { size: 13, weight: '700', color: C.COLORS.TEXT, align: 'left', spacing: 2 });
+      text(ctx, fmtTime(b.time), V.W / 2 + 20, y + i * E.ROW_H, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right', family: C.FONT.MONO });
+      text(ctx, b.hits + ' hit', V.W / 2 + 100, y + i * E.ROW_H, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
+      text(ctx, b.perfects + ' perfect', V.W / 2 + 190, y + i * E.ROW_H, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
+      text(ctx, b.rank, V.W / 2 + 216, y + i * E.ROW_H, { size: 16, weight: '800', color: rankColor(b.rank), align: 'left', glow: rankColor(b.rank), blur: 10 });
+    }
 
+    var ty = y + run.bosses.length * E.ROW_H + 18;
     text(ctx, 'TOTAL  ' + fmtTime(run.time) + '   ·   ' + run.hits + ' HITS   ·   ' + run.perfects + ' PERFECT',
-      V.W / 2, ty + 4, { size: 14, weight: '700', color: C.COLORS.TEXT, spacing: 1 });
+      V.W / 2, ty, { size: 13, weight: '700', color: C.COLORS.TEXT, spacing: 1 });
 
     var ov = game.overallRank();
     var k = clamp((t - 0.25) / C.RANK.CARD_SCALE_TIME, 0, 1);
     var sc = k < 1 ? lerp(2.8, 1, k * k) : 1;
-    text(ctx, ov, V.W / 2, ty + 62,
-      { size: Math.round(64 * sc), weight: '800', color: rankColor(ov), glow: rankColor(ov), blur: 28, alpha: clamp(k * 1.6, 0, 1) });
-    text(ctx, 'OVERALL RANK', V.W / 2, ty + 100,
-      { size: 10, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: k });
+    text(ctx, ov, V.W / 2 + 300, ty - 4,
+      { size: Math.round(54 * sc), weight: '800', color: rankColor(ov), glow: rankColor(ov), blur: 28, alpha: clamp(k * 1.6, 0, 1) });
+    text(ctx, 'OVERALL', V.W / 2 + 300, ty + 30, { size: 9, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: k });
+
+    // 손패 3칸이 ENDING_SLOT_DROP 간격으로 앞에서부터 비어 간다 — "Nothing is kept."
+    var labels = game.endingHand || [];
+    var dropped = Math.floor(Math.max(0, t - 1.0) / C.STORY.ENDING_SLOT_DROP);
+    var n = C.HAND.SIZE;
+    var totalW = n * C.HAND.SLOT_W + (n - 1) * C.HAND.SLOT_GAP;
+    var sx = (V.W - totalW) / 2;
+    for (var s = 0; s < n; s++) {
+      var x = sx + s * (C.HAND.SLOT_W + C.HAND.SLOT_GAP);
+      var keep = s >= dropped && labels[s];
+      ctx.save();
+      ctx.fillStyle = 'rgba(12,16,26,0.72)';
+      ctx.fillRect(x, E.SLOTS_Y, C.HAND.SLOT_W, C.HAND.SLOT_H);
+      ctx.strokeStyle = keep ? 'rgba(230,235,245,0.35)' : 'rgba(120,130,150,0.20)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + 0.5, E.SLOTS_Y + 0.5, C.HAND.SLOT_W - 1, C.HAND.SLOT_H - 1);
+      ctx.restore();
+      text(ctx, keep ? labels[s] : '—', x + C.HAND.SLOT_W / 2, E.SLOTS_Y + C.HAND.SLOT_H / 2,
+        { size: keep ? 13 : 14, weight: keep ? '800' : '600', color: keep ? C.COLORS.TEXT : 'rgba(120,130,150,0.35)', spacing: keep ? 1 : 0 });
+    }
 
     var blink = 0.5 + 0.5 * Math.sin(t * 4);
     text(ctx, 'ENTER  —  TITLE', V.W / 2, V.H - 24,
