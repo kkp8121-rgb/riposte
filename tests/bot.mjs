@@ -14,6 +14,7 @@
  *   --jitter=<s>   패리/대시 입력 시점에 균등분포 오프셋 [-jitter,+jitter] (초)
  *   --miss=<0..1>  텔을 잘못 읽어 패리/대시를 아예 누르지 않을 확률
  *   --think=<s>    손패가 찬 뒤 리포스트를 누르기까지의 사고 지연(초)
+ *   --set=PATH=VAL,PATH=VAL  FIGHT 진입 전 window.CONFIG 중첩 키에 숫자 대입 (tests/mash.mjs 와 동일)
  *
  * installBot / TUNE 은 export 되어 tools/shots.mjs 가 같은 봇으로 스크린샷을 찍는다.
  * (직접 실행할 때만 테스트 본체가 돈다 — import 해도 브라우저가 뜨지 않는다.)
@@ -47,6 +48,17 @@ const SEED = parseInt(arg('seed', '7'), 10);
 const JITTER = parseFloat(arg('jitter', '0')) || 0;
 const MISS = parseFloat(arg('miss', '0')) || 0;
 const THINK = parseFloat(arg('think', '0')) || 0;
+
+// --set 은 값 안에 '=' 이 또 나오므로(PARRY.RECOVERY=1.0) arg()의 split('=')[1] 로는 잘린다 —
+// 접두사 이후를 통째로 잘라낸다 (tests/mash.mjs 와 동일 패턴).
+const SET = (() => {
+  const hit = argv.find((a) => a.startsWith('--set='));
+  return hit ? hit.slice('--set='.length) : '';
+})();
+const SET_PAIRS = SET ? SET.split(',').map((pair) => {
+  const eq = pair.indexOf('=');
+  return [pair.slice(0, eq), parseFloat(pair.slice(eq + 1))];
+}) : [];
 
 const VIEWPORT = { width: 960, height: 540 };
 const LAUNCH_ARGS = [
@@ -230,6 +242,17 @@ async function runBoss(browser, bossNum, { passive = false } = {}) {
   const url = pathToFileURL(join(ROOT, 'index.html')).href +
     `?boss=${bossNum}&mute=1&seed=${SEED}`;
   await page.goto(url, { waitUntil: 'load' });
+
+  if (SET_PAIRS.length) {
+    await page.evaluate((pairs) => {
+      for (const [path, val] of pairs) {
+        const parts = path.split('.');
+        let obj = window.CONFIG;
+        for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+        obj[parts[parts.length - 1]] = val;
+      }
+    }, SET_PAIRS);
+  }
 
   const ready = await until(page, (s) => s.scene === 'FIGHT', 8000);
   if (!ready) {
