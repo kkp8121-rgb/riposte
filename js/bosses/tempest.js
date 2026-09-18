@@ -16,7 +16,7 @@
   var TEMPEST = {
     key: 'tempest',
     name: 'TEMPEST',
-    title: 'THE STORM',
+    title: 'THE RAIN',
     color: '#7fc4ff',
     silhouette: 'storm',       // 무기 없는 넓은 어깨 — 던지는 자
     hp: 330,

@@ -513,7 +513,8 @@
       CODE_GAP: 2.0,          // 글자 사이가 이보다 벌어지면 버퍼를 비운다 (초)
       HP_CUT: 0.25,           // F2 한 번에 깎는 보스 최대 HP 비율
       BADGE: 'DEV',
-      BADGE_X: 906, BADGE_Y: 16,
+      /* 우상단 타이머(ui.js L.TIMER_Y 26 + PAR 줄 17) 바로 아래 — 타이머와 겹치지 않는 자리 */
+      BADGE_X: 938, BADGE_Y: 50,
       /* F1 오버레이 (보스/HP/스태미너/페이즈/시드 5줄) — 좌상단, 한 줄씩 아래로 */
       OVERLAY_X: 16, OVERLAY_Y: 60, OVERLAY_LINE_H: 18
     },

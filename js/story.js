@@ -7,9 +7,10 @@
  * 줄 형식: 문자열 | { text, hideSpeaker: true }(콜드 오픈 — 화자 라벨 ???) | { text, dissolve: true }.
  *          '……' 만 있는 줄은 침묵행(타자기 없이 즉시 표시).
  *          ' / ' 는 CHORUS 두 목소리 교대(ui 가 색을 번갈아 칠한다).
- * choice: { at: 'before'|'after', K: { text, ok, reply }, J: { text, ok, reply, dissolve? } }
+ * choice: { at: 'before'|'after', K: { text, ok, reply, dissolve? }, J: { text, ok, reply, dissolve? } }
  *         K = PARRY(받아넘김) / J = RIPOSTE(되받아침). ok:false 의 reply 는 TAKEN 카드 본문.
- *         dissolve:true 는 그 줄(또는 reply) 중 보스 실루엣이 사라진다(ADAMANT after 마지막 줄 — 엔딩 직전).
+ *         dissolve:true 는 줄 객체 또는 choice 항목(reply)에 붙는다 — 그 줄/reply 중 보스 실루엣이 사라진다.
+ *         현재 쓰는 곳은 ADAMANT after 마지막 줄(엔딩 직전) 하나. game.js 가 둘을 같은 규칙으로 처리한다.
  * ========================================================================== */
 (function (global) {
   'use strict';
