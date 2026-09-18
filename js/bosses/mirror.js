@@ -28,6 +28,7 @@
     title: 'YOUR REFLECTION',
     color: '#ffffff',
     silhouette: 'mirror',       // 플레이어 실루엣, 백색
+    overlapIntended: '챕터 1 기술을 되돌려 쓰는 거울 (스펙 §3.4)',   // 차별화 검사(tools/boss-overlap.mjs) 예외 선언
     hp: 320,
     par: 50,
     armor: false,

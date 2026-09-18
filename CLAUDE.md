@@ -11,6 +11,7 @@
   `state.mjs` · `audio-smoke.mjs` · `story.mjs`(브라우저 불필요) — 로컬 chromium. Pages 배포 확인은
   `node tools/check-pages.mjs [url]`.
 - 브라우저 자동 실행 금지 (`start`/`open` 사용 금지). 헤드리스만 허용.
+- **신규 보스 차별화 원칙**: 새 보스는 기존 보스와 패턴·컨셉·실루엣이 겹치면 안 된다(의도된 기획은 `overlapIntended` 선언). 보스 추가·수정 후 `node tools/boss-overlap.mjs --check` 통과 필수 (스펙 §3 공통).
 - Git: author = 전역 설정(BHS). GitHub 계정 = `kkp8121-rgb`. 시크릿 커밋 금지.
 
 ## 참조
