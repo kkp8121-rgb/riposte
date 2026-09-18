@@ -14,6 +14,8 @@
     /* ?nofx=1 이면 false — 파티클·링·잔상·텍스트 팝이 꺼진다.
        히트스톱/흔들림/슬로모는 판정 타이밍의 일부라 그대로 유지된다 (README 참조). */
     enabled: true,
+    /* ?flash=0 이면 false — 전체화면 백색 플래시만 꺼진다 (히트스톱/흔들림/슬로모/텔 버스트는 그대로). */
+    whiteFlashEnabled: true,
     particles: [],
     pops: [],
     rings: [],
@@ -54,6 +56,7 @@
   FX.addShake = function (mag) { if (mag > FX.shake) FX.shake = mag; };
 
   FX.flashWhite = function (dur) {
+    if (!FX.whiteFlashEnabled) return;
     FX.whiteFlash = Math.max(FX.whiteFlash, dur);
     FX.whiteFlashMax = Math.max(0.001, dur);
   };
@@ -143,10 +146,12 @@
     }, 24);
   };
 
-  /** 텔 플래시 — 무기 끝 원형 버스트 + 방사선 (스펙 §4 마지막 행) */
-  FX.tellBurst = function (x, y, color) {
+  /** 텔 플래시 — 무기 끝 원형 버스트 + 형태 (스펙 §4 마지막 행).
+   *  shape: 'gold'(방사선, 기본) | 'red'(굵은 X) — 호출부가 텔 종류를 명시적으로 넘긴다
+   *  (색 문자열로 자동 판정하지 않는다 — 접근성: 음소거/색맹 상태에서도 형태로 구분). */
+  FX.tellBurst = function (x, y, color, shape) {
     push(FX.bursts, {
-      x: x, y: y, color: color,
+      x: x, y: y, color: color, shape: shape || 'gold',
       life: C.TELL.LIFE, life0: C.TELL.LIFE,
       rays: C.TELL.RAYS, seed: FX._r() * Math.PI
     }, 16);

@@ -309,7 +309,7 @@
     this.flashT = B.FLASH_TIME;
     this.flashColor = (tell === 'red') ? C.COLORS.RED : C.COLORS.GOLD;
     var tip = this.weaponTip();
-    FX.tellBurst(tip.x, tip.y, this.flashColor);
+    FX.tellBurst(tip.x, tip.y, this.flashColor, tell === 'red' ? 'red' : 'gold');
     if (tell === 'red') RAudio.tellRed(); else RAudio.tellGold();
   };
 

@@ -222,6 +222,14 @@
     sweep('sine', 620, 240, t, 0.14, 0.08);
   };
 
+  /** 스태미너 부족 — 짧고 둔탁한 헛손질 */
+  RAudio.staminaEmpty = function () {
+    if (!ok()) return;
+    var t = now();
+    noise(t, 0.09, 0.07, 'lowpass', 300, 0.7);
+    tone('sine', 110, t, 0.10, 0.07);
+  };
+
   /** 리포스트 발동(휘두름) */
   RAudio.swing = function () {
     if (!ok()) return;

@@ -118,6 +118,7 @@
     });
 
     if (p.nofx !== undefined) FX.enabled = false;
+    if (p.flash === '0') FX.whiteFlashEnabled = false;   // 전체화면 백색 플래시만 옵트아웃 (히트스톱/흔들림/슬로모/텔 버스트는 유지)
     if (p.mute !== undefined) RAudio.setMuted(true);
 
     Input.attach(global);

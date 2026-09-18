@@ -207,6 +207,20 @@
       heart(ctx, L.HEART_X + i * L.HEART_GAP, L.HEART_Y, L.HEART_R, alive, brk);
     }
 
+    /* 스태미너 바 (하트 바로 아래) — 패리 1회분이 안 남으면 붉게, 헛입력이면 점멸 */
+    var HU = C.HUD;
+    var stRatio = clamp(p.stamina / C.STAMINA.MAX, 0, 1);
+    var low = p.stamina < C.STAMINA.PARRY_COST;
+    ctx.save();
+    if (p.staminaEmptyFlash > 0) {
+      ctx.globalAlpha = (Math.sin(p.staminaEmptyFlash * TAU * 8) > 0) ? 1 : 0.25;
+    }
+    ctx.fillStyle = C.COLORS.HP_BACK;
+    ctx.fillRect(HU.STAMINA_X, HU.STAMINA_Y, HU.STAMINA_W, HU.STAMINA_H);
+    ctx.fillStyle = low ? C.COLORS.RED : C.COLORS.PLAYER;
+    ctx.fillRect(HU.STAMINA_X, HU.STAMINA_Y, HU.STAMINA_W * stRatio, HU.STAMINA_H);
+    ctx.restore();
+
     /* 타이머 */
     text(ctx, fmtTime(game.time), L.TIMER_X, L.TIMER_Y,
       { size: 17, weight: '700', color: game.time > b.par ? C.COLORS.TEXT_DIM : C.COLORS.TEXT,

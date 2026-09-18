@@ -470,7 +470,11 @@
     var axis = Input.axis();
 
     // 패리 (짧은 입력 버퍼 — 대시/패리 락 중에 눌린 입력을 흘려버리지 않는다)
-    if (Input.consume('parry')) p.parryBuffer = C.COMBAT.INPUT_BUFFER;
+    if (Input.consume('parry')) {
+      // 스태미너가 모자라면 버퍼에 쌓지 않는다 (락 해제 순간 자동 재입력 방지)
+      if (p.stamina < C.STAMINA.PARRY_COST) p.staminaEmpty();
+      else p.parryBuffer = C.COMBAT.INPUT_BUFFER;
+    }
     if (p.parryBuffer > 0 && p.canParry()) {
       p.parryBuffer = 0;
       p.startParry();
@@ -484,7 +488,7 @@
         RAudio.dash();
         FX.sparks(p.x, V.FLOOR_Y - 6, C.FX.DUST, C.COLORS.PLAYER,
           { speed: 130, life: 0.28, size: 1.8, gravity: 220 });
-      }
+      } else if (p.stamina < C.STAMINA.DASH_COST) p.staminaEmpty();
     }
     // 리포스트 (짧은 입력 버퍼)
     if (Input.consume('riposte')) p.riposteBuffer = C.COMBAT.INPUT_BUFFER;
@@ -689,6 +693,7 @@
   Game.prototype.onPerfectParry = function (def, boss, projectile) {
     var p = this.player;
     p.onParrySuccess();
+    p.gainStamina(C.STAMINA.PERFECT_REFUND);   // 퍼펙트만 환급
     p.streak++;
     p.streakPulse = C.PLAYER.STREAK_PULSE_TIME;
     this.perfects++;
@@ -724,6 +729,7 @@
   Game.prototype.onBlock = function (def, boss, projectile) {
     var p = this.player;
     p.onParrySuccess();
+    p.gainStamina(C.STAMINA.BLOCK_REFUND);   // 타이밍은 맞췄다 — 절반 환급 (퍼펙트는 전액, 헛침은 0)
     this.blocks++;
 
     var px = p.x + p.facing * 30;
@@ -1018,6 +1024,7 @@
       bossMaxHp: b ? b.maxHp : 0,
       phase: b ? b.phase : 1,
       playerHp: p.hp,
+      stamina: p.stamina,
       playerX: p.x,
       bossX: b ? b.x : 0,
       hand: hand,

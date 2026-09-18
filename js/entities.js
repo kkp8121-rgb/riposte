@@ -34,6 +34,10 @@
     this.parryBuffer = 0;      // 락/대시 중에 눌린 패리 입력 (버퍼)
     this.parryGrace = 0;       // 패리 성공 직후 유예 — 같은 순간 겹쳐 온 두 번째 위협도 받아낸다
 
+    this.stamina = C.STAMINA.MAX;   // 패리·대시가 깎고 시간이 채운다
+    this.staminaDelay = 0;          // 회복 시작까지 남은 시간
+    this.staminaEmptyFlash = 0;     // 잔량 부족 입력 점멸 잔여
+
     this.dashT = 0;
     this.dashCd = 0;
     this.dashDir = 1;
@@ -72,10 +76,12 @@
   };
   Player.prototype.canParry = function () {
     return this.parryLock <= 0 && this.parryT < 0 && this.dashT <= 0 &&
+           this.stamina >= C.STAMINA.PARRY_COST &&
            !(this.riposte && this.riposte.stage !== 'recover');
   };
   Player.prototype.canDash = function () {
     return this.dashCd <= 0 && this.dashT <= 0 &&
+           this.stamina >= C.STAMINA.DASH_COST &&
            !(this.riposte && this.riposte.stage !== 'recover');
   };
   Player.prototype.canRiposte = function () {
@@ -87,7 +93,23 @@
 
   /* ---- 액션 -------------------------------------------------------------- */
 
+  /* 스태미너 — 소모하면 회복 대기가 다시 걸린다 */
+  Player.prototype.spendStamina = function (cost) {
+    this.stamina = Math.max(0, this.stamina - cost);
+    this.staminaDelay = C.STAMINA.REGEN_DELAY;
+  };
+  Player.prototype.gainStamina = function (amount) {
+    this.stamina = Math.min(C.STAMINA.MAX, this.stamina + amount);
+  };
+  /** 잔량이 모자란 채로 눌렀다 — 점멸 + 둔탁음 (점멸 중엔 다시 울리지 않는다) */
+  Player.prototype.staminaEmpty = function () {
+    if (this.staminaEmptyFlash > 0) return;
+    this.staminaEmptyFlash = C.STAMINA.EMPTY_FLASH;
+    RAudio.staminaEmpty();
+  };
+
   Player.prototype.startParry = function () {
+    this.spendStamina(C.STAMINA.PARRY_COST);
     this.parryT = 0;
     this.parryLock = C.PARRY.RECOVERY;
     this.parryPose = C.PARRY.POSE_TIME;
@@ -103,6 +125,7 @@
   };
 
   Player.prototype.startDash = function (dir) {
+    this.spendStamina(C.STAMINA.DASH_COST);
     this.dashT = C.DASH.DURATION;
     this.dashCd = C.DASH.COOLDOWN;
     this.dashDir = dir;
@@ -158,6 +181,13 @@
     if (this.riposteBuffer > 0) this.riposteBuffer -= dt;
     if (this.parryBuffer > 0) this.parryBuffer -= dt;
     if (this.parryGrace > 0) this.parryGrace -= dt;
+    if (this.staminaEmptyFlash > 0) this.staminaEmptyFlash -= dt;
+
+    // 스태미너 회복 — 마지막 소모 후 REGEN_DELAY 가 지나야 차오른다
+    if (this.staminaDelay > 0) this.staminaDelay -= dt;
+    else if (this.stamina < C.STAMINA.MAX) {
+      this.stamina = Math.min(C.STAMINA.MAX, this.stamina + C.STAMINA.REGEN * dt);
+    }
 
     if (this.parryT >= 0) {
       this.parryT += dt;

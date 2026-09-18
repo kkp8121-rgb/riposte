@@ -616,16 +616,29 @@
       ctx.beginPath();
       ctx.arc(b.x, b.y, C.TELL.BURST_R * (0.3 + t * 1.5), 0, TAU);
       ctx.stroke();
-      // 방사선
-      ctx.lineWidth = 2.2 * (1 - t);
-      for (var k2 = 0; k2 < b.rays; k2++) {
-        var ang = b.seed + (k2 / b.rays) * TAU;
-        var r0 = C.TELL.BURST_R * (0.5 + t * 1.1);
-        var r1 = r0 + C.TELL.RAY_LEN * (1 - t) * 0.9;
-        ctx.beginPath();
-        ctx.moveTo(b.x + Math.cos(ang) * r0, b.y + Math.sin(ang) * r0);
-        ctx.lineTo(b.x + Math.cos(ang) * r1, b.y + Math.sin(ang) * r1);
-        ctx.stroke();
+      // 방사선(금) / 굵은 X자(적) — 색 없이도 형태로 구분 (접근성)
+      if (b.shape === 'red') {
+        ctx.lineWidth = C.TELL.RED_LINE_W * (1 - t);
+        for (var k2 = 0; k2 < C.TELL.RED_RAYS; k2++) {
+          var ang = Math.PI / 4 + (k2 / C.TELL.RED_RAYS) * TAU; // 45/135/225/315도 고정 — 항상 X 모양
+          var r0 = C.TELL.BURST_R * (0.5 + t * 1.1);
+          var r1 = r0 + C.TELL.RED_CROSS_LEN * (1 - t) * 0.9;
+          ctx.beginPath();
+          ctx.moveTo(b.x + Math.cos(ang) * r0, b.y + Math.sin(ang) * r0);
+          ctx.lineTo(b.x + Math.cos(ang) * r1, b.y + Math.sin(ang) * r1);
+          ctx.stroke();
+        }
+      } else {
+        ctx.lineWidth = 2.2 * (1 - t);
+        for (var k2 = 0; k2 < b.rays; k2++) {
+          var ang = b.seed + (k2 / b.rays) * TAU;
+          var r0 = C.TELL.BURST_R * (0.5 + t * 1.1);
+          var r1 = r0 + C.TELL.RAY_LEN * (1 - t) * 0.9;
+          ctx.beginPath();
+          ctx.moveTo(b.x + Math.cos(ang) * r0, b.y + Math.sin(ang) * r0);
+          ctx.lineTo(b.x + Math.cos(ang) * r1, b.y + Math.sin(ang) * r1);
+          ctx.stroke();
+        }
       }
     }
     ctx.restore();

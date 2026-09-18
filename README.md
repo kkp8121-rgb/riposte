@@ -31,7 +31,9 @@ all first.
 | `M` | Mute |
 | `Esc` | Back to title |
 
-Two colors, two verbs. **Gold = parry. Red = dash.** That's the whole language.
+Two colors, two verbs. **Gold = parry. Red = dash.** That's the whole language — and the two
+tells differ in *shape* as well as colour (gold bursts in eight rays, red in a thick X), so the
+language still reads with the sound off or the colours hard to tell apart.
 
 ---
 
@@ -48,7 +50,11 @@ Two colors, two verbs. **Gold = parry. Red = dash.** That's the whole language.
    `slam` crushes. Hit a boss **during its wind-up** and you interrupt it for **×1.5**.
 4. **Keep the streak.** Three perfect parries in a row and every riposte deals **×2**. The
    streak only resets when *you* take damage — so the fantasy holds: flawless is lethal.
-5. **Phase II.** At 50 % HP every boss roars, speeds up its wind-ups, and unlocks new
+5. **Mind the stamina.** Parrying costs stamina, dashing costs less, and it refills a beat after
+   you stop spending. What you get back follows how well you read: a **perfect** parry refunds
+   the whole cost, a **block** half of it, a whiff nothing. Flawless reading is free, mashing is
+   not. Run dry and the bar flashes red: the key simply won't answer.
+6. **Phase II.** At 50 % HP every boss roars, speeds up its wind-ups, and unlocks new
    patterns.
 
 Rank per boss: **S** = no hits *and* under par · **A** = ≤1 hit *or* under par ·
@@ -111,6 +117,7 @@ Retry a boss with `R` and the scene doesn't play again — only your first attem
 | `?seed=N` | Seed the pattern RNG |
 | `?mute=1` | Start muted |
 | `?nofx=1` | Disable particles, rings, after-images and text pops. **Hit-stop, screen shake and slow-motion stay on** — they are part of the timing, not decoration, so judgement is identical with or without it |
+| `?flash=0` | Disable the full-screen white flash on a perfect parry (photosensitivity opt-out). Hit-stop, shake, slow-motion and the tell bursts all stay on |
 | `?speed=0.5` | Time scale |
 
 A run started with `?boss=N` never writes to your saved progress.
@@ -133,6 +140,7 @@ node tests/bot.mjs --all    # a reactive bot beats all eight bosses; a passive b
 node tests/state.mjs        # boss definition tables stay byte-identical across a whole fight
 node tests/audio-smoke.mjs  # one keypress -> AudioContext running; every sound path callable
 node tests/story.mjs        # dialogue table rules: line/length limits, choice shape
+node tests/mash.mjs --all --riposte --expect-lose   # a bot that only mashes must lose every fight
 node tools/boss-overlap.mjs --check  # boss differentiation gate: no undeclared pattern/attack overlap
 node tools/shots.mjs        # re-capture the README screenshots into docs/media/
 ```

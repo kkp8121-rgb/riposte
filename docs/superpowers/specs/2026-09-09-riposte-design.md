@@ -78,6 +78,8 @@
 - **금색 플래시** = 패리 가능. 플래시 → 타격까지 시간은 공격별로 **항상 일정**(리듬 학습).
 - **붉은 플래시** = 패리 불가. **대시**로 통과해야 한다. 패리하면 그냥 맞는다.
 - 플래시와 동시에 짧은 오디오 큐(금: 높은 "tick", 적: 낮은 "thud")가 난다.
+- **모양도 다르다 (2026-09-18 추가 — 접근성).** 금은 방사선 8줄, **적은 굵은 X자 4줄**(45/135/225/315도 고정). Game Accessibility Guidelines 1급 권고가 "고정된 색 하나만으로 정보를 전달하지 말 것"이라, 색·소리·모양 세 채널로 이중화한다 — 음소거 상태에서도, 색 구분이 어려워도 읽힌다. 수치는 `C.TELL.RED_*`. 호출부(`Boss.flash`)가 텔 종류를 **명시적으로** 넘긴다(색 문자열로 자동 판정하지 않는다).
+- 색 재사용 금지: 세 번째 대응 유형이 필요해지면 색을 돌려 쓰지 말고 새 색·새 모양을 배정한다(Sekiro가 한 기호로 3종 대응을 표시해 "몸에 가려 못 읽는다"는 불만을 산 사례).
 
 ### 2.3 패리 (K)
 
@@ -114,6 +116,27 @@
 - 플레이어 HP 0 → 슬로모 → **DEFEAT** ("R: 재도전", "Esc: 타이틀").
 - 4번째 보스(챕터 1 마지막) 격파 → **INTERLUDE** (챕터 I 랭크·시간 카드) → Enter → 5번째 보스 STORY/INTRO. 8번째 보스 격파 → **ENDING** (총 시간, 총 피격, 총 퍼펙트, 종합 랭크). localStorage에 보스별 최고 랭크·진행도 저장. 챕터 경계는 `config.CHAPTERS` 테이블이 정한다(§3 공통).
 - **트라이 수 (2026-09-18, 사용자 요청)**: 보스별 **전투 시작 횟수**를 런 단위로 센다(`run.tries[key]` — 첫 도전 1, DEFEAT 뒤 R 재도전마다 +1, 타이틀로 나가 Continue 하면 새 런이라 1부터, `?boss=N` 도 센다). 표시: VICTORY 카드 `TRIES N`(저장된 최소 기록이 있으면 `best M` 병기), INTERLUDE·ENDING 보스 행에 트라이 열, DEFEAT 화면 `TRY N`. 저장: 보스별 최소 트라이 `bestTries[key]`(승리 시 갱신, `?boss=N` 판은 저장 안 함). `getState().tries` 로 노출(테스트가 R 재도전 후 2 가 되는지 본다).
+
+### 2.6.1 스태미너 (2026-09-18 추가 — 연타 결함 수정)
+
+> **왜 넣었나.** 패리 키를 연타하면 보스가 그냥 깨지는 결함이 있었다. 실측: K+J 연타 봇이 24판 중 9승(SERAPH 3/3 · BASTION 3/3 · GRAVEN 2/3 · MIRROR 1/3), K만 연타해도 VESPER에게 115초 동안 피격 0. 근본 원인은 **판정 창(0.34s) < 재입력 잠금(0.40s)** 이라 헛쳐도 실질 무방비가 0.06초뿐이고, 블록도 "성공"으로 취급돼 잠금이 0.10초로 줄어 연타가 끊기지 않는 것이다. 측정기 = `tests/mash.mjs`(회귀 게이트 `--expect-lose`).
+
+- 스태미너 `MAX` 100에서 시작. **패리 입력 시 `PARRY_COST`(30), 대시 시작 시 `DASH_COST`(20) 소모** — 성공 여부와 무관하게 누르는 순간 나간다.
+- 마지막 소모 후 `REGEN_DELAY`(0.5s)가 지나면 초당 `REGEN`(25)으로 회복.
+- **환급은 §2.3의 판정 사다리를 그대로 따른다.** 정확히 읽으면 공짜, 타이밍만 맞추면 절반, 못 읽으면 전액 부담이다.
+
+  | 판정 | 환급 | 실질 비용 |
+  |---|---|---|
+  | PERFECT | `PERFECT_REFUND` 30 (= 소모값) | **0** |
+  | BLOCK | `BLOCK_REFUND` 15 | 15 |
+  | 헛침 | 0 | 30 |
+
+  퍼펙트가 순소모 0이라 §2.5의 "무결점이면 무한" 판타지가 수치로 지켜진다. 블록에 절반을 돌려주는 이유는 **정확히 읽고도 마르는 일을 막기 위해서다** — 환급이 퍼펙트뿐이면 패리 횟수가 가장 많은 BASTION(완벽 봇 34회, 되받아치기 랠리가 짧은 간격의 연속 패리를 요구)에서 숙련 플레이가 먼저 바닥난다(실측: 숙련 봇 DEFEAT). 연타는 대부분 **헛침**이라 이 완화의 혜택을 받지 못한다.
+- 잔량이 부족하면 패리·대시 입력이 **무시되고, 입력 버퍼에도 쌓이지 않는다.** (버퍼에 쌓으면 잠금이 풀리는 순간 자동 재입력돼 연타가 그대로 살아남는다 — 이게 핵심이다.) 이때 스태미너 바가 `EMPTY_FLASH`(0.25s) 점멸하고 둔탁한 헛손질 음이 난다.
+- HUD: 하트 바로 아래 얇은 바(`C.HUD.STAMINA_*`). 잔량이 패리 1회분 미만이면 붉게 칠한다 — 이 장르 리뷰의 1순위 불만이 "왜 안 먹혔는지 모르겠다"라서 상태를 눈에 보이게 한다.
+- 상수는 전부 `js/config.js`의 `STAMINA` 블록. 보스 전환·재도전 시 `Player.reset()`이 `MAX`로 되돌린다.
+
+**기각한 안 (실측 근거)**: 재입력 잠금만 늘리는 방식. `PARRY.RECOVERY` 0.40 → **0.8**이면 연타는 0/24로 막히지만 숙련 프로파일 봇이 MIRROR 페인트에 죽어 7/8. **0.6**도 숙련 봇이 BASTION 되받아치기 랠리에 죽어 7/8. ⇒ 실수 한 번을 과하게 벌하면 정상 플레이가 먼저 무너진다. 스태미너는 "연속 헛침"만 벌하고 단발 실수는 한 칸으로 끝난다.
 
 ### 2.7 랭크
 
@@ -331,8 +354,9 @@ README.md
 ```
 
 - 디버그 훅: `window.__RIPOSTE = { game, CONFIG, getState(), setTimeScale(n) }`.
-  `getState()` → `{ scene, bossId, bossHp, bossMaxHp, phase, playerHp, playerX, bossX, hand:[id], streak, time, hits, perfects, tries, chapter, loot:[id], currentAttack: { id, tell, stage:'windup'|'active'|'recover', tRemain, hitAt } | null, projectiles:[{x,vx,tell}], zones:[{x,w,tRemain}] }`(`tries`: 현재 보스의 런 내 시도 횟수 · `chapter`: 현재 챕터 id · `loot`: 약탈 보스가 빼앗은 손패 id)
-- URL 파라미터: `?boss=1..8` (해당 보스로 바로 — STORY 건너뜀, 저장 안 함), `?story=0`(대화 전부 건너뜀), `?seed=N`, `?mute=1`, `?nofx=1`, `?speed=0.5`(타임스케일).
+  `getState()` → `{ scene, bossId, bossHp, bossMaxHp, phase, playerHp, stamina, playerX, bossX, hand:[id], streak, time, hits, perfects, tries, chapter, loot:[id], currentAttack: { id, tell, stage:'windup'|'active'|'recover', tRemain, hitAt } | null, projectiles:[{x,vx,tell}], zones:[{x,w,tRemain}] }`(`tries`: 현재 보스의 런 내 시도 횟수 · `chapter`: 현재 챕터 id · `loot`: 약탈 보스가 빼앗은 손패 id)
+- URL 파라미터: `?boss=1..8` (해당 보스로 바로 — STORY 건너뜀, 저장 안 함), `?story=0`(대화 전부 건너뜀), `?seed=N`, `?mute=1`, `?nofx=1`, `?flash=0`, `?speed=0.5`(타임스케일).
+  - `?nofx=1` = 파티클·링·잔상·텍스트 팝만 끈다. `?flash=0` = **전체화면 백색 플래시만** 끈다(광과민성 옵트아웃 — 화면 100%·알파 0.85·0.055s이고 SERAPH `triple`(0.22/0.18s 간격)을 연속 퍼펙트로 받으면 0.44초 안에 3회라 WCAG·Xbox XAG 118의 "1초 내 3회 초과 + 화면 25% 이상" 임계에 닿는다). **둘 다 히트스톱·흔들림·슬로모·텔 버스트는 끄지 않는다** — 판정 타이밍의 일부다. 피격 붉은 비네트는 가장자리 그라디언트이고 무적 0.8s 때문에 초당 1회를 넘을 수 없어 `?flash=0` 대상이 아니다.
 - `getState().scene` 에 `'STORY'`, `'INTERLUDE'` 추가. STORY 중에는 `story: { beat:'before'|'after', line, total, choice: null | 'pending' | 'taken' }` 를 함께 준다(`bossId` 는 최상위 필드; 테스트가 Enter 진행을 확인하는 데 쓴다).
 - 상수: `config.CHAPTERS`(§3 공통), `config.STORY = { CPS: 24, SKIP_HOLD: 0.6, MAX_LINES: 4, TAKEN_FLASH: 0.4, ENDING_SLOT_DROP: 0.4, DISSOLVE: 0.8 }`, `config.BOSS` 에 `MIN_VOLLEY_GAP` · `DEFLECT_*`(§3.6~3.7). `config.FONT.UI` 에 한글 폴백 `"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR"` 추가(외부 폰트 로드 없음).
 
