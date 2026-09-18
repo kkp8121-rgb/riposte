@@ -17,6 +17,9 @@
     armor: false,
     spawnX: 680,
     droneHz: 65.41,             // C2
+    arena: 'gate',             /* 아레나 (C.ARENA) */
+    /* 드론 변주 (두 목소리 — 디튠을 크게 벌려 둘로 들린다) — 작곡이 아니라 파라미터다 */
+    drone: { wave: 'sawtooth', lfo: 0.7, lfoDepth: 120, cutoff: 460, cutoffP2: 1200, detune: 33 },
     weaponTip: { dx: 46, dy: 60 },
 
     prefer: { close: 115, far: 300, back: 210 },

@@ -78,17 +78,26 @@
     if (this.def.onReset) this.def.onReset(this, this.game);
   };
 
+  /** 하드 모드 "RIPOSTE+" — 같은 보스를 더 빠르게 돌린다 (새 공격·새 패턴 없음) */
+  Boss.prototype.isHard = function () { return !!(this.game && this.game.hard); };
+
   Boss.prototype.patternGap = function () {
     var g = this.def.gap;
-    if (!g) return B.PATTERN_GAP_DEFAULT;
-    return g[this.phase] === undefined ? B.PATTERN_GAP_DEFAULT : g[this.phase];
+    var v = (!g || g[this.phase] === undefined) ? B.PATTERN_GAP_DEFAULT : g[this.phase];
+    return this.isHard() ? v * C.HARD.GAP : v;
   };
 
   Boss.prototype.windupMult = function () {
     var m = this.phase === 2 ? B.PHASE2_WINDUP_MULT : 1;
     // ASSIST: BOSS WINDUP — 기본 ×1 이면 곱이 1이라 밸런스가 그대로다
     if (this.game && this.game.assistWindupMult) m *= this.game.assistWindupMult();
+    if (this.isHard()) m *= C.HARD.WINDUP;   // MIN_WINDUP 하한은 그대로 걸린다
     return m;
+  };
+
+  /** Phase 2 진입 HP 비율 — 하드는 더 일찍 넘어간다 */
+  Boss.prototype.phase2Ratio = function () {
+    return this.isHard() ? C.HARD.PHASE2_AT : B.PHASE2_HP_RATIO;
   };
 
   Boss.prototype.dist = function () {
@@ -498,7 +507,7 @@
     if (this.hp <= 0) {
       this.hp = 0;
       this.die();
-    } else if (this.phase === 1 && this.hp <= this.maxHp * B.PHASE2_HP_RATIO) {
+    } else if (this.phase === 1 && this.hp <= this.maxHp * this.phase2Ratio()) {
       this.enterPhase2();
     }
     return applied;

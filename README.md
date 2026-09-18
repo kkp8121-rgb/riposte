@@ -97,6 +97,15 @@ Retry a boss with `R` and the scene doesn't play again — only your first attem
 
 ---
 
+## RIPOSTE+
+
+Clear the ending once and the title menu gains **NEW RUN (RIPOSTE+)**: every boss winds up
+faster, throws patterns closer together, and roars into Phase II at 60 % health instead of 50 %.
+No new bosses, no new attacks — the same eight fights, played at speed. Its records are kept
+apart from your normal ones and ranks carry a `+`.
+
+---
+
 ## Options
 
 The title screen is a menu: **NEW RUN**, **CONTINUE**, **BOSS SELECT** (bosses you have cleared),
@@ -121,6 +130,8 @@ easier behind your back.
   Fixed-step simulation at 1/120 s with an accumulator; rendering on `requestAnimationFrame`.
 - Deterministic: boss pattern selection and deflect chance are the only consumers of RNG,
   and it's seeded.
+- Three arenas, drawn not loaded: the pillars, palette and floor change per boss out of a table,
+  and each boss carries its own drone — wave, base note, filter — that shifts when Phase II hits.
 - Constants live in tables — `js/config.js` globally, `js/bosses/*.js` per boss. No magic
   numbers in the logic.
 
@@ -134,6 +145,7 @@ easier behind your back.
 | `?mute=1` | Start muted |
 | `?nofx=1` | Disable particles, rings, after-images and text pops. **Hit-stop, screen shake and slow-motion stay on** — they are part of the timing, not decoration, so judgement is identical with or without it |
 | `?flash=0` | Disable the full-screen white flash on a perfect parry (photosensitivity opt-out). Hit-stop, shake, slow-motion and the tell bursts all stay on |
+| `?hard=1` | Start in **RIPOSTE+** (harder wind-ups, tighter patterns, Phase II at 60 % HP) |
 | `?speed=0.5` | Time scale |
 
 A run started with `?boss=N` never writes to your saved progress.

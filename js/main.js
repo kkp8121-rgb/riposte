@@ -118,7 +118,8 @@
     game = new Game({
       seed: numParam(p, 'seed', 20260909),
       speed: numParam(p, 'speed', 1),
-      story: p.story !== '0'                  // ?story=0 — 대화 전부 건너뜀 (테스트/봇)
+      story: p.story !== '0',                 // ?story=0 — 대화 전부 건너뜀 (테스트/봇)
+      hard: p.hard !== undefined && p.hard !== '0'   // ?hard=1 — RIPOSTE+ (언락 없이 진입, 테스트/밸런스)
     });
 
     // 저장된 옵션 먼저 → URL 파라미터가 항상 이긴다 (테스트/봇이 옵션에 흔들리지 않게)

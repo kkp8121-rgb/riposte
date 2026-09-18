@@ -31,9 +31,14 @@
     return out;
   }
 
+  /** 랭크·최고 기록 한 벌 (일반 / 하드가 각각 하나씩 가진다) */
+  function emptyRecords() { return { ranks: {}, bestTimes: {}, bestTries: {} }; }
+
   function loadSave(bossCount) {
     var n = bossCount || 1;
-    var fallback = { unlocked: 1, cleared: false, ranks: {}, bestTimes: {}, bestTries: {}, settings: loadSettings(null) };
+    var fallback = { unlocked: 1, cleared: false, hardUnlocked: false,
+                     ranks: {}, bestTimes: {}, bestTries: {},
+                     hard: emptyRecords(), settings: loadSettings(null) };
     try {
       var raw = global.localStorage.getItem(C.STORAGE.KEY);
       if (!raw) return fallback;
@@ -47,9 +52,14 @@
       return {
         unlocked: unlocked,
         cleared: cleared,
+        hardUnlocked: !!o.hardUnlocked,
         ranks: o.ranks || {},
         bestTimes: o.bestTimes || {},
         bestTries: o.bestTries || {},
+        // 하드 판 기록은 일반 기록과 같은 모양으로 따로 둔다 (섞이지 않게)
+        hard: o.hard && typeof o.hard === 'object'
+          ? { ranks: o.hard.ranks || {}, bestTimes: o.hard.bestTimes || {}, bestTries: o.hard.bestTries || {} }
+          : emptyRecords(),
         settings: loadSettings(o.settings)
       };
     } catch (e) { return fallback; }
@@ -69,6 +79,9 @@
     this.runStory = this.storyOn;          // 이번 런에서 대화를 트는가 (?boss=N 은 false)
     this.story = null;                     // STORY 장면 상태 (아래 beginStory)
     this.seed = opts.seed === undefined ? 1337 : opts.seed;
+    /* 하드 모드 "RIPOSTE+" — ?hard=1 로 들어오면 이 세션의 모든 런이 하드다 (테스트/밸런스용) */
+    this.forceHard = !!opts.hard;
+    this.hard = this.forceHard;
     this.speed = opts.speed || 1;
     this.debugScale = 1;
     this.rng = new RNG(this.seed);
@@ -164,6 +177,7 @@
   /** opts.noSave = true 면 저장하지 않고, opts.noStory = true 면 대화도 틀지 않는다 (?boss=N) */
   Game.prototype.startRun = function (fromIndex, opts) {
     this.noSave = !!(opts && opts.noSave);
+    this.hard = this.forceHard || !!(opts && opts.hard);
     this.runStory = this.storyOn && !(opts && opts.noStory);
     this.run = this.newRun();
     this.startBoss(fromIndex || 0);
@@ -200,7 +214,7 @@
     this.setScene('FIGHT');
     this.time = 0;
     var def = this.defs[this.bossIndex];
-    RAudio.startDrone(def.droneHz, C.AUDIO.BPM[def.key]);
+    RAudio.startDrone(def.droneHz, C.AUDIO.BPM[def.key], def.drone);
   };
 
   Game.prototype.restartBoss = function () {
@@ -279,6 +293,7 @@
     var id = items[this.menuIndex].id;
     // NEW RUN 이 0번이라 "Enter 한 번 = 시작" 이 그대로 유지된다 (하네스 호환)
     if (id === 'new') this.startRun(0);
+    else if (id === 'hard') this.startRun(0, { hard: true });
     else if (id === 'continue') this.startRun(this.save.cleared ? 0 : this.save.unlocked - 1);
     else if (id === 'bosses') { this.menuIndex = 0; this.setScene('BOSSSELECT'); }
     else if (id === 'options') { this.menuIndex = 0; this.setScene('OPTIONS'); }
@@ -311,10 +326,19 @@
 
   Game.prototype.titleItems = function () {
     var items = [{ id: 'new', label: 'NEW RUN' }];
+    // 하드는 0번이 아니다 — "Enter 한 번 = NEW RUN" 이 그대로 유지돼야 한다 (하네스 호환)
+    if (this.save.hardUnlocked) items.push({ id: 'hard', label: C.HARD.MENU_LABEL });
     if (this.save.unlocked > 1 || this.save.cleared) items.push({ id: 'continue', label: 'CONTINUE' });
     if (this.clearedBosses().length) items.push({ id: 'bosses', label: 'BOSS SELECT' });
     items.push({ id: 'options', label: 'OPTIONS' });
     return items;
+  };
+
+  /** 이번 런이 쓰는 기록 한 벌 — 하드 판은 일반 기록과 섞이지 않는다 */
+  Game.prototype.records = function () {
+    if (!this.hard) return this.save;
+    if (!this.save.hard) this.save.hard = emptyRecords();
+    return this.save.hard;
   };
 
   /* ---- ASSIST (옵트인 — 기본값이면 배율이 1이라 밸런스가 그대로다) -------- */
@@ -479,8 +503,9 @@
   /** 다음 보스 / 챕터 카드 / 엔딩 (스펙 §2.6) */
   Game.prototype.advanceAfterBoss = function () {
     if (this.bossIndex + 1 >= this.defs.length) {
-      if (!this.noSave) {                // 완주 — 타이틀 문구가 바뀐다
+      if (!this.noSave) {                // 완주 — 타이틀 문구가 바뀌고 RIPOSTE+ 가 열린다
         this.save.cleared = true;
+        this.save.hardUnlocked = true;
         this.persist();
       }
       this.endingHand = this.snapshotHand();
@@ -1151,12 +1176,13 @@
       this.save.unlocked = clamp(Math.max(this.save.unlocked, this.bossIndex + 2), 1, this.defs.length);
       // ASSIST 가 켜진 판은 진행만 남기고 랭크·최고 기록은 갱신하지 않는다
       if (this.assistOn()) { this.persist(); FX.setZoom(1); this.setScene('VICTORY'); return; }
-      var prev = this.save.ranks[r.key];
-      if (!prev || C.RANK.VALUE[r.rank] > C.RANK.VALUE[prev]) this.save.ranks[r.key] = r.rank;
-      var bt = this.save.bestTimes[r.key];
-      if (!bt || r.time < bt) this.save.bestTimes[r.key] = r.time;
-      var bt2 = this.save.bestTries[r.key];
-      if (!bt2 || r.tries < bt2) this.save.bestTries[r.key] = r.tries;
+      var rec = this.records();
+      var prev = rec.ranks[r.key];
+      if (!prev || C.RANK.VALUE[r.rank] > C.RANK.VALUE[prev]) rec.ranks[r.key] = r.rank;
+      var bt = rec.bestTimes[r.key];
+      if (!bt || r.time < bt) rec.bestTimes[r.key] = r.time;
+      var bt2 = rec.bestTries[r.key];
+      if (!bt2 || r.tries < bt2) rec.bestTries[r.key] = r.tries;
       this.persist();
     }
 
@@ -1225,6 +1251,8 @@
     return {
       scene: this.scene,
       menuIndex: this.menuIndex,
+      hard: this.hard,
+      arena: b ? (b.def.arena || C.ARENA.DEFAULT) : null,
       settings: this.save.settings,
       assist: { hp: this.assistMaxHp(), windup: this.assistWindupMult(), on: this.assistOn() },
       bossId: this.bossIndex + 1,

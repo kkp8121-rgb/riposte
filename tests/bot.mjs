@@ -7,6 +7,7 @@
  *
  *   node tests/bot.mjs                 -> 보스 1
  *   node tests/bot.mjs --boss=3        -> 보스 3
+ *   node tests/bot.mjs --all --hard   -> 하드 모드 RIPOSTE+ (?hard=1)
  *   node tests/bot.mjs --all           -> 보스 1..4 순차 + 무입력 패배 검증
  *   node tests/bot.mjs --seed=7
  *
@@ -43,6 +44,7 @@ const arg = (k, d) => {
   return hit ? hit.split('=')[1] : d;
 };
 const ALL = argv.includes('--all');
+const HARD = argv.includes('--hard');   // 하드 모드 "RIPOSTE+" (?hard=1) 로 돌린다
 const BOSS = parseInt(arg('boss', '1'), 10);
 const SEED = parseInt(arg('seed', '7'), 10);
 const JITTER = parseFloat(arg('jitter', '0')) || 0;
@@ -240,7 +242,7 @@ async function runBoss(browser, bossNum, { passive = false } = {}) {
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console.error: ' + m.text()); });
 
   const url = pathToFileURL(join(ROOT, 'index.html')).href +
-    `?boss=${bossNum}&mute=1&seed=${SEED}`;
+    `?boss=${bossNum}&mute=1&seed=${SEED}${HARD ? '&hard=1' : ''}`;
   await page.goto(url, { waitUntil: 'load' });
 
   if (SET_PAIRS.length) {

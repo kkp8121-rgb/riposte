@@ -17,6 +17,9 @@
     armor: false,
     spawnX: 660,
     droneHz: 55,               // A1
+    arena: 'hall',             /* 아레나 (C.ARENA) */
+    /* 드론 변주 (결투가 — 현행 기준음. 가장 평범한 드론이 뒤 보스들의 기준이 된다) — 작곡이 아니라 파라미터다 */
+    drone: { wave: 'sawtooth', lfo: 0.15, lfoDepth: 90, cutoff: 420, cutoffP2: 980, detune: 11 },
     weaponTip: { dx: 52, dy: 58 },
 
     /* 선호 거리 — close 보다 가까우면 물러나고, far 보다 멀면 붙는다 */

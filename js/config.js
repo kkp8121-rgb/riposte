@@ -18,6 +18,59 @@
       HORIZON_Y: 250
     },
 
+    /* ---- 아레나 3종 (Phase1 그룹4) ----------------------------------------
+     * 보스 정의의 `arena: 'id'` 가 고른다. 바꾸는 것은 색·기둥 개수·간격·시차 계수·
+     * 바닥 색뿐이고 도형·렌더 패스는 늘리지 않는다 (이미지 에셋 0 유지).
+     * 🔴 배경은 세 아레나 모두 어둡게 유지한다 — 금(#ffd166)/적(#ff3b3b) 텔 대비가 살아야 한다.
+     * 바닥선 y 는 V.FLOOR_Y(물리 지면)라 바꾸지 않는다. 높이감은 기둥·색으로만 낸다.
+     * ------------------------------------------------------------------- */
+    ARENA: {
+      DEFAULT: 'hall',
+      SEED: 20260909,          // 배치 생성 시드 — 고정이라 매 실행 같은 그림이다
+      STAR_Y: [10, 20],        // 별 y 범위 (아래값은 HORIZON_Y 에서 뺀다)
+      STAR_SIZE: [0.6, 1.6],
+      /* hall — 현행 값 그대로 (기존 스크린샷이 깨지지 않게) */
+      hall: {
+        bg: ['#070910', '#0b0d14', '#0e1220'], bgMid: 0.62,
+        floor: '#1a1f2e', line: '#232a3d', reflect: 'rgba(94,230,255,0.07)',
+        farColor: '#11151f', farAlpha: 0.9, nearColor: '#161b28', nearAlpha: 1,
+        farStep: 118, farJitter: 18, farW: [38, 62], farH: [150, 260], farPar: 0.06,
+        nearStep: 214, nearJitter: 24, nearW: [56, 96], nearH: [210, 330], nearPar: 0.16,
+        stars: 60, starAlpha: [0.06, 0.30]
+      },
+      /* range — 원거리 보스. 더 어둡고 기둥이 멀고 낮다(넓은 공간) */
+      range: {
+        bg: ['#04060c', '#070a12', '#0a0e18'], bgMid: 0.58,
+        floor: '#141827', line: '#1c2233', reflect: 'rgba(94,230,255,0.05)',
+        farColor: '#0c1018', farAlpha: 0.85, nearColor: '#10141e', nearAlpha: 1,
+        farStep: 168, farJitter: 26, farW: [30, 50], farH: [110, 190], farPar: 0.04,
+        nearStep: 300, nearJitter: 34, nearW: [44, 74], nearH: [160, 250], nearPar: 0.11,
+        stars: 84, starAlpha: [0.08, 0.36]
+      },
+      /* gate — 닫힌 문 앞. 기둥이 촘촘하고 높다 */
+      gate: {
+        bg: ['#08070e', '#0e0c16', '#13101e'], bgMid: 0.66,
+        floor: '#1e1a2c', line: '#2b2440', reflect: 'rgba(168,184,200,0.06)',
+        farColor: '#14101c', farAlpha: 0.95, nearColor: '#1b1626', nearAlpha: 1,
+        farStep: 84, farJitter: 12, farW: [42, 70], farH: [200, 300], farPar: 0.08,
+        nearStep: 150, nearJitter: 16, nearW: [62, 104], nearH: [280, 400], nearPar: 0.20,
+        stars: 34, starAlpha: [0.05, 0.20]
+      }
+    },
+
+    /* ---- 하드 모드 "RIPOSTE+" (Phase1 그룹4) -------------------------------
+     * 엔딩 클리어 후 언락. 기존 보스에 이 배율 하나를 곱할 뿐이고
+     * 새 공격·새 패턴·새 실루엣을 만들지 않는다 (적 컨셉 중복 금지 원칙).
+     * ------------------------------------------------------------------- */
+    HARD: {
+      NAME: 'RIPOSTE+',
+      MENU_LABEL: 'NEW RUN (RIPOSTE+)',
+      BADGE: '+',              // 랭크 옆에 붙는 배지 — 일반 기록과 섞이지 않는다는 표시
+      WINDUP: 0.85,            // 텔에서 타격까지 (MIN_WINDUP 하한은 그대로 적용된다)
+      GAP: 0.85,               // 패턴 사이 간격
+      PHASE2_AT: 0.6           // Phase 2 진입 HP 비율 (기본 0.5)
+    },
+
     /* ---- 루프 ------------------------------------------------------------ */
     LOOP: {
       FIXED_DT: 1 / 120,
@@ -326,6 +379,11 @@
       DRONE_CUTOFF_P2: 980,
       DRONE_DETUNE: 11,
       DRONE_LFO_HZ: 0.15,
+      /* 보스 정의의 drone 블록이 없을 때 쓰는 기본값 + Phase 2 변조 (작곡 없이 파라미터만) */
+      DRONE_WAVE: 'sawtooth',
+      DRONE_LFO_DEPTH: 90,       // LFO 가 컷오프를 흔드는 폭(Hz)
+      DRONE_DETUNE_P2: 2.2,      // Phase 2 에서 디튠에 곱하는 배율
+      DRONE_P2_RAMP: 1.0,        // Phase 2 변조에 걸리는 시간(초)
       TELL_GOLD_HZ: 2200,
       TELL_GOLD_MS: 40,
       TELL_RED_HZ: 90,

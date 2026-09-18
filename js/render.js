@@ -48,10 +48,7 @@
     dagger: 0.28, twin: 0.30, shield: 0.26
   };
 
-  var Render = {
-    pillars: null,
-    stars: null
-  };
+  var Render = {};
 
   /* ---- 고정 그라디언트 캐시 -----------------------------------------------
    * createLinearGradient 는 프레임마다 새로 만들 이유가 없다 (좌표가 고정).
@@ -84,21 +81,35 @@
     return { x: handX + Math.cos(armA) * wl * f, y: handY + Math.sin(armA) * wl };
   };
 
-  /* ---- 배경 생성 (고정 레이아웃) ------------------------------------------ */
-  Render.initScene = function () {
-    var r = new RNG(20260909);
+  /* ---- 배경 생성 (아레나별 고정 레이아웃) ----------------------------------
+   * C.ARENA 테이블이 색·개수·간격·시차 계수를 전부 소유한다. 여기서는 표를 읽어
+   * 배치를 한 번 만들어 캐시할 뿐이다 (도형 종류·렌더 패스는 아레나마다 같다).
+   * ---------------------------------------------------------------------- */
+  var SCENES = {};
+
+  function arenaKey(id) { return (id && C.ARENA[id] && id !== 'DEFAULT') ? id : C.ARENA.DEFAULT; }
+
+  /** 아레나 배치를 만들어 캐시하고 돌려준다 (id 당 1회 생성) */
+  Render.initScene = function (id) {
+    var key = arenaKey(id);
+    if (SCENES[key]) return SCENES[key];
+    var A = C.ARENA, a = A[key];
+    var r = new RNG(A.SEED);
     var far = [], near = [];
     var i, x;
-    for (i = 0, x = -120; x < V.W + 220; i++, x += 118) {
-      far.push({ x: x + r.range(-18, 18), w: r.range(38, 62), h: r.range(150, 260) });
+    for (x = -a.farStep; x < V.W + a.farStep * 2; x += a.farStep) {
+      far.push({ x: x + r.range(-a.farJitter, a.farJitter), w: r.range(a.farW[0], a.farW[1]), h: r.range(a.farH[0], a.farH[1]) });
     }
-    for (i = 0, x = -200; x < V.W + 340; i++, x += 214) {
-      near.push({ x: x + r.range(-24, 24), w: r.range(56, 96), h: r.range(210, 330) });
+    for (x = -a.nearStep; x < V.W + a.nearStep * 2; x += a.nearStep) {
+      near.push({ x: x + r.range(-a.nearJitter, a.nearJitter), w: r.range(a.nearW[0], a.nearW[1]), h: r.range(a.nearH[0], a.nearH[1]) });
     }
-    Render.pillars = { far: far, near: near };
     var st = [];
-    for (i = 0; i < 60; i++) st.push({ x: r.range(0, V.W), y: r.range(10, V.HORIZON_Y - 20), a: r.range(0.06, 0.3), s: r.range(0.6, 1.6) });
-    Render.stars = st;
+    for (i = 0; i < a.stars; i++) {
+      st.push({ x: r.range(0, V.W), y: r.range(A.STAR_Y[0], V.HORIZON_Y - A.STAR_Y[1]),
+                a: r.range(a.starAlpha[0], a.starAlpha[1]), s: r.range(A.STAR_SIZE[0], A.STAR_SIZE[1]) });
+    }
+    SCENES[key] = { id: key, def: a, pillars: { far: far, near: near }, stars: st };
+    return SCENES[key];
   };
 
   /* ---- 아레나 ------------------------------------------------------------- */
@@ -121,9 +132,10 @@
   var STAR_COLOR = '#9fb3d9';
   var ARENA_EDGES = [V.MIN_X, V.MAX_X];      // 프레임마다 배열을 새로 만들지 않는다
 
-  function drawBackground(ctx, camX) {
-    ctx.fillStyle = gradient(ctx, 'bg', 0, 0, 0, V.FLOOR_Y, [
-      [0, C.COLORS.BG_FAR], [0.62, C.COLORS.BG], [1, '#0e1220']
+  function drawBackground(ctx, camX, sc) {
+    var a = sc.def;
+    ctx.fillStyle = gradient(ctx, 'bg:' + sc.id, 0, 0, 0, V.FLOOR_Y, [
+      [0, a.bg[0]], [a.bgMid, a.bg[1]], [1, a.bg[2]]
     ]);
     ctx.fillRect(0, 0, V.W, V.FLOOR_Y);
 
@@ -131,31 +143,32 @@
     var i, s;
     ctx.save();
     ctx.fillStyle = STAR_COLOR;
-    for (i = 0; i < Render.stars.length; i++) {
-      s = Render.stars[i];
+    for (i = 0; i < sc.stars.length; i++) {
+      s = sc.stars[i];
       ctx.globalAlpha = s.a;
       ctx.fillRect(s.x - camX * 0.02, s.y, s.s, s.s);
     }
     ctx.restore();
 
     // 패럴랙스 기둥 2층
-    drawPillars(ctx, Render.pillars.far, camX * 0.06, C.COLORS.PILLAR_FAR, 0.9);
-    drawPillars(ctx, Render.pillars.near, camX * 0.16, C.COLORS.PILLAR_NEAR, 1);
+    drawPillars(ctx, sc.pillars.far, camX * a.farPar, a.farColor, a.farAlpha);
+    drawPillars(ctx, sc.pillars.near, camX * a.nearPar, a.nearColor, a.nearAlpha);
   }
 
-  function drawFloor(ctx) {
-    ctx.fillStyle = C.COLORS.FLOOR;
+  function drawFloor(ctx, sc) {
+    var a = sc.def;
+    ctx.fillStyle = a.floor;
     ctx.fillRect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
 
     // 바닥 반사 그라디언트
-    ctx.fillStyle = gradient(ctx, 'floor', 0, V.FLOOR_Y, 0, V.H, [
-      [0, 'rgba(94,230,255,0.07)'],
+    ctx.fillStyle = gradient(ctx, 'floor:' + sc.id, 0, V.FLOOR_Y, 0, V.H, [
+      [0, a.reflect],
       [0.45, 'rgba(10,13,22,0.0)'],
       [1, 'rgba(6,8,14,0.55)']
     ]);
     ctx.fillRect(0, V.FLOOR_Y, V.W, V.H - V.FLOOR_Y);
 
-    ctx.strokeStyle = C.COLORS.FLOOR_LINE;
+    ctx.strokeStyle = a.line;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, V.FLOOR_Y + 0.5);
@@ -165,7 +178,7 @@
     // 아레나 경계 표시
     ctx.save();
     ctx.globalAlpha = 0.5;
-    ctx.strokeStyle = C.COLORS.FLOOR_LINE;
+    ctx.strokeStyle = a.line;
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (var i = 0; i < ARENA_EDGES.length; i++) {
@@ -665,11 +678,11 @@
 
   /* ---- 전체 드로우 -------------------------------------------------------- */
 
-  /** 배경 + 바닥만 (타이틀/엔딩 배경으로도 쓴다) */
-  Render.drawArena = function (ctx, camX) {
-    if (!Render.pillars) Render.initScene();
-    drawBackground(ctx, camX || 0);
-    drawFloor(ctx);
+  /** 배경 + 바닥만 (타이틀/엔딩 배경으로도 쓴다). arenaId 를 안 주면 기본 아레나. */
+  Render.drawArena = function (ctx, camX, arenaId) {
+    var sc = Render.initScene(arenaId);
+    drawBackground(ctx, camX || 0, sc);
+    drawFloor(ctx, sc);
   };
 
   /** 바닥 반사는 아래로 갈수록 사라진다 (하단 HUD 와 겹치지 않게) */
@@ -743,10 +756,10 @@
    * 보스 알파는 game.story.bossAlpha (AVARICE 정답 반응에서 0 으로 내려간다).
    * ---------------------------------------------------------------------- */
   Render.drawStoryScene = function (ctx, game) {
-    Render.drawArena(ctx, 0);
+    var b = game.boss;
+    Render.drawArena(ctx, 0, b && b.def ? b.def.arena : null);
     drawReflectionFade(ctx);
     var S = C.STORY;
-    var b = game.boss;
     var t = game.sceneT;
     var alpha = game.story ? game.story.bossAlpha : 1;
 
@@ -776,7 +789,8 @@
     var b = game.boss;
     var camX = p.x - V.W / 2;
 
-    Render.drawArena(ctx, camX);
+    // 아레나는 보스 정의가 고른다 (C.ARENA 테이블)
+    Render.drawArena(ctx, camX, b && b.def ? b.def.arena : null);
 
     // 존 (바닥 경고)
     for (var i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);

@@ -18,6 +18,9 @@
     armor: true,
     spawnX: 700,
     droneHz: 43.65,             // F1
+    arena: 'hall',             /* 아레나 (C.ARENA) */
+    /* 드론 변주 (망치 — 둔중하고 좁은 컷오프) — 작곡이 아니라 파라미터다 */
+    drone: { wave: 'square', lfo: 0.22, lfoDepth: 60, cutoff: 240, cutoffP2: 620, detune: 19 },
     weaponTip: { dx: 58, dy: 76 },
 
     prefer: { close: 150, far: 330, back: 220 },

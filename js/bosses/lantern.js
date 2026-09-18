@@ -18,6 +18,9 @@
     armor: false,
     spawnX: 660,
     droneHz: 61.74,             // B1
+    arena: 'range',             /* 아레나 (C.ARENA) */
+    /* 드론 변주 (환술사 — 깜빡이는 컷오프) — 작곡이 아니라 파라미터다 */
+    drone: { wave: 'triangle', lfo: 0.33, lfoDepth: 220, cutoff: 360, cutoffP2: 900, detune: 14 },
     weaponTip: { dx: 44, dy: 58 },
 
     prefer: { close: 110, far: 290, back: 200 },

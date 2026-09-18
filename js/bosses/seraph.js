@@ -24,6 +24,9 @@
     armor: false,
     spawnX: 760,
     droneHz: 58.27,             // B♭1
+    arena: 'range',             /* 아레나 (C.ARENA) */
+    /* 드론 변주 (궁수 — 맑고 성글게, 느린 흔들림) — 작곡이 아니라 파라미터다 */
+    drone: { wave: 'triangle', lfo: 0.09, lfoDepth: 140, cutoff: 300, cutoffP2: 760, detune: 6 },
     weaponTip: { dx: 40, dy: 62 },
     range: RANGE,
 

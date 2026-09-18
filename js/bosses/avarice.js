@@ -31,6 +31,9 @@
     stealOnHit: true,
     spawnX: 680,
     droneHz: 41.20,             // E1
+    arena: 'gate',             /* 아레나 (C.ARENA) */
+    /* 드론 변주 (약탈자 — 가장 불안하게 흔들린다) — 작곡이 아니라 파라미터다 */
+    drone: { wave: 'sawtooth', lfo: 0.9, lfoDepth: 260, cutoff: 620, cutoffP2: 1600, detune: 40 },
     weaponTip: { dx: 40, dy: 60 },
 
     prefer: { close: 120, far: 300, back: 200 },

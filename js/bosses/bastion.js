@@ -19,6 +19,9 @@
     deflect: true,              // 확률·사거리·경직은 CONFIG.BOSS.DEFLECT_*
     spawnX: 700,
     droneHz: 46.25,             // F#1
+    arena: 'gate',             /* 아레나 (C.ARENA) */
+    /* 드론 변주 (수문장 — 거의 멈춘 저역 벽) — 작곡이 아니라 파라미터다 */
+    drone: { wave: 'square', lfo: 0.06, lfoDepth: 40, cutoff: 200, cutoffP2: 560, detune: 8 },
     weaponTip: { dx: 44, dy: 68 },
 
     prefer: { close: 170, far: 360, back: 220 },

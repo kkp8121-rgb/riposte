@@ -295,10 +295,23 @@
    * 아직 오디오가 준비되지 않았어도 "무엇이 울려야 하는지"(_want)는 기억한다.
    * => ?boss=N 부팅처럼 전투가 이미 시작된 뒤 오디오가 열려도 드론이 살아난다.
    */
-  RAudio.startDrone = function (rootHz, bpm) {
-    RAudio._want = { root: rootHz, bpm: bpm, phase2: false };
+  /**
+   * drone = 보스 정의의 변주 파라미터 {wave, lfo, lfoDepth, cutoff, cutoffP2, detune}.
+   * 없거나 빠진 값은 CONFIG.AUDIO 의 기본값을 쓴다 — 같은 악기로 8곡처럼 들리게 하는
+   * 장치이고, 새 오실레이터·새 노드는 늘리지 않는다 (파라미터만).
+   */
+  RAudio.startDrone = function (rootHz, bpm, drone) {
+    RAudio._want = { root: rootHz, bpm: bpm, drone: drone || null, phase2: false };
     if (!ok()) return;
     stopDroneNodes();
+    var d = drone || {};
+    var wave = d.wave || A.DRONE_WAVE;
+    var cutoff = d.cutoff === undefined ? A.DRONE_CUTOFF_P1 : d.cutoff;
+    var cutoffP2 = d.cutoffP2 === undefined ? A.DRONE_CUTOFF_P2 : d.cutoffP2;
+    var detune = d.detune === undefined ? A.DRONE_DETUNE : d.detune;
+    var lfoHz = d.lfo === undefined ? A.DRONE_LFO_HZ : d.lfo;
+    var lfoDepth = d.lfoDepth === undefined ? A.DRONE_LFO_DEPTH : d.lfoDepth;
+
     var t = now();
     var g = RAudio.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
@@ -306,22 +319,22 @@
 
     var lp = RAudio.ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(A.DRONE_CUTOFF_P1, t);
+    lp.frequency.setValueAtTime(cutoff, t);
     lp.Q.setValueAtTime(4, t);
 
     var o1 = RAudio.ctx.createOscillator();
     var o2 = RAudio.ctx.createOscillator();
-    o1.type = 'sawtooth'; o2.type = 'sawtooth';
+    o1.type = wave; o2.type = wave;
     o1.frequency.setValueAtTime(rootHz, t);
     o2.frequency.setValueAtTime(rootHz, t);
-    o1.detune.setValueAtTime(-A.DRONE_DETUNE, t);
-    o2.detune.setValueAtTime(A.DRONE_DETUNE, t);
+    o1.detune.setValueAtTime(-detune, t);
+    o2.detune.setValueAtTime(detune, t);
 
     var lfo = RAudio.ctx.createOscillator();
     var lfoGain = RAudio.ctx.createGain();
     lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(A.DRONE_LFO_HZ, t);
-    lfoGain.gain.setValueAtTime(90, t);
+    lfo.frequency.setValueAtTime(lfoHz, t);
+    lfoGain.gain.setValueAtTime(lfoDepth, t);
     lfo.connect(lfoGain);
     lfoGain.connect(lp.frequency);
 
@@ -329,17 +342,26 @@
     lp.connect(g); g.connect(RAudio.master);
     o1.start(t); o2.start(t); lfo.start(t);
 
-    RAudio._drone = { o1: o1, o2: o2, lfo: lfo, lp: lp, g: g, bpm: bpm || 100 };
+    RAudio._drone = { o1: o1, o2: o2, lfo: lfo, lp: lp, g: g, bpm: bpm || 100,
+                      cutoff: cutoff, cutoffP2: cutoffP2, detune: detune };
   };
 
+  /** Phase 2 — 컷오프를 열고 디튠을 벌린다 (보스별 값 기준) */
   RAudio.dronePhase2 = function () {
     if (RAudio._want) RAudio._want.phase2 = true;
     if (!ok() || !RAudio._drone) return;
-    var t = now();
-    RAudio._drone.lp.frequency.cancelScheduledValues(t);
-    RAudio._drone.lp.frequency.setValueAtTime(A.DRONE_CUTOFF_P1, t);
-    RAudio._drone.lp.frequency.linearRampToValueAtTime(A.DRONE_CUTOFF_P2, t + 1.0);
-    RAudio.startHeartbeat(RAudio._drone.bpm);
+    var t = now(), dr = RAudio._drone, ramp = A.DRONE_P2_RAMP;
+    dr.lp.frequency.cancelScheduledValues(t);
+    dr.lp.frequency.setValueAtTime(dr.cutoff, t);
+    dr.lp.frequency.linearRampToValueAtTime(dr.cutoffP2, t + ramp);
+    var wide = dr.detune * A.DRONE_DETUNE_P2;
+    dr.o1.detune.cancelScheduledValues(t);
+    dr.o2.detune.cancelScheduledValues(t);
+    dr.o1.detune.setValueAtTime(-dr.detune, t);
+    dr.o2.detune.setValueAtTime(dr.detune, t);
+    dr.o1.detune.linearRampToValueAtTime(-wide, t + ramp);
+    dr.o2.detune.linearRampToValueAtTime(wide, t + ramp);
+    RAudio.startHeartbeat(dr.bpm);
   };
 
   RAudio.startHeartbeat = function (bpm) {
@@ -377,7 +399,7 @@
   function resumeWanted() {
     var w = RAudio._want;
     if (!w || !ok()) return;
-    RAudio.startDrone(w.root, w.bpm);      // _want 를 다시 기록한다 (phase2=false)
+    RAudio.startDrone(w.root, w.bpm, w.drone);   // _want 를 다시 기록한다 (phase2=false)
     if (w.phase2) RAudio.dronePhase2();    // phase2 였다면 즉시 되살린다
   }
 

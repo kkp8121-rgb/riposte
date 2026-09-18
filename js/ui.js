@@ -668,10 +668,11 @@
 
     text(ctx, 'VICTORY', V.W / 2, y + 36,
       { size: 34, weight: '800', color: C.COLORS.WHITE, spacing: 8, glow: C.COLORS.PLAYER, blur: 18 });
-    text(ctx, r.boss || '', V.W / 2, y + 66,
-      { size: 13, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 3 });
+    text(ctx, (r.boss || '') + (game.hard ? '  ·  ' + C.HARD.NAME : ''), V.W / 2, y + 66,
+      { size: 13, weight: '700', color: game.hard ? C.COLORS.GOLD : C.COLORS.TEXT_DIM, spacing: 3 });
 
-    var best = r.key && game.save.bestTries ? game.save.bestTries[r.key] : null;
+    // 기록은 하드/일반이 각각 따로다 — 보이는 최고 기록도 이번 런의 것만 본다
+    var best = r.key ? game.records().bestTries[r.key] : null;
     var rows = [
       ['TIME', fmtTime(r.time) + '   (par ' + r.par + 's)'],
       ['HITS TAKEN', String(r.hits)],
@@ -690,7 +691,8 @@
     if (k > 0) {
       var sc = k < 1 ? lerp(2.6, 1, k * k) : 1;
       var col = rankColor(r.rank);
-      text(ctx, r.rank || 'C', V.W / 2, y + 238,
+      // 하드 판 랭크에는 + 배지를 붙여 일반 기록과 섞이지 않는다는 것을 보인다
+      text(ctx, (r.rank || 'C') + (game.hard ? C.HARD.BADGE : ''), V.W / 2, y + 238,
         { size: Math.round(58 * sc), weight: '800', color: col, glow: col, blur: 26, alpha: clamp(k * 1.6, 0, 1) });
       text(ctx, 'RANK', V.W / 2, y + 271,
         { size: 10, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: k });
@@ -739,9 +741,9 @@
     }
 
     /* 이 보스의 저장된 최고 랭크 */
-    var best = r.key && game.save.ranks ? game.save.ranks[r.key] : null;
+    var best = r.key ? game.records().ranks[r.key] : null;
     if (best) {
-      text(ctx, 'BEST RANK  ' + best, V.W / 2, 344,
+      text(ctx, 'BEST RANK  ' + best + (game.hard ? C.HARD.BADGE : ''), V.W / 2, 344,
         { size: 12, weight: '700', color: rankColor(best), spacing: 2 });
     }
 
@@ -784,7 +786,7 @@
     var ov = game.overallRank();
     var k = clamp((t - 0.25) / C.RANK.CARD_SCALE_TIME, 0, 1);
     var sc = k < 1 ? lerp(2.8, 1, k * k) : 1;
-    text(ctx, ov, V.W / 2 + 300, ty - 4,
+    text(ctx, ov + (game.hard ? C.HARD.BADGE : ''), V.W / 2 + 300, ty - 4,
       { size: Math.round(54 * sc), weight: '800', color: rankColor(ov), glow: rankColor(ov), blur: 28, alpha: clamp(k * 1.6, 0, 1) });
     text(ctx, 'OVERALL', V.W / 2 + 300, ty + 30, { size: 9, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: k });
 

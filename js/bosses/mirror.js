@@ -34,6 +34,9 @@
     armor: false,
     spawnX: 680,
     droneHz: 49.0,              // G1
+    arena: 'hall',             /* 아레나 (C.ARENA) */
+    /* 드론 변주 (거울 — 빠른 흔들림, 넓은 대역) — 작곡이 아니라 파라미터다 */
+    drone: { wave: 'sawtooth', lfo: 0.5, lfoDepth: 180, cutoff: 520, cutoffP2: 1400, detune: 24 },
     weaponTip: { dx: 46, dy: 56 },
 
     prefer: { close: 120, far: 300, back: 200 },
