@@ -459,6 +459,17 @@
       RESERVED_CODES: ['Enter', 'NumpadEnter', 'Escape']
     },
 
+    /* ---- 개발용 (스펙 §5.5) — 기본 꺼짐. 배포본에서 우연히 밟히면 안 된다 ---- */
+    DEV: {
+      /* 타이틀에서 이 물리 키 코드를 순서대로 누르면 토글. 액션이 아니라 코드를 본다 —
+         키 리바인드와 서로 간섭하지 않는다. 지금 어떤 액션에도 안 묶인 글자만 골랐다. */
+      CODE: ['KeyT', 'KeyH', 'KeyI', 'KeyE', 'KeyF'],
+      CODE_GAP: 2.0,          // 글자 사이가 이보다 벌어지면 버퍼를 비운다 (초)
+      HP_CUT: 0.25,           // F2 한 번에 깎는 보스 최대 HP 비율
+      BADGE: 'DEV',
+      BADGE_X: 906, BADGE_Y: 16
+    },
+
     /* ---- 튜토리얼 (스펙 §3.1 — Vesper P1 한정) --------------------------- */
     TUTORIAL: {
       PARRY: 'K  —  PARRY THE GOLD FLASH',

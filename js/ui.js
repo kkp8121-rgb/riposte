@@ -815,6 +815,33 @@
       { size: 15, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
   };
 
+  /* ---- 개발용 (스펙 §5.5) — dev 모드 배지 + 상태 오버레이 --------------- */
+
+  /** 우상단 DEV 배지 — game.dev 인 동안 장면과 무관하게 그린다 */
+  UI.drawDevBadge = function (ctx, game) {
+    text(ctx, C.DEV.BADGE, C.DEV.BADGE_X, C.DEV.BADGE_Y,
+      { size: 13, weight: '800', color: C.COLORS.RED, align: 'right', baseline: 'top',
+        spacing: 2, glow: C.COLORS.RED, blur: 8 });
+  };
+
+  /** F1 오버레이 — 보스/HP/스태미너/페이즈/시드를 한 줄씩. 전투 중(보스 존재)에만 의미가 있다 */
+  UI.drawDevOverlay = function (ctx, game) {
+    var b = game.boss;
+    if (!b) return;
+    var p = game.player;
+    var lines = [
+      'BOSS   ' + b.name + '  (#' + (game.bossIndex + 1) + ')',
+      'HP     ' + Math.ceil(b.hp) + ' / ' + b.maxHp,
+      'STAM   ' + Math.ceil(p.stamina) + ' / ' + C.STAMINA.MAX,
+      'PHASE  ' + b.phase,
+      'SEED   ' + game.seed
+    ];
+    for (var i = 0; i < lines.length; i++) {
+      text(ctx, lines[i], 16, 60 + i * 18,
+        { size: 12, weight: '700', color: C.COLORS.TEXT, align: 'left', family: C.FONT.MONO });
+    }
+  };
+
   UI.text = text;
   UI.fmtTime = fmtTime;
   global.UI = UI;

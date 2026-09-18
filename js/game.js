@@ -83,6 +83,9 @@
     this.forceHard = !!opts.hard;
     this.hard = this.forceHard;
     this.speed = opts.speed || 1;
+    /* dev 모드(스펙 §5.5) — 기본 꺼짐. 타이틀 THIEF 입력으로 토글하거나 ?dev=1 로 곧장 켠다 */
+    this.dev = !!opts.dev;
+    this.devOverlay = false;
     this.debugScale = 1;
     this.rng = new RNG(this.seed);
 
@@ -122,6 +125,15 @@
     this.endingHand = [];
 
     this.skillTable = this.buildSkillTable();
+
+    /* dev 커맨드 토글 — 타이틀 화면일 때만 반응한다(전투 중 오발동 방지) */
+    Input.onDevCode = (function (g) {
+      return function () {
+        if (g.scene !== 'TITLE') return;
+        g.dev = !g.dev;
+        RAudio.ui(g.dev);
+      };
+    })(this);
   }
 
   Game.prototype.newRun = function () {
@@ -315,11 +327,11 @@
 
   Game.prototype.setMenuMsg = function (m) { this.menuMsg = m; this.menuMsgT = C.MENU.MSG_TIME; };
 
-  /** 클리어한 보스 인덱스 목록 (보스 선택 화면) */
+  /** 클리어한 보스 인덱스 목록 (보스 선택 화면). dev 모드면 클리어 여부와 무관하게 전부 반환한다 */
   Game.prototype.clearedBosses = function () {
     var out = [];
     for (var i = 0; i < this.defs.length; i++) {
-      if (this.save.cleared || i < this.save.unlocked - 1) out.push(i);
+      if (this.dev || this.save.cleared || i < this.save.unlocked - 1) out.push(i);
     }
     return out;
   };
@@ -726,6 +738,18 @@
     // 리포스트 (짧은 입력 버퍼)
     if (Input.consume('riposte')) p.riposteBuffer = C.COMBAT.INPUT_BUFFER;
     if (p.riposteBuffer > 0 && p.canRiposte()) { p.riposteBuffer = 0; this.doRiposte(); }
+
+    /* 개발용 치트 — dev 모드에서만. 이 판은 저장하지 않는다 */
+    if (this.dev) {
+      if (Input.consumeCode('F1')) this.devOverlay = !this.devOverlay;
+      if (Input.consumeCode('F2') && b) { this.noSave = true; b.takeDamage(b.maxHp * C.DEV.HP_CUT); }
+      if (Input.consumeCode('F3') && b) { this.noSave = true; b.takeDamage(b.hp); }
+      if (Input.consumeCode('F4')) {
+        this.noSave = true;
+        var dir = Input.down.dash ? -1 : 1;      // Shift 를 누른 채면 이전 보스
+        this.startBoss(clamp(this.bossIndex + dir, 0, this.defs.length - 1), { skipBefore: true });
+      }
+    }
 
     this.stepWorld(dt, axis, false);
   };
@@ -1250,6 +1274,7 @@
 
     return {
       scene: this.scene,
+      dev: this.dev,
       menuIndex: this.menuIndex,
       hard: this.hard,
       arena: b ? (b.def.arena || C.ARENA.DEFAULT) : null,
