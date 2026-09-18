@@ -26,7 +26,9 @@
     shield:  { h: 96,  w: 30, head: 0.088, hood: false, weapon: 'shield', thick: 13 },
     taker:   { h: 90,  w: 17, head: 0.084, hood: true,  weapon: 'none',   thick: 8 },
     /* 챕터 3 (스펙 §2.1) — 움직이지 않는 파수꾼. 키가 크고 창이 길다 */
-    spear:   { h: 104, w: 18, head: 0.075, hood: false, weapon: 'spear',  thick: 9 }
+    spear:   { h: 104, w: 18, head: 0.075, hood: false, weapon: 'spear',  thick: 9 },
+    /* 챕터 3 (스펙 §2.2) — 던지는 자. 무기 없이 어깨가 넓고 머리가 작다 */
+    storm:   { h: 88,  w: 26, head: 0.066, hood: false, weapon: 'none',   thick: 11 }
   };
 
   /* 포즈별 무기팔 각도(rad). 0 = 정면(facing 방향), 음수 = 위. */
