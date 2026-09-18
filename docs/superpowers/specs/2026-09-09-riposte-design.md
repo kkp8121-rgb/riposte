@@ -331,7 +331,7 @@ README.md
 ```
 
 - 디버그 훅: `window.__RIPOSTE = { game, CONFIG, getState(), setTimeScale(n) }`.
-  `getState()` → `{ scene, bossId, bossHp, bossMaxHp, phase, playerHp, playerX, bossX, hand:[id], streak, time, hits, perfects, currentAttack: { id, tell, stage:'windup'|'active'|'recover', tRemain, hitAt } | null, projectiles:[{x,vx,tell}], zones:[{x,w,tRemain}] }`
+  `getState()` → `{ scene, bossId, bossHp, bossMaxHp, phase, playerHp, playerX, bossX, hand:[id], streak, time, hits, perfects, tries, currentAttack: { id, tell, stage:'windup'|'active'|'recover', tRemain, hitAt } | null, projectiles:[{x,vx,tell}], zones:[{x,w,tRemain}] }`(`tries`: 현재 보스의 런 내 시도 횟수)
 - URL 파라미터: `?boss=1..8` (해당 보스로 바로 — STORY 건너뜀, 저장 안 함), `?story=0`(대화 전부 건너뜀), `?seed=N`, `?mute=1`, `?nofx=1`, `?speed=0.5`(타임스케일).
 - `getState().scene` 에 `'STORY'`, `'INTERLUDE'` 추가. STORY 중에는 `story: { beat:'before'|'after', line, total, choice: null | 'pending' | 'taken' }` 를 함께 준다(`bossId` 는 최상위 필드; 테스트가 Enter 진행을 확인하는 데 쓴다).
 - 상수: `config.CHAPTERS`(§3 공통), `config.STORY = { CPS: 24, SKIP_HOLD: 0.6, MAX_LINES: 4, TAKEN_FLASH: 0.4, ENDING_SLOT_DROP: 0.4, DISSOLVE: 0.8 }`, `config.BOSS` 에 `MIN_VOLLEY_GAP` · `DEFLECT_*`(§3.6~3.7). `config.FONT.UI` 에 한글 폴백 `"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR"` 추가(외부 폰트 로드 없음).

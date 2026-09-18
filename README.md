@@ -54,6 +54,8 @@ Two colors, two verbs. **Gold = parry. Red = dash.** That's the whole language.
 Rank per boss: **S** = no hits *and* under par · **A** = ≤1 hit *or* under par ·
 **B** = ≤3 hits · **C** = otherwise.
 
+The victory card also counts your tries on each boss and remembers your best.
+
 ---
 
 ## The bosses

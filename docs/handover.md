@@ -1,7 +1,7 @@
 # RIPOSTE — 인수인계 (handover)
 
 - 갱신: 2026-09-18
-- 상태: 챕터 2 보스 4종 차별화 재설계 완료(커밋 8ad2f17, 밸런스 확정) + 트라이 수 표시 기능 진행 중(병렬 태스크). GitHub `kkp8121-rgb/riposte` (Public) → Pages `https://kkp8121-rgb.github.io/riposte/`
+- 상태: 챕터 2 보스 4종 차별화 재설계 완료(커밋 8ad2f17, 밸런스 확정) + 트라이 수 표시 완료(커밋 30f18c8 — 승리 카드 TRIES/best·INTERLUDE/ENDING 열·DEFEAT TRY·bestTries 저장·getState().tries). GitHub `kkp8121-rgb/riposte` (Public) → Pages `https://kkp8121-rgb.github.io/riposte/`
 - 설계 SSoT: `docs/superpowers/specs/2026-09-09-riposte-design.md` · 스토리 대사 SSoT: `docs/superpowers/specs/2026-09-17-riposte-story-bible.md` · 상수 SSoT: `js/config.js` + `js/bosses/*.js`
 
 ## 무엇을 왜 택했나 (요약)
@@ -41,3 +41,5 @@
 - **보스 7(BASTION) 이 보스 5(LANTERN) 보다 짧다**: 숙련 23.0s vs 33.4s — 챕터 2 진행 길이 곡선이 뒤집혀 있다. BASTION `hp` 를 380 으로 늘려 봤으나 완벽·숙련 둘 다 DEFEAT 라 되돌렸다(`docs/qa/balance-2026-09-18.md` 레버 13). 길이를 늘리려면 hp 가 아니라 패턴 수 쪽이 맞아 보인다 — 미조치.
 - `?nofx=1`은 텍스트 팝·파티클만 끄고 히트스톱·흔들림·텔 버스트는 유지(의도).
 - 모바일 터치 UI 없음(키보드 전용이 설계).
+- `js/render.js`의 `drawWeapon`/`WEAPON_LEN`: `spear`는 제거 후보다(보스 어디에서도 무기로 지정되지 않는 렌더 전용 죽은 코드). `blade`는 지우면 안 된다 — `playerWeapon()`이 slash 계열 리포스트 무기로 그리는 데 쓴다.
+- 다음 사이클 후보 (a) 되받기 근접 가드: 퍼펙트 패리가 `DEFLECT_REACH` 안이면 반사탄이 0 거리에서 되받혀 반응 시간이 사라진다 — `js/game.js` `updateProjectiles`의 deflect 호출에 `Math.abs(pr.x - p.x) >= C.BOSS.DEFLECT_REACH` 가드 후보. (b) `js/boss.js` `tryDeflect`의 `pr.label = 'DEFLECT'`가 원 공격명을 지운다 — `'DEFLECT ' + (원 label || 'SHOT')` 후보. (c) 엔딩 8행에서 hit 열(`V.W/2+65`)이 time 열(`V.W/2+20`) 우측 정렬과 45px 밖에 안 떨어져 있어 2자리 hits 에서 근접한다 — 여백 재배치 후보.
