@@ -150,6 +150,9 @@ const state = () => window.__RIPOSTE.getState();
   const s3 = await page.evaluate(state);
   check('R retry skips STORY (INTRO or FIGHT)', s3.scene === 'INTRO' || s3.scene === 'FIGHT', `(scene ${s3.scene})`);
 
+  const s4 = await page.evaluate(state);
+  check('retry counts as a second try', s4.tries === 2, `(tries ${s4.tries})`);
+
   check('zero page/console errors', errors.length === 0, errors.length ? `\n        ${errors.slice(0, 6).join('\n        ')}` : '');
 
   await browser.close();

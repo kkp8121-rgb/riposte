@@ -21,7 +21,7 @@
     TIMER_X: V.W - 22, TIMER_Y: 26,
     STREAK_X: V.W - 22, STREAK_Y: V.H - 26,
     TITLE_Y: 150,
-    CARD_W: 460, CARD_H: 268
+    CARD_W: 460, CARD_H: 294
   };
 
   /* 자간(letter-spacing) 텍스트의 글자 폭 캐시.
@@ -521,6 +521,7 @@
       total += r.time;
       text(ctx, r.name, V.W / 2 - 180, y + i * 28, { size: 15, weight: '700', color: C.COLORS.TEXT, align: 'left', spacing: 2 });
       text(ctx, fmtTime(r.time), V.W / 2 + 60, y + i * 28, { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right', family: C.FONT.MONO });
+      text(ctx, r.tries + ' ' + C.TRIES.UNIT, V.W / 2 + 110, y + i * 28, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
       text(ctx, r.rank, V.W / 2 + 150, y + i * 28, { size: 19, weight: '800', color: rankColor(r.rank), align: 'left', glow: rankColor(r.rank), blur: 10 });
     }
     var cr = game.chapterRank(ch);
@@ -551,10 +552,12 @@
     text(ctx, r.boss || '', V.W / 2, y + 66,
       { size: 13, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 3 });
 
+    var best = r.key && game.save.bestTries ? game.save.bestTries[r.key] : null;
     var rows = [
       ['TIME', fmtTime(r.time) + '   (par ' + r.par + 's)'],
       ['HITS TAKEN', String(r.hits)],
-      ['PERFECT PARRIES', String(r.perfects)]
+      ['PERFECT PARRIES', String(r.perfects)],
+      [C.TRIES.LABEL, String(r.tries) + (best && best < r.tries ? '   (' + C.TRIES.BEST + ' ' + best + ')' : '')]
     ];
     for (var i = 0; i < rows.length; i++) {
       var ry = y + 108 + i * 26;
@@ -568,9 +571,9 @@
     if (k > 0) {
       var sc = k < 1 ? lerp(2.6, 1, k * k) : 1;
       var col = rankColor(r.rank);
-      text(ctx, r.rank || 'C', V.W / 2, y + 212,
+      text(ctx, r.rank || 'C', V.W / 2, y + 238,
         { size: Math.round(58 * sc), weight: '800', color: col, glow: col, blur: 26, alpha: clamp(k * 1.6, 0, 1) });
-      text(ctx, 'RANK', V.W / 2, y + 245,
+      text(ctx, 'RANK', V.W / 2, y + 271,
         { size: 10, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: k });
     }
 
@@ -593,7 +596,8 @@
     var r = game.result || {};
     text(ctx, 'DEFEAT', V.W / 2, 196,
       { size: 60, weight: '800', color: C.COLORS.HEART, spacing: 10, glow: C.COLORS.HEART, blur: 24 });
-    text(ctx, (r.boss || '') + '  ·  ' + fmtTime(r.time) + '  ·  ' + (r.perfects || 0) + ' PERFECT',
+    text(ctx, (r.boss || '') + '  ·  ' + fmtTime(r.time) + '  ·  ' + (r.perfects || 0) + ' PERFECT' +
+      '  ·  ' + C.TRIES.TRY + ' ' + (r.tries || 0),
       V.W / 2, 244, { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, spacing: 2 });
 
     /* 죽인 공격 + 그 텔 색의 정답을 가르친다 */
@@ -643,9 +647,10 @@
       var b = run.bosses[i];
       text(ctx, b.name, V.W / 2 - 200, y + i * E.ROW_H, { size: 13, weight: '700', color: C.COLORS.TEXT, align: 'left', spacing: 2 });
       text(ctx, fmtTime(b.time), V.W / 2 + 20, y + i * E.ROW_H, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right', family: C.FONT.MONO });
-      text(ctx, b.hits + ' hit', V.W / 2 + 100, y + i * E.ROW_H, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
-      text(ctx, b.perfects + ' perfect', V.W / 2 + 190, y + i * E.ROW_H, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
-      text(ctx, b.rank, V.W / 2 + 216, y + i * E.ROW_H, { size: 16, weight: '800', color: rankColor(b.rank), align: 'left', glow: rankColor(b.rank), blur: 10 });
+      text(ctx, b.hits + ' hit', V.W / 2 + 65, y + i * E.ROW_H, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
+      text(ctx, b.perfects + ' perfect', V.W / 2 + 150, y + i * E.ROW_H, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
+      text(ctx, b.tries + ' ' + C.TRIES.UNIT, V.W / 2 + 215, y + i * E.ROW_H, { size: 12, weight: '600', color: C.COLORS.TEXT_DIM, align: 'right' });
+      text(ctx, b.rank, V.W / 2 + 250, y + i * E.ROW_H, { size: 16, weight: '800', color: rankColor(b.rank), align: 'left', glow: rankColor(b.rank), blur: 10 });
     }
 
     var ty = y + run.bosses.length * E.ROW_H + 18;

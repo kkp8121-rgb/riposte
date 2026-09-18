@@ -15,7 +15,7 @@
    * ====================================================================== */
   function loadSave(bossCount) {
     var n = bossCount || 1;
-    var fallback = { unlocked: 1, cleared: false, ranks: {}, bestTimes: {} };
+    var fallback = { unlocked: 1, cleared: false, ranks: {}, bestTimes: {}, bestTries: {} };
     try {
       var raw = global.localStorage.getItem(C.STORAGE.KEY);
       if (!raw) return fallback;
@@ -30,7 +30,8 @@
         unlocked: unlocked,
         cleared: cleared,
         ranks: o.ranks || {},
-        bestTimes: o.bestTimes || {}
+        bestTimes: o.bestTimes || {},
+        bestTries: o.bestTries || {}
       };
     } catch (e) { return fallback; }
   }
@@ -88,7 +89,7 @@
   }
 
   Game.prototype.newRun = function () {
-    return { time: 0, hits: 0, perfects: 0, ranks: [], bosses: [] };
+    return { time: 0, hits: 0, perfects: 0, ranks: [], bosses: [], tries: {} };
   };
 
   /** 저장 — URL 로 특정 보스에 바로 들어온 판은 진행도를 쓰지 않는다 */
@@ -147,6 +148,7 @@
   Game.prototype.startBoss = function (index, opts) {
     this.bossIndex = clamp(index, 0, this.defs.length - 1);
     var def = this.defs[this.bossIndex];
+    this.run.tries[def.key] = (this.run.tries[def.key] || 0) + 1;
     this.boss = new Boss(def, this);
     this.player.hardReset();
     this.clearWorld();
@@ -890,6 +892,7 @@
     this.result = {
       boss: boss.name, key: boss.key,
       time: this.time, hits: this.hits, perfects: this.perfects,
+      tries: this.run.tries[boss.key],
       par: boss.par,
       rank: this.rankFor(this.hits, this.time, boss.par)
     };
@@ -911,6 +914,7 @@
       boss: this.boss ? this.boss.name : '',
       key: this.boss ? this.boss.key : null,
       time: this.time, hits: this.hits, perfects: this.perfects,
+      tries: this.boss ? this.run.tries[this.boss.key] : 0,
       slainBy: this.lastHitBy          // 무엇에 죽었는지 → 패배 화면이 대응법을 가르친다
     };
     FX.setSlowmo(C.SLOWMO.DEFEAT_SCALE, C.SLOWMO.DEFEAT_TIME);
@@ -926,7 +930,7 @@
     this.run.hits += r.hits;
     this.run.perfects += r.perfects;
     this.run.ranks.push(r.rank);
-    this.run.bosses.push({ key: r.key, name: r.boss, time: r.time, hits: r.hits, perfects: r.perfects, rank: r.rank });
+    this.run.bosses.push({ key: r.key, name: r.boss, time: r.time, hits: r.hits, perfects: r.perfects, rank: r.rank, tries: r.tries });
 
     // 저장 — 진행도 + 보스별 최고 랭크 (?boss=N 판은 메모리 상태도 건드리지 않는다)
     if (!this.noSave) {
@@ -935,6 +939,8 @@
       if (!prev || C.RANK.VALUE[r.rank] > C.RANK.VALUE[prev]) this.save.ranks[r.key] = r.rank;
       var bt = this.save.bestTimes[r.key];
       if (!bt || r.time < bt) this.save.bestTimes[r.key] = r.time;
+      var bt2 = this.save.bestTries[r.key];
+      if (!bt2 || r.tries < bt2) this.save.bestTries[r.key] = r.tries;
       this.persist();
     }
 
@@ -1020,6 +1026,7 @@
       time: this.time,
       hits: this.hits,
       perfects: this.perfects,
+      tries: b ? (this.run.tries[b.key] || 0) : 0,
       currentAttack: b ? b.attackState() : null,
       projectiles: projs,
       zones: zones
