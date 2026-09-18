@@ -837,7 +837,7 @@
       'SEED   ' + game.seed
     ];
     for (var i = 0; i < lines.length; i++) {
-      text(ctx, lines[i], 16, 60 + i * 18,
+      text(ctx, lines[i], C.DEV.OVERLAY_X, C.DEV.OVERLAY_Y + i * C.DEV.OVERLAY_LINE_H,
         { size: 12, weight: '700', color: C.COLORS.TEXT, align: 'left', family: C.FONT.MONO });
     }
   };
