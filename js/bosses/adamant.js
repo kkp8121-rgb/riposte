@@ -17,7 +17,7 @@
     color: '#c9b8ff',
     silhouette: 'adamant',     // 가장 크고 가장 두껍다 — 대검 하나
     hp: 340,
-    par: 75,
+    par: 75,                    // 2026-09-19 실측 유지: 숙련 29.7~42.0s ×2 ≈ 85(차 <10s). 완벽은 21.4/33.2/67.7s 로 이봉 — P2 counterOnly 가 원인(§6)
     armor: false,
     spawnX: 700,
     droneHz: 36,

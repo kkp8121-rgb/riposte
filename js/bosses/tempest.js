@@ -20,7 +20,7 @@
     color: '#7fc4ff',
     silhouette: 'storm',       // 무기 없는 넓은 어깨 — 던지는 자
     hp: 330,
-    par: 46,                    // 봇 실측 확정 (숙련 22.6s ×2 ≈ 45)
+    par: 46,                    // 2026-09-19 실측 유지: 숙련 23.5~26.0s ×2 ≈ 50(차 <10s) · 완벽 23.0~27.8s. docs/qa/balance-2026-09-19.md
     armor: false,
     spawnX: 720,
     droneHz: 52,
@@ -51,7 +51,8 @@
            간격을 더 벌리면(0.40) 첫 탄을 받은 뒤 다음 탄이 보이기 전에 반격을 시도하다
            맞는다 — 봇 실측. */
         proj: { speed: 380, r: 16, y: 52, damage: 1, reflectDamage: 12, shape: 'arrow' },
-        volley: { count: 3, interval: 0.26, p2Interval: 0.22 },
+        /* p2Interval 0.22 → 0.26 (2026-09-19): 숙련 봇이 P2 에서 SURGE 3연속 피격으로 죽었다(seed 11). P1 과 같은 간격으로 */
+        volley: { count: 3, interval: 0.26, p2Interval: 0.26 },
         steal: { id: 'SURGE', label: 'SURGE', kind: 'shot', damage: 14 }
       },
       shear: {                                   // 낮은 한 발 — 패리 불가, 대시로만

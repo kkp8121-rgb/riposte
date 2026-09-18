@@ -21,7 +21,7 @@
     color: '#8a7fb0',
     silhouette: 'hollow',      // 무기 없이 키만 크고 몹시 가늘다 — 빈 것
     hp: 300,
-    par: 60,                    // 숙련 봇 실측 ~48s (seed 7) — Task 8 밸런스에서 재확정
+    par: 85,                    // 2026-09-19 실측: 숙련 41.9~46.8s(승 43.4s ×2 ≈ 85) · 완벽 34.3~48.1s > 85/3. 숙련 승률 1/3 — docs/qa/balance-2026-09-19.md §6
     armor: false,
     spawnX: 720,
     droneHz: 40,

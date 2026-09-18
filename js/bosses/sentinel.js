@@ -13,7 +13,7 @@
     color: '#8fe3c8',
     silhouette: 'spear',       // 키 큰 파수꾼 + 긴 창
     hp: 320,
-    par: 55,
+    par: 50,                    // 2026-09-19 실측: 숙련 22.0~43.8s(중앙 27.6) · 완벽 17.5~27.1s — 17.54 < 55/3 라 하향. docs/qa/balance-2026-09-19.md
     armor: false,
     spawnX: 700,
     droneHz: 46,
@@ -51,7 +51,9 @@
            넓어, 물러나는 방향으로 대시(190) 한 번이면 빠져나간다.
            w·linger 는 봇 실측으로 내린 값이다 — 200/4.5 에서는 뒤로 물러난 자리가 그대로
            구역이라 LINGER_TICK 마다 다시 맞고 갇혔다(task-3-report 참조). */
-        zone: { w: 120, damage: 1, anchor: 'boss', offset: 320, linger: 2.4 },
+        /* linger 2.4 → 1.8 (2026-09-19): 존이 살아 있는 동안 플레이어는 창 리치 밖으로 물러나 금 텔이 아예 오지 않는
+           죽은 시간이었다 — 완벽 봇 43.6s → 27.1s. 존 재타격은 LINGER_TICK(0.9) 단위라 1.5 와 1.8 은 같다(2회) */
+        zone: { w: 120, damage: 1, anchor: 'boss', offset: 320, linger: 1.8 },
         steal: null
       }
     },
