@@ -176,7 +176,7 @@ node tests/story.mjs        # dialogue table rules: line/length limits, choice s
 node tests/mash.mjs --all --riposte --expect-lose   # a bot that only mashes must lose every fight
 node tests/pad.mjs          # gamepad mapping via a mocked pad: buttons, stick, no stuck keys
 node tests/options.mjs      # options menu: volume, assist, rebinding, reset, boss select
-node tests/zone.mjs         # lingering hazard zones never leave you without room to dash out
+node tests/zone.mjs         # persistent zone (linger) behavior: one-shot zones unchanged, linger zones re-strike on tick
 node tools/boss-overlap.mjs --check  # boss differentiation gate: no undeclared pattern/attack overlap
 node tools/shots.mjs        # re-capture the README screenshots into docs/media/
 ```

@@ -31,7 +31,7 @@
 | `tests/mash.mjs --all --seeds=7,11,23 --riposte --expect-lose` | 텔을 읽지 않는 연타 봇 — 전패해야 한다(스태미너 회귀) |
 | `tests/pad.mjs` · `tests/options.mjs` | 게임패드 매핑(모의 패드) · 옵션 메뉴(볼륨·어시스트·리바인드·리셋·보스 선택) |
 | `tests/dev.mjs` | dev 모드 — 꺼져 있으면 `THIEF`·F키가 어떤 효과도 없다, `?dev=1`·커맨드로 켜진 판은 저장하지 않는다, 타이틀에서만 켜진다 |
-| `tests/zone.mjs` | 존 `linger`(지속 구역) 동작 + `C.ARENA.SAFE_MIN_W` 하한 — 플레이어가 구역에 갇히지 않는다 |
+| `tests/zone.mjs` | 존 `linger`(지속 구역) 동작 — 단발 존은 불변(때리고 사라짐), 지속 존은 `LINGER_TICK` 마다 재타격 |
 
 ## 실패했던 시도와 교훈
 1. **봇 테스트 통과 ≠ 정상**: 1차 구현은 스모크·봇 전부 통과했지만 읽기 전용 opus 리뷰가 19건을 찾았다. 특히 (a) 패턴 스텝 객체를 그대로 opt로 넘겨 `_approached`가 정적 보스 정의를 영구 오염(R 재시작·시드 결정론 붕괴), (b) Phase 2를 유발한 타격의 후속 stagger가 포효 무적을 덮어씀, (c) 첫 키 latch + suspended AudioContext → Shift가 첫 키면 영구 무음. 셋 다 "로드→1전투→종료" 테스트로는 원리적으로 못 잡는다 → `tests/state.mjs`·`tests/audio-smoke.mjs`를 추가했다.

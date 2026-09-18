@@ -441,7 +441,7 @@
       /* Phase 2 심박 킥 BPM (보스별) */
       BPM: { vesper: 96, seraph: 104, graven: 84, mirror: 116,
              lantern: 100, chorus: 120, bastion: 88, avarice: 124,
-             sentinel: 80, tempest: 108, hollow: 72 }
+             sentinel: 80, tempest: 108, hollow: 72, adamant: 64 } // 최종 보스 — 챕터 3에서 가장 느리고 무겁게(hollow 72 보다 낮음)
     },
 
     /* ---- 저장 ------------------------------------------------------------ */

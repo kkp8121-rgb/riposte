@@ -752,7 +752,8 @@
       if (Input.consumeCode('F3') && b) { this.noSave = true; b.takeDamage(b.hp, { dev: true }); }
       if (Input.consumeCode('F4')) {
         this.noSave = true;
-        var dir = Input.down.dash ? -1 : 1;      // Shift 를 누른 채면 이전 보스
+        // 물리 Shift 키로 판정 — dash 를 리바인드해도 "이전 보스" 가 깨지지 않는다 (스펙 C10)
+        var dir = (Input.codeDown('ShiftLeft') || Input.codeDown('ShiftRight')) ? -1 : 1;
         this.startBoss(clamp(this.bossIndex + dir, 0, this.defs.length - 1), { skipBefore: true });
       }
     }

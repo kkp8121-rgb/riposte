@@ -9,7 +9,7 @@
 - 디버그 훅: `window.__RIPOSTE` (스펙 §7). 테스트는 이 훅만 사용한다.
 - 테스트: `npm install`(최초 1회, playwright-core) → `node tests/smoke.mjs` · `bot.mjs --all` ·
   `state.mjs` · `audio-smoke.mjs` · `story.mjs`(브라우저 불필요) · `mash.mjs --all --riposte --expect-lose`
-  (연타 봇은 반드시 전패) · `pad.mjs` · `options.mjs` · `dev.mjs`(dev 모드는 꺼져 있으면 무효) · `zone.mjs`(지속 구역·안전 폭)
+  (연타 봇은 반드시 전패) · `pad.mjs` · `options.mjs` · `dev.mjs`(dev 모드는 꺼져 있으면 무효) · `zone.mjs`(지속 구역 `linger` 동작 — 단발 존 불변·재타격)
   — 로컬 chromium. Pages 배포 확인은 `node tools/check-pages.mjs [url]`(main 배포본 기준).
 - **브라우저 측정은 동시에 돌리지 않는다** — 헤드리스 프레임 페이싱이 흔들려 봇 결과가 어긋난다(실측 사고 2026-09-18).
 - 브라우저 자동 실행 금지 (`start`/`open` 사용 금지). 헤드리스만 허용.

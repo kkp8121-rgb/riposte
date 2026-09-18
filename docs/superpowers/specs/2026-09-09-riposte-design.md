@@ -473,7 +473,7 @@ tests/audio-smoke.mjs 오디오: 제스처 후 AudioContext running + 전 사운
 tests/pad.mjs · options.mjs  게임패드 · 옵션 화면
 tests/mash.mjs        연타 봇 — --expect-lose 로 연타 전패 검증(스태미너 §2.6.1)
 tests/dev.mjs         dev 모드(THIEF 커맨드·?dev=1·F키 치트·noSave) — 꺼져 있으면 어떤 키로도 발동하지 않는다
-tests/zone.mjs        존 linger·SAFE_MIN_W 하한 — 플레이어가 구역에 갇히지 않는다
+tests/zone.mjs        존 linger 동작 — 단발 존은 때리고 사라지고, 지속 존은 LINGER_TICK 마다 재타격
 tools/boss-overlap.mjs 보스 차별화 판정기(§3 공통) · tools/check-pages.mjs Pages 배포 확인
 tools/shots.mjs       README 용 스크린샷 3장 → docs/media/
 README.md
@@ -496,7 +496,7 @@ README.md
 6. `node tests/audio-smoke.mjs` — 음소거 없이 Enter 한 번으로 AudioContext 가 `running`, 모든 `RAudio` 공개 메서드 호출에 예외 0.
 7. `node tests/story.mjs` — 대사 테이블: 장면당 ≤4줄, 느낌표 0, 보스별 전속 어미 교차 0(바이블 §3 표), 선택지 3개에 각각 `ok:true` 하나·`ok:false` 하나.
 8. 밸런스: 새 챕터 보스 4종을 3프로파일(완벽·숙련 `--jitter=0.05 --miss=0.15 --think=0.25`·평균 `--miss=0.3 --jitter=0.09 --think=0.45`)로 실측해 par/HP 확정. **기준은 3시드(7·11·23) 다수결** — 완벽은 매 시드 승리, 숙련은 3시드 중 2 이상 승리(최종 보스·BASTION 은 1/3 허용), 평균은 3시드 중 2 이상 패배. (2026-09-19 정정: 이전 문구 "숙련 프로파일 전부 승리" 는 seed 7 단일 표본 위의 기준이었다 — 챕터 1·2 기준선이 seed 7 하나로만 측정됐음이 `docs/qa/balance-2026-09-19.md` §6 에서 확인됐고, seed 11 에서는 MIRROR·LANTERN·CHORUS·AVARICE 숙련이 지고 VESPER·SERAPH·GRAVEN 평균이 이긴다. `main` 에서도 같으므로 회귀가 아니라 기준선의 성질이다.) **챕터 1·2 재조정은 별도 결정이다** — 이 정정은 기준 문구만 고친다.
-9. `node tests/dev.mjs` — dev 모드가 꺼져 있으면 F키·`THIEF` 가 아무 효과도 없고, 켜진 판은 저장하지 않는다. `node tests/zone.mjs` — 지속 구역이 깔려도 남는 맨바닥이 `SAFE_MIN_W` 이상.
+9. `node tests/dev.mjs` — dev 모드가 꺼져 있으면 F키·`THIEF` 가 아무 효과도 없고, 켜진 판은 저장하지 않는다. `node tests/zone.mjs` — 단발 존은 한 번 때리고 사라지고, 지속 존(linger)은 LINGER_TICK 마다 다시 때리는지 검증.
 
 ---
 
