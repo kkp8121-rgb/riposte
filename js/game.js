@@ -1091,8 +1091,9 @@
         }
         if (Math.abs(pr.x - b.x) <= C.BOSS.HALF_W + pr.r + 6) {
           pr.dead = true;
-          /* 엔진 방벽(스펙 §2.4) — 서 있으면 반사탄은 벽을 깎고 보스 피해는 없다 */
-          if (b.wallUp()) this.onWallHit(b, pr, b.wallHit());
+          /* 엔진 방벽(스펙 §2.4) — 서 있으면 **반사탄**(fromHand 없음)만 벽을 깎고 보스 피해는 없다.
+             손패 shot(fromHand 있음)은 벽을 깎지 않는다 — resolveProjectileHitBoss 가 takeDamage→0→환급 경로를 탄다 */
+          if (b.wallUp() && !pr.fromHand) this.onWallHit(b, pr, b.wallHit());
           else this.resolveProjectileHitBoss(pr);
         }
       }
