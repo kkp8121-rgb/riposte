@@ -20,9 +20,11 @@
     rapier:  { h: 84,  w: 13, head: 0.078, hood: false, weapon: 'rapier', thick: 6 },
     bow:     { h: 84,  w: 16, head: 0.095, hood: true,  weapon: 'bow',    thick: 7 },
     hammer:  { h: 98,  w: 27, head: 0.090, hood: false, weapon: 'hammer', thick: 12 },
-    /* 챕터 2 (스펙 §3.5~3.6) — 무기 그리기(blade/spear)는 drawWeapon 에 이미 있다 */
-    blade:   { h: 84,  w: 14, head: 0.082, hood: false, weapon: 'blade',  thick: 6 },
-    spear:   { h: 86,  w: 14, head: 0.080, hood: true,  weapon: 'spear',  thick: 6 }
+    /* 챕터 2 재설계 (스펙 §3.5~3.8) — 보스마다 고유 실루엣 (차별화 원칙) */
+    lantern: { h: 82,  w: 13, head: 0.080, hood: true,  weapon: 'dagger', thick: 6 },
+    twin:    { h: 84,  w: 12, head: 0.078, hood: false, weapon: 'twin',   thick: 5 },
+    shield:  { h: 96,  w: 30, head: 0.088, hood: false, weapon: 'shield', thick: 13 },
+    taker:   { h: 90,  w: 17, head: 0.084, hood: true,  weapon: 'none',   thick: 8 }
   };
 
   /* 포즈별 무기팔 각도(rad). 0 = 정면(facing 방향), 음수 = 위. */
@@ -42,7 +44,8 @@
 
   /* 무기 길이 (실루엣 기준 비율) — 텔 버스트를 무기 "끝"에 정확히 찍기 위해 필요 */
   var WEAPON_LEN = {
-    none: 0.10, rapier: 0.62, blade: 0.50, hammer: 0.52, bow: 0.26, spear: 0.66
+    none: 0.10, rapier: 0.62, blade: 0.50, hammer: 0.52, bow: 0.26, spear: 0.66,
+    dagger: 0.28, twin: 0.30, shield: 0.26
   };
 
   var Render = {
@@ -358,6 +361,22 @@
       case 'spear':
         ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(h * 0.66, 0); ctx.stroke();
+        break;
+      case 'dagger':                                   // LANTERN — 단검 + 등불
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(h * 0.28, 0); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-h * 0.12, h * 0.10, h * 0.06, 0, TAU); ctx.fill();
+        break;
+      case 'twin':                                     // CHORUS — 단검 두 자루
+        ctx.lineWidth = 2.8;
+        ctx.beginPath(); ctx.moveTo(-6, -5); ctx.lineTo(h * 0.30, -9); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-6, 5); ctx.lineTo(h * 0.30, 9); ctx.stroke();
+        break;
+      case 'shield':                                   // BASTION — 방패 + 짧은 철퇴
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(h * 0.26, 0); ctx.stroke();
+        ctx.beginPath(); ctx.arc(h * 0.26, 0, h * 0.05, 0, TAU); ctx.fill();
+        ctx.fillRect(-h * 0.06, -h * 0.22, h * 0.10, h * 0.44);
         break;
     }
     ctx.restore();

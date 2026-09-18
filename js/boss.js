@@ -73,6 +73,7 @@
     this.chargeDir = -1;
     /* 약탈 보스(스펙 §3.8)가 빼앗아 간 손패. 정의 테이블(def)이 아니라 인스턴스에만 둔다. */
     this.loot = [];
+    this.moveSpeed = B.WALK_SPEED;
 
     if (this.def.onReset) this.def.onReset(this, this.game);
   };
@@ -161,10 +162,37 @@
       return;
     }
 
+    if (step.move === 'behind') { this.blinkBehind(); return; }
     if (step.move) { this.beginMove(step.move); return; }
 
     // 알 수 없는 스텝 — 건너뛴다 (스톨 방지)
     this.nextStep();
+  };
+
+  /** 플레이어 반대편 prefer.close 지점. 벽에 막혀 너무 가까우면 null (그 스텝은 건너뛴다) */
+  Boss.prototype.oppositeSideX = function () {
+    var p = this.game.player;
+    var pref = this.def.prefer || { close: 90 };
+    var side = (this.x >= p.x) ? 1 : -1;
+    var target = clamp(p.x - side * pref.close, V.MIN_X, V.MAX_X);
+    if (Math.abs(target - p.x) < pref.close * B.SIDE_MIN_RATIO) return null;
+    return target;
+  };
+
+  /** 순간이동 — 플레이어 등 뒤로 (스펙 §3.5 LANTERN). 잔상을 남기고 BLINK_PAUSE 만큼 멈춘 뒤 다음 스텝. */
+  Boss.prototype.blinkBehind = function () {
+    var target = this.oppositeSideX();
+    if (target === null) { this.nextStep(); return; }
+    var fromX = this.x;
+    for (var i = 0; i < B.BLINK_GHOSTS; i++) {
+      FX.ghost(fromX + (target - fromX) * (i / B.BLINK_GHOSTS), V.FLOOR_Y, this.facing, this.color, 'dash');
+    }
+    this.x = target;
+    this.vx = 0;
+    this.facing = this.dirToPlayer();
+    RAudio.swing();
+    this.state = 'wait';
+    this.stateT = B.BLINK_PAUSE;
   };
 
   Boss.prototype.beginMove = function (kind) {
@@ -177,7 +205,14 @@
     else if (kind === 'back') target = this.x + side * pref.back;
     else if (kind === 'left') target = this.x - B.STRAFE;
     else if (kind === 'right') target = this.x + B.STRAFE;
+    else if (kind === 'cross') {
+      // 플레이어를 지나쳐 반대편으로 (스펙 §3.6 CHORUS) — 벽에 막히면 스텝을 건너뛴다
+      var opp = this.oppositeSideX();
+      if (opp === null) { this.nextStep(); return; }
+      target = opp;
+    }
     this.moveTarget = clamp(target, V.MIN_X, V.MAX_X);
+    this.moveSpeed = (kind === 'cross') ? B.CROSS_SPEED : B.WALK_SPEED;
     this.state = 'move';
     this.stateT = B.MOVE_TIMEOUT;
   };
@@ -247,8 +282,12 @@
     // 존(rain)은 windup 시작에 바닥 경고 스트립을 깔고 windup 끝에 낙하한다.
     // => 존의 tRemain 과 attack.hitAt 이 항상 일치한다.
     if (def.kind === 'zone') {
+      // anchor:'boss' 면 보스 앞 offset 에 고정 (스펙 §3.7 gate), 기본은 플레이어 현재 위치 (rain)
+      var zx = (def.zone.anchor === 'boss')
+        ? this.x + this.dirToPlayer() * (def.zone.offset === undefined ? B.ZONE_OFFSET_DEFAULT : def.zone.offset)
+        : this.game.player.x;
       var z = new Zone({
-        x: clamp(this.game.player.x, V.MIN_X, V.MAX_X),
+        x: clamp(zx, V.MIN_X, V.MAX_X),
         w: def.zone.w,
         delay: windupTotal,
         damage: def.zone.damage === undefined ? 1 : def.zone.damage,
@@ -556,7 +595,7 @@
 
       case 'move':
         this.stateT -= dt;
-        var reached = this.stepTo(this.moveTarget, B.WALK_SPEED, dt);
+        var reached = this.stepTo(this.moveTarget, this.moveSpeed || B.WALK_SPEED, dt);
         if (reached || this.stateT <= 0) { this.watch = 0; this.nextStep(); }
         break;
 

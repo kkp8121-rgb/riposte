@@ -164,7 +164,13 @@
       DEFLECT_FORCE_RALLY: 3,     // 랠리 3회째부터는 반드시 되받는다
       DEFLECT_SPEED_MULT: 1.25,
       DEFLECT_SPEED_MAX: 720,
-      DEFLECT_RECOVER: 0.45       // 되받은 직후 경직 = 카운터 창
+      DEFLECT_RECOVER: 0.45,      // 되받은 직후 경직 = 카운터 창
+      /* 챕터 2 재설계 (스펙 §3.5~3.7) */
+      BLINK_PAUSE: 0.12,          // move:'behind' 순간이동 뒤 멈춤 — 잔상을 볼 시간
+      BLINK_GHOSTS: 3,            // 순간이동 잔상 수
+      CROSS_SPEED: 700,           // move:'cross' 플레이어를 지나쳐 반대편으로 달리는 속도
+      SIDE_MIN_RATIO: 0.6,        // 반대편 목표가 prefer.close 의 이 비율보다 가까우면(벽) 이동 스텝을 건너뛴다
+      ZONE_OFFSET_DEFAULT: 140    // zone.anchor:'boss' 존의 보스 앞 거리 기본값
     },
 
     /* ---- 텔 / 투사체 / 존 ------------------------------------------------ */
