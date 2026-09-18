@@ -14,7 +14,7 @@
     color: '#a8b8c8',
     silhouette: 'shield',
     hp: 310,
-    par: 50,                    // Task 3 봇 실측 확정 (숙련 ×2 = 45, 기존 50 과 차이 <10 → 유지)
+    par: 50,                    // Task 3 봇 실측 확정 (숙련 23.0s ×2 = 46 → 50 유지, 차이 4.0s<10)
     armor: true,
     deflect: true,              // 확률·사거리·경직은 CONFIG.BOSS.DEFLECT_*
     spawnX: 700,

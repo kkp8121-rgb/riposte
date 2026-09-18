@@ -18,6 +18,7 @@
 - 설계 스펙: `docs/superpowers/specs/2026-09-09-riposte-design.md`
 - 스토리 대사 SSoT: `docs/superpowers/specs/2026-09-17-riposte-story-bible.md`
 - 챕터 2 제안서: `docs/superpowers/specs/2026-09-17-riposte-chapter2-proposal.md`
-- 구현 계획: `docs/superpowers/plans/2026-09-17-riposte-chapter2-story.md`
-- 밸런스 실측: `docs/qa/balance-2026-09-17.md`
+- 챕터 2 재설계안: `docs/superpowers/specs/2026-09-18-riposte-chapter2-redesign.md` (구현 완료, 커밋 8ad2f17)
+- 구현 계획: `docs/superpowers/plans/2026-09-17-riposte-chapter2-story.md` · `docs/superpowers/plans/2026-09-18-riposte-chapter2-redesign.md`
+- 밸런스 실측: `docs/qa/balance-2026-09-17.md`(구 기반, 폐기) · `docs/qa/balance-2026-09-18.md`(재설계 확정)
 - 인수인계: `docs/handover.md` (세션 종료 시 갱신)

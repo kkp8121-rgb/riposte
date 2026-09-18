@@ -196,7 +196,7 @@ Expected: 예외 또는 FAIL (`js/story.js` 없음 → `ENOENT`).
       DEFLECT_REACH: 120,
       DEFLECT_CHANCE_P1: 0.6,
       DEFLECT_CHANCE_P2: 0.9,
-      DEFLECT_FORCE_RALLY: 3,     // 랠리 3회째부터는 반드시 되받는다
+      DEFLECT_FORCE_RALLY: 3,     // 랠리 3회째부터는 반드시 되받는다 (2026-09-18 폐기: DEFLECT_MAX_RALLY 상한으로 반전 — 무한 랠리 결함)
       DEFLECT_SPEED_MULT: 1.25,
       DEFLECT_SPEED_MAX: 720,
       DEFLECT_RECOVER: 0.45       // 되받은 직후 경직 = 카운터 창
@@ -558,6 +558,7 @@ git commit -m "feat(story): 대사 테이블 js/story.js + 챕터/스토리 상�
    * 플레이어 쪽에서 되돌아오는 투사체를 되받아친다. true 면 투사체는 다시 보스 것이 됐다.
    * 조건: def.deflect, 살아 있음, 무적 아님, idle/wait/move 또는 공격 recover 중.
    * 랠리(pr.rally)가 DEFLECT_FORCE_RALLY 회째부터는 반드시 되받는다.
+   * (2026-09-18 폐기: DEFLECT_MAX_RALLY 상한으로 반전 — 무한 랠리 결함)
    * 되받은 직후 DEFLECT_RECOVER 만큼 경직 = 모든 리포스트가 카운터 판정(stagger counter).
    */
   Boss.prototype.tryDeflect = function (pr) {
@@ -567,7 +568,7 @@ git commit -m "feat(story): 대사 테이블 js/story.js + 챕터/스토리 상�
     if (!open) return false;
 
     var rally = pr.rally || 0;
-    var chance = (rally + 1 >= B.DEFLECT_FORCE_RALLY) ? 1
+    var chance = (rally + 1 >= B.DEFLECT_FORCE_RALLY) ? 1  // (2026-09-18 폐기: DEFLECT_MAX_RALLY 상한으로 반전 — 무한 랠리 결함)
                : (this.phase === 2 ? B.DEFLECT_CHANCE_P2 : B.DEFLECT_CHANCE_P1);
     if (!this.game.rng.chance(chance)) return false;
 
@@ -1862,7 +1863,7 @@ Expected: 챕터 2 어딘가에서 DEFEAT 가 나오는 것이 **정상**(챕터
 - [ ] **Step 4: 조정 규칙 (필요할 때만, 한 번에 한 레버)**
 
 - par = 숙련 프로파일 time 의 약 2배(5초 단위 반올림). 40/45/50/60 과 10초 이상 어긋나면 par 를 바꾼다.
-- 완벽 봇이 지면: 원인을 `tests/shots/bot-b{N}-*.png` 와 stats 로 본다. deflect 랠리 무한 → `DEFLECT_SPEED_MAX` 를 낮추지 말고 `DEFLECT_FORCE_RALLY` 를 2 로. volley 두 번째 타격을 못 받으면 `interval` 을 0.40 으로.
+- 완벽 봇이 지면: 원인을 `tests/shots/bot-b{N}-*.png` 와 stats 로 본다. deflect 랠리 무한 → `DEFLECT_SPEED_MAX` 를 낮추지 말고 `DEFLECT_FORCE_RALLY` 를 2 로(2026-09-18 폐기: `DEFLECT_MAX_RALLY` 상한으로 반전 — 무한 랠리 결함). volley 두 번째 타격을 못 받으면 `interval` 을 0.40 으로.
 - 길이 레버는 HP 가 아니라 `gap` 과 배수 스택이다(handover 교훈 3). 너무 길면 `gap` 을 0.1 줄이고, 너무 짧으면 HP 를 10% 올리기 전에 `gap` 을 0.1 늘린다.
 - 바꾼 뒤 Step 1~3 을 다시 돌린다. 세 프로파일 결과를 문서에 갱신.
 

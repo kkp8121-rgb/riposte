@@ -185,7 +185,7 @@
 - P1 패턴: `[thrust]`, `[feint-thrust]`, `[slash, thrust]`, `[arrow, close, slash]`, `[slam]`
 - P2 패턴: `[mirror ×hand.length]`, `[feint-slash, thrust]`, `[execution]`, `[arrow, arrow, slam]`
 
-### 3.5 LANTERN — 환술사 (HP 280, par 미정) — 챕터 2 · 색 읽기 + 등 뒤 순간이동 (2026-09-18 재설계)
+### 3.5 LANTERN — 환술사 (HP 280, par 65) — 챕터 2 · 색 읽기 + 등 뒤 순간이동 (2026-09-18 재설계)
 
 실루엣 신규 `lantern`(등불 + 단검, 무기 `dagger`), 색 `#7dff9a`. 엔진 변경: 스텝 `{ move: 'behind' }`(플레이어 등 뒤 `prefer.close` 거리로 즉시 이동 + 잔상, `BOSS.BLINK_PAUSE` 0.12s 정지 후 다음 스텝).
 
@@ -200,7 +200,7 @@
 - 챕터 1 이 쓰지 않는 공간 모양: **뒤에서 온다.** 플레이어는 자동으로 보스를 보지만 잔상 순간에 방향이 뒤집힌다. 색과 방향을 같이 읽어야 한다.
 - 판정기 예상: 실루엣 고유 · 비기본 패턴 모양 챕터 1 과 0% · 공격 구성 [m/g, m/r, p/g] vs VESPER 50%.
 
-### 3.6 CHORUS — 쌍검 (HP 300, par 미정) — 챕터 2 · 연속 패리 + 좌우 교차 (2026-09-18 재설계)
+### 3.6 CHORUS — 쌍검 (HP 300, par 45) — 챕터 2 · 연속 패리 + 좌우 교차 (2026-09-18 재설계)
 
 실루엣 신규 `twin`(양손 단검 2자루, 무기 `twin`), 색 `#4d9dff`. 엔진 변경: 스텝 `{ move: 'cross' }`(플레이어를 **지나쳐** 반대편 `prefer.close` 거리로 `BOSS.CROSS_SPEED` 700px/s 로 달려 넘어간다 — LANTERN 의 순간이동과 달리 눈에 보이는 이동. 히트박스 없음).
 
@@ -216,23 +216,23 @@
 - 챕터 1 이 쓰지 않는 공간 모양: **한 패턴 안에서 플레이어의 반대편으로 넘어간다.** 연타 사이에 몸을 돌려 받아야 한다. 적색 돌진(lance)은 GRAVEN 과 겹쳐 삭제.
 - 판정기 예상: 실루엣 고유 · 비기본 모양(`m:cross …`) 0% · 공격 구성 [m/g/volley ×2, p/g, m/r] vs VESPER 17%.
 
-### 3.7 BASTION — 수문장 (HP 310, par 미정) — 챕터 2 · 아머 + 되받아치기 + 문 (2026-09-18 재설계)
+### 3.7 BASTION — 수문장 (HP 310, par 50) — 챕터 2 · 아머 + 되받아치기 + 문 (2026-09-18 재설계)
 
 실루엣 신규 `shield`(큰 방패 + 짧은 철퇴, 무기 `shield`), 색 `#a8b8c8`, armor: true, deflect: true. 엔진 변경: 존 정의 `zone.anchor: 'boss'`(보스 앞 `zone.offset` px 에 고정 — 기본은 플레이어 위치).
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
-| salvo | 금 (지면 투사체, 속도 280) | 0.65 | 패리 시 반사. **반사되면 deflect 대상** | VOLLEY (shot, 20) |
+| salvo | 금 (지면 투사체, 속도 380) | 0.65 | 패리 시 반사. **반사되면 deflect 대상** | VOLLEY (shot, 20) |
 | gate | **적** (존, 보스 앞 offset 140, 폭 220) | 1.00 | 문이 닫힌다 — 근접 접근 차단. 대시로만 통과 | — |
 | ward | 금 | 0.80 | reach 170, slam 계열 | WARD (slam, 30) |
 
 - P1 패턴: `[salvo]`, `[gate, salvo]`, `[far, salvo, wait .45, salvo]`, `[ward]`
-- P2 패턴: `[gate, salvo, wait .4, salvo, wait .4, salvo]`(랠리), `[far, gate]`, `[ward, gate]`, `[salvo, far, salvo]`
-- deflect(스펙 유지): 플레이어 쪽 투사체가 `DEFLECT_REACH` 안이면 idle/recover 중 확률(`DEFLECT_CHANCE_P1/P2`, 랠리 `DEFLECT_MAX_RALLY` 회째엔 0 (랠리 상한))로 되받는다. 되받은 직후 `DEFLECT_RECOVER` 경직 = 카운터 창.
+- P2 패턴: `[gate, salvo, wait .4, salvo]`(랠리, 2연사), `[far, gate]`, `[ward, gate]`, `[salvo, far, salvo]`
+- deflect(스펙 유지): 플레이어 쪽 투사체가 `DEFLECT_REACH` 안이면 idle/recover 중 확률(`DEFLECT_CHANCE_P1/P2` 0.35/0.55, 랠리 `DEFLECT_MAX_RALLY`(3) 회째엔 0)로 되받는다. 되받은 직후 `DEFLECT_RECOVER` 경직 = 카운터 창. 되받은 탄은 `DEFLECT_SPEED_MULT`(0.55)로 느려진다(상한 `DEFLECT_SPEED_MAX` 380) — 반응 시간 (거리−DEFLECT_REACH)/속도 가 퍼펙트 창 0.18s 를 넘도록. 랠리는 `DEFLECT_MAX_RALLY`(3)에서 반드시 끝난다(`rally` 는 `Projectile.reflect()` 가 리셋하지 않는다).
 - 챕터 1 이 쓰지 않는 공간 모양: **보스 앞이 막힌다.** 문이 닫힌 동안은 원거리(반사·shot)만 통하고, 되받는 순간만이 열린 틈. 돌진(bulwark)은 GRAVEN 과 겹쳐 삭제.
 - 판정기 예상: 실루엣 고유 · 비기본 모양(`m:far …`) 0% · 공격 구성 [p/g, z/r, m/g] vs GRAVEN 50% · vs SERAPH 60%.
 
-### 3.8 AVARICE — 약탈자 (HP 400, par 미정) — 챕터 2 보스 · 빼앗김 · 자기 기술 없음 (2026-09-18 재설계)
+### 3.8 AVARICE — 약탈자 (HP 400, par 55) — 챕터 2 보스 · 빼앗김 · 자기 기술 없음 (2026-09-18 재설계)
 
 실루엣 신규 `taker`(후드 + 긴 외투, 무기 없음, player 보다 큼), 색 `#ff2fa6`, stealOnHit: true, `overlapIntended: '되돌림용 공격표는 챕터 1·2 기술 정의를 그대로 담는다'`.
 
@@ -241,7 +241,7 @@
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
-| count | 금 (근접 광역, reach 190, 느린 선딜) | 0.90 | "하나, 둘, 셋" 세며 걷어가는 한 번의 큰 휘두르기. **fallbackAttack** — loot·손패가 비면 이것이 나온다(플레이어가 첫 카드를 훔칠 유일한 금색) | COUNT (slash, 15) |
+| count | 금 (근접 광역, reach 190, 느린 선딜) | 0.90 | "하나, 둘, 셋" 세며 걷어가는 한 번의 큰 휘두르기. **fallbackAttack** — loot·손패가 비면 이것이 나온다(플레이어가 첫 카드를 훔칠 유일한 금색) | COUNT (slash, 25) |
 | plunder | **적** (잡기, reach 230) | 0.95 | 피해 1 + 손패 전부 강탈. 대시로만 회피. **P1 부터** | — |
 
 - P1 패턴: `[loot]`, `[loot, loot]`, `[close, loot]`, `[plunder]`
@@ -250,7 +250,7 @@
 - 챕터 1 이 쓰지 않는 공간 모양: **되돌림의 연쇄.** MIRROR 는 손패를 한 번 통째로 비추고, AVARICE 는 빼앗은 것을 잘게 나눠 두 번 세 번 되돌린다. 맞을수록 내 기술이 상대 손에 쌓인다 — 무피격이 곧 공격권.
 - 판정기 예상: 실루엣 고유 · 비기본 모양(`M M`, `m:close M`, `M w M w M`) 0% · 공격 구성은 `overlapIntended` 선언.
 
-**챕터 2 수치는 재설계 후 재실측 대상이다(2026-09-18).** 2026-09-17 의 par/HP 확정값은 복제된 기반 위의 값이라 폐기한다. 챕터 1 과 같은 3프로파일(완벽·숙련·평균) 봇 실측으로 par/HP 를 다시 확정한다. HP 는 길이 레버가 아니다(handover 교훈 3) — 레버는 엠파워·카운터 배수 스택과 패턴 간격(gap). 이전 실측·레버 기록은 `docs/qa/balance-2026-09-17.md`, 재실측은 `docs/qa/balance-2026-09-18.md`.
+**챕터 2 수치는 2026-09-18 확정 — `docs/qa/balance-2026-09-18.md`.** 2026-09-17 의 par/HP 확정값은 복제된 기반 위의 값이라 폐기했다. 챕터 1 과 같은 3프로파일(완벽·숙련·평균) 봇 실측(완벽 8/8·숙련 8/8 VICTORY, 평균 8/8 DEFEAT)으로 par/HP 를 다시 확정했다. HP 는 길이 레버가 아니다(handover 교훈 3) — 레버는 엠파워·카운터 배수 스택과 패턴 간격(gap). 이전 실측·레버 기록은 `docs/qa/balance-2026-09-17.md`.
 
 ---
 

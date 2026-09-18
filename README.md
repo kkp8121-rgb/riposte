@@ -66,10 +66,10 @@ Rank per boss: **S** = no hits *and* under par · **A** = ≤1 hit *or* under pa
 | 3 | **GRAVEN** | *The Bulwark* | Armor — only an **empowered** riposte interrupts it. Dash *into* the charge. | `SLAM` `SHOCKWAVE` |
 | 4 | **MIRROR** | *Your Reflection* | Patience. It feints, and in Phase II it replays **your own hand** back at you. | everything |
 | — | **CHAPTER II — THE DEBT** | | | |
-| 5 | **LANTERN** | *The Illusionist* | Reading the colour, not the beat — gold and red twins share one rhythm. | `FLICKER` `SWEEP` |
-| 6 | **CHORUS** | *The Twin Blades* | Chained parries — two- and three-hit volleys. | `TWIN` `BOLT` |
-| 7 | **BASTION** | *The Warden* | Armor and deflection — it bats your reflected shots back; strike the recovery. | `WARD` `VOLLEY` |
-| 8 | **AVARICE** | *The Taker* | Every hit you take, it takes a card from your hand and uses it. | everything |
+| 5 | **LANTERN** | *The Illusionist* | Reading the colour — and the direction: it blinks behind you. | `FLICKER` `GLOW` |
+| 6 | **CHORUS** | *The Twin Blades* | Chained parries while it crosses to your other side. | `TWIN` `BOLT` |
+| 7 | **BASTION** | *The Warden* | Armor, a gate at its feet, and it bats your reflected shots back — strike the recovery. | `VOLLEY` `WARD` |
+| 8 | **AVARICE** | *The Taker* | It has no moves of its own — every hit you take, it takes a card and uses it. | `COUNT` + everything |
 
 ---
 
@@ -131,6 +131,7 @@ node tests/bot.mjs --all    # a reactive bot beats all eight bosses; a passive b
 node tests/state.mjs        # boss definition tables stay byte-identical across a whole fight
 node tests/audio-smoke.mjs  # one keypress -> AudioContext running; every sound path callable
 node tests/story.mjs        # dialogue table rules: line/length limits, choice shape
+node tools/boss-overlap.mjs --check  # boss differentiation gate: no undeclared pattern/attack overlap
 node tools/shots.mjs        # re-capture the README screenshots into docs/media/
 ```
 
