@@ -79,6 +79,9 @@
     // UI
     switch (game.scene) {
       case 'TITLE':   UI.drawTitle(ctx, game); break;
+      case 'OPTIONS': UI.drawOptions(ctx, game); break;
+      case 'BOSSSELECT': UI.drawBossSelect(ctx, game); break;
+      case 'KEYBIND': UI.drawKeybind(ctx, game); break;
       case 'STORY':   UI.drawStory(ctx, game); break;
       case 'INTERLUDE': UI.drawInterlude(ctx, game); break;
       case 'INTRO':   UI.drawHUD(ctx, game); UI.drawIntro(ctx, game); break;
@@ -117,6 +120,9 @@
       speed: numParam(p, 'speed', 1),
       story: p.story !== '0'                  // ?story=0 — 대화 전부 건너뜀 (테스트/봇)
     });
+
+    // 저장된 옵션 먼저 → URL 파라미터가 항상 이긴다 (테스트/봇이 옵션에 흔들리지 않게)
+    game.applySettings();
 
     if (p.nofx !== undefined) FX.enabled = false;
     if (p.flash === '0') FX.whiteFlashEnabled = false;   // 전체화면 백색 플래시만 옵트아웃 (히트스톱/흔들림/슬로모/텔 버스트는 유지)

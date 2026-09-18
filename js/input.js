@@ -19,8 +19,19 @@
     restart: ['KeyR'],
     mute:    ['KeyM'],
     back:    ['Escape'],
-    newgame: ['KeyN']
+    newgame: ['KeyN'],
+    /* 메뉴 커서 전용 — 전투 동사가 아니다(플레이어 이동은 left/right 그대로) */
+    up:      ['ArrowUp', 'KeyW'],
+    down:    ['ArrowDown', 'KeyS']
   };
+
+  /* 기본 매핑 원본 — RESET TO DEFAULTS 가 되돌릴 대상 */
+  var DEFAULT_KEYMAP = {};
+  (function snapshot() {
+    for (var a in KEYMAP) {
+      if (KEYMAP.hasOwnProperty(a)) DEFAULT_KEYMAP[a] = KEYMAP[a].slice();
+    }
+  })();
 
   /* 스크롤/기본동작을 막아야 하는 코드.
      Tab 은 매핑이 없으므로 넣지 않는다 — 막으면 키보드 포커스가 페이지에 갇힌다(a11y). */
@@ -30,7 +41,8 @@
   };
 
   var codeToActions = {};
-  (function build() {
+  function rebuild() {
+    codeToActions = {};
     for (var action in KEYMAP) {
       if (!KEYMAP.hasOwnProperty(action)) continue;
       var codes = KEYMAP[action];
@@ -40,7 +52,8 @@
         codeToActions[c].push(action);
       }
     }
-  })();
+  }
+  rebuild();
 
   var Input = {
     KEYMAP: KEYMAP,
@@ -54,8 +67,39 @@
     /* 모든 keydown 에서 호출된다 (첫 입력 한 번이 아니다).
        AudioContext 는 user activation 을 주지 않는 키(Shift/Tab 등)로는 열리지 않으므로
        running 이 될 때까지 매 입력마다 재시도해야 영구 무음에 빠지지 않는다. */
-    onGesture: null
+    onGesture: null,
+    /* 다음 keydown 하나를 가로챌 콜백 (키 재지정 화면). cb(code) 가 true 를 돌려주면 소비. */
+    _capture: null
   };
+
+  /** 기본 매핑 사본 (RESET TO DEFAULTS) */
+  Input.defaultKeymap = function () {
+    var out = {};
+    for (var a in DEFAULT_KEYMAP) {
+      if (DEFAULT_KEYMAP.hasOwnProperty(a)) out[a] = DEFAULT_KEYMAP[a].slice();
+    }
+    return out;
+  };
+
+  /** 저장된 매핑을 덮어쓴다. 없는 액션은 기본값을 유지한다. */
+  Input.setKeymap = function (map) {
+    var base = Input.defaultKeymap();
+    if (map) {
+      for (var a in map) {
+        if (!map.hasOwnProperty(a) || !base[a]) continue;
+        var codes = map[a];
+        if (codes && codes.length) base[a] = codes.slice();
+      }
+    }
+    for (var k in KEYMAP) { if (KEYMAP.hasOwnProperty(k)) delete KEYMAP[k]; }
+    for (var k2 in base) { if (base.hasOwnProperty(k2)) KEYMAP[k2] = base[k2]; }
+    rebuild();
+    handleBlur();
+    return KEYMAP;
+  };
+
+  /** 다음 keydown 한 번을 가로챈다 — 키 재지정용. cb(code) */
+  Input.captureKey = function (cb) { Input._capture = cb; };
 
   function setAction(action, isDown) {
     if (isDown) {
@@ -70,6 +114,14 @@
     if (!Input.enabled) return;
     if (PREVENT[e.code]) e.preventDefault();
     if (e.repeat) return;
+    // 키 재지정 중이면 이 keydown 은 게임으로 흘려보내지 않는다
+    if (Input._capture) {
+      var cb = Input._capture;
+      Input._capture = null;
+      e.preventDefault();
+      try { cb(e.code); } catch (err) { /* 무시 */ }
+      return;
+    }
     // 매핑 여부와 무관하게 제스처 훅을 먼저 친다 (오디오 resume 재시도)
     Input._anyKey = true;
     if (typeof Input.onGesture === 'function') {
@@ -209,6 +261,17 @@
       if (left) pressedNow.left = true;
       if (right) pressedNow.right = true;
 
+      // 메뉴 커서 (세로) — 좌스틱 Y + D-Pad 상하
+      var ay = pad.axes ? pad.axes[P.AXIS_Y] : 0;
+      var up = typeof ay === 'number' && ay < -P.DEADZONE;
+      var downDir = typeof ay === 'number' && ay > P.DEADZONE;
+      var du = pad.buttons && pad.buttons[P.DPAD_UP];
+      var dd = pad.buttons && pad.buttons[P.DPAD_DOWN];
+      if (du && du.pressed) up = true;
+      if (dd && dd.pressed) downDir = true;
+      if (up) pressedNow.up = true;
+      if (downDir) pressedNow.down = true;
+
       for (var action in P.BUTTONS) {
         if (!P.BUTTONS.hasOwnProperty(action) || pressedNow[action]) continue;
         var idxList = P.BUTTONS[action];
@@ -222,6 +285,8 @@
 
     applyPadAction('left', !!pressedNow.left);
     applyPadAction('right', !!pressedNow.right);
+    applyPadAction('up', !!pressedNow.up);
+    applyPadAction('down', !!pressedNow.down);
     for (var act in P.BUTTONS) {
       if (!P.BUTTONS.hasOwnProperty(act)) continue;
       applyPadAction(act, !!pressedNow[act]);

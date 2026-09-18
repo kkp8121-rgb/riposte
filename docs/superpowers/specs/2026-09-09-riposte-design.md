@@ -321,7 +321,26 @@
 4번째 `STORY`(after) → `INTERLUDE`(CHAPTER I 랭크·시간 카드) → (Enter) → 5번째 `STORY`(before) … → 8번째 `STORY`(after, 선택지) → `ENDING` → (Enter) → `TITLE`
 `FIGHT` → HP 0 → `DEFEAT` → (R) 같은 보스 `INTRO`(**STORY 없음**) / (Esc) `TITLE`
 
-- TITLE: 제목, 한 줄 Hook, 조작표, "PRESS ENTER". 저장 진행도가 있으면 "[Enter] Continue — CH.II BOSS 2 / [N] New Game". 챕터 1 을 이미 클리어한 기존 세이브(`cleared=true`)는 "[Enter] Continue — CHAPTER II" 로 이어 붙인다(`loadSave` 가 4보스 시절 cleared 세이브를 `cleared=false, unlocked+1` 로 옮긴다 — 디스크에 쓰지 않는 멱등 마이그레이션. 8보스 완주 세이브는 건드리지 않는다).
+- TITLE: 제목, 한 줄 Hook, **세로 메뉴**. 항목은 진행도에 따라 달라진다 — `NEW RUN`(항상) / `CONTINUE`(저장 진행도가 있을 때) / `BOSS SELECT`(클리어한 보스 ≥1) / `OPTIONS`(항상). 챕터 1 을 이미 클리어한 기존 세이브(`cleared=true`)는 `CONTINUE` 가 챕터 II 로 이어 붙는다(`loadSave` 가 4보스 시절 cleared 세이브를 `cleared=false, unlocked+1` 로 옮긴다 — 디스크에 쓰지 않는 멱등 마이그레이션. 8보스 완주 세이브는 건드리지 않는다).
+  - 🔴 **커서 기본값은 `NEW RUN`(0번)** — Enter 한 번이 그대로 시작이어야 한다. `tests/smoke.mjs`·`bot.mjs`·`audio-smoke.mjs` 가 "TITLE→Enter→(STORY)→FIGHT" 를 전제하고, STORY 를 넣을 때 이 전제가 3군데에서 깨진 전례가 있다(handover 교훈 6).
+  - 메뉴 이동은 `up`/`down` 액션(↑↓ · W/S · D-Pad 12·13 · 좌스틱 Y). **전투 동사는 늘리지 않는다** — 메뉴 전용이며 `left`/`right` 의 플레이어 이동 경로는 건드리지 않는다.
+- OPTIONS (타이틀에서만 진입, 값은 전부 `C.STORAGE.KEY` 안 `settings` 필드에 합류 저장):
+
+  | 항목 | 값 | 비고 |
+  |---|---|---|
+  | MASTER VOLUME | 0~100 (10 단위) | `RAudio` 마스터 게인. 0 = 음소거 |
+  | FULLSCREEN | ON/OFF | `requestFullscreen()` — 브라우저가 거부하면 조용히 무시 |
+  | SCREEN FLASH | ON/OFF | `FX.whiteFlashEnabled` (= `?flash=0`) |
+  | PARTICLES | ON/OFF | `FX.enabled` (= `?nofx=1`) |
+  | ASSIST: PLAYER HP | ×1 / ×1.5 / ×2 | 기본 ×1. `C.ASSIST.HP` |
+  | ASSIST: BOSS WINDUP | ×1 / ×1.2 / ×1.5 | 기본 ×1(느릴수록 쉬움). `C.ASSIST.WINDUP` |
+  | KEY BINDINGS | 하위 화면 | 충돌 키는 거부. `Esc`·`Enter` 는 재지정 금지 |
+  | RESET TO DEFAULTS | 실행 | |
+
+  - 🔴 **ASSIST 가 기본값(×1, ×1)이 아니면 그 판은 랭크·최고 기록(`ranks`·`bestTimes`·`bestTries`)을 저장하지 않는다.** 진행도(`unlocked`)는 남겨 계속 진행할 수 있다 — Celeste Assist Mode 관행("코어 난도 무손상 + 옵트인"). 승리 카드·옵션 화면에 `ASSIST — NO RANK SAVED` 배지.
+  - 기본 난도 자체는 바꾸지 않는다(사용자 결정 2026-09-10).
+  - 부팅 순서는 `applySettings()` → URL 파라미터라 `?nofx=1`·`?flash=0`·`?mute=1` 이 저장값을 이긴다.
+- BOSS SELECT: 클리어한 보스만 목록에 띄운다. 고른 판은 **진행도를 저장하지 않는다**(`?boss=N` 규칙과 동일).
 - STORY: 좌 플레이어 실루엣, 우 보스 실루엣(×1.6, idle), 하단 텍스트 박스. 첫 줄은 화자 라벨 `???`(콜드 오픈). 선택지는 `[K] …` / `[J] …` 두 줄. 오답 → `TAKEN.` 카드(붉은 비네트) → Enter → 선택지 복귀.
 - INTERLUDE: 챕터 제목, 4보스 랭크, 챕터 시간, "ENTER — CHAPTER II".
 - HUD: 상단 보스 이름·HP바(50% 마커), 좌상단 하트 5, 하단 중앙 손패 3슬롯(맨 앞 강조, 엠파워 시 금테), 우하단 스트릭 "×N", 우상단 타이머.

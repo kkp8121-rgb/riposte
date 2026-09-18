@@ -12,6 +12,7 @@
     ctx: null,
     master: null,
     muted: false,
+    volume: 1,     // 옵션 화면 마스터 볼륨 배수 (0~1)
     ready: false,
     supported: false,
     _drone: null,
@@ -50,7 +51,7 @@
       try {
         RAudio.ctx = new C();
         RAudio.master = RAudio.ctx.createGain();
-        RAudio.master.gain.value = A.MASTER;
+        RAudio.master.gain.value = A.MASTER * RAudio.volume;
         RAudio.master.connect(RAudio.ctx.destination);
       } catch (e) {
         RAudio.ctx = null;
@@ -67,6 +68,11 @@
     markReady();
   };
 
+  /** 현재 음소거/볼륨을 마스터 게인에 반영한다 */
+  function applyGain() {
+    if (RAudio.master) RAudio.master.gain.value = RAudio.muted ? 0 : A.MASTER * RAudio.volume;
+  }
+
   RAudio.setMuted = function (m) {
     RAudio.muted = !!m;
     if (RAudio.muted) {
@@ -74,10 +80,19 @@
       if (RAudio.master) RAudio.master.gain.value = 0;
     } else {
       RAudio.init();
-      if (RAudio.master) RAudio.master.gain.value = A.MASTER;
+      applyGain();
       resumeWanted();
     }
     return RAudio.muted;
+  };
+
+  /** 마스터 볼륨 0~1 (옵션 화면). 음소거와 곱해져 최종 게인이 된다. */
+  RAudio.setVolume = function (v) {
+    var n = parseFloat(v);
+    if (!isFinite(n)) n = 1;
+    RAudio.volume = n < 0 ? 0 : (n > 1 ? 1 : n);
+    applyGain();
+    return RAudio.volume;
   };
 
   RAudio.toggleMute = function () { return RAudio.setMuted(!RAudio.muted); };

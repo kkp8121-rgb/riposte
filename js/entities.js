@@ -21,7 +21,9 @@
     this.x = C.PLAYER.SPAWN_X;
     this.vx = 0;
     this.facing = 1;
-    this.hp = C.PLAYER.HP;
+    // 최대 HP 는 ASSIST 배율이 붙는다 (기본 ×1 = 지금 수치 그대로)
+    this.maxHp = (this.game && this.game.assistMaxHp) ? this.game.assistMaxHp() : C.PLAYER.HP;
+    this.hp = this.maxHp;
 
     this.iframes = 0;
     this.hurtFlash = 0;

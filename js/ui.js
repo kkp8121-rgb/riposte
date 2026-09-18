@@ -200,7 +200,7 @@
     }
 
     /* 하트 (잃은 직후 한 칸은 깨짐 애니메이션) */
-    for (var i = 0; i < C.PLAYER.HP; i++) {
+    for (var i = 0; i < (p.maxHp || C.PLAYER.HP); i++) {
       var alive = i < p.hp;
       var brk = (i === p.heartBreak && p.heartBreakT > 0)
         ? p.heartBreakT / C.PLAYER.HEART_BREAK_TIME : 0;
@@ -357,24 +357,26 @@
         { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, align: 'left', alpha: fade });
     }
 
+    // 세로 메뉴 — 커서 기본값 0번(NEW RUN)이라 Enter 한 번이 그대로 시작이다
+    var M = C.MENU;
+    var items = game.titleItems();
     var blink = (0.55 + 0.45 * Math.sin(t * C.TITLE.BLINK_HZ)) * fade;
-    if (game.save.cleared) {
-      text(ctx, '[ENTER]  PLAY AGAIN  ·  BEST RANKS', V.W / 2, 452,
-        { size: 19, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 2, glow: C.COLORS.GOLD, blur: 12 });
-      text(ctx, '[N]  NEW GAME  —  CLEAR PROGRESS', V.W / 2, 480,
-        { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2, alpha: fade });
-    } else if (game.save.unlocked > 1) {
-      var ci = game.chapterOf(game.save.unlocked - 1);
-      var within = ci ? (ci.bosses.indexOf(game.defs[game.save.unlocked - 1].key) + 1) : game.save.unlocked;
-      var label = ci ? (ci.name.replace('CHAPTER ', 'CH.') + '  BOSS ' + within) : ('BOSS ' + game.save.unlocked);
-      text(ctx, '[ENTER]  CONTINUE  —  ' + label, V.W / 2, 452,
-        { size: 19, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 2, glow: C.COLORS.PLAYER, blur: 12 });
-      text(ctx, '[N]  NEW GAME', V.W / 2, 480,
-        { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2, alpha: fade });
-    } else {
-      text(ctx, 'PRESS ENTER', V.W / 2, 462,
-        { size: 22, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 4, glow: C.COLORS.PLAYER, blur: 14 });
+    for (var m = 0; m < items.length; m++) {
+      var on = m === game.menuIndex;
+      var my = M.ITEM_Y + m * M.ITEM_GAP;
+      var label = items[m].label;
+      if (items[m].id === 'continue') label += '  —  ' + continueLabel(game);
+      text(ctx, label, V.W / 2, my,
+        { size: M.ITEM_SIZE, weight: '800', color: on ? C.COLORS.WHITE : C.COLORS.TEXT_DIM,
+          spacing: 3, alpha: on ? blink : fade * 0.85,
+          glow: on ? C.COLORS.PLAYER : false, blur: 12 });
+      if (on) {
+        text(ctx, M.CURSOR, M.CURSOR_X, my,
+          { size: M.ITEM_SIZE, weight: '800', color: C.COLORS.GOLD, align: 'right', alpha: blink });
+      }
     }
+    text(ctx, M.TITLE_HINT + '      N  NEW GAME', V.W / 2, M.HINT_Y,
+      { size: 10, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2, alpha: fade * 0.8 });
 
     // 저장된 랭크
     var keys = Object.keys(game.save.ranks || {});
@@ -385,9 +387,112 @@
         var r = game.save.ranks[d.key];
         line += d.name + ' ' + (r || '-') + (k < game.defs.length - 1 ? '   ' : '');
       }
-      text(ctx, line, V.W / 2, 514,
+      text(ctx, line, V.W / 2, M.RANKS_Y,
         { size: 11, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 1, alpha: fade });
     }
+  };
+
+  /* =========================================================================
+   * 메뉴 화면 (OPTIONS · BOSS SELECT · KEY BINDINGS)
+   * ====================================================================== */
+
+  /** CONTINUE 오른쪽에 붙는 "어디서부터인지" 라벨 */
+  function continueLabel(game) {
+    if (game.save.cleared) return 'BEST RANKS';
+    var i = game.save.unlocked - 1;
+    var ci = game.chapterOf(i);
+    if (!ci) return 'BOSS ' + game.save.unlocked;
+    return ci.name.replace('CHAPTER ', 'CH.') + '  BOSS ' + (ci.bosses.indexOf(game.defs[i].key) + 1);
+  }
+
+  /** 메뉴 한 행 (라벨 + 값) — 커서가 있으면 금색 화살표 */
+  function menuRow(ctx, y, label, value, on, valueColor) {
+    var M = C.MENU;
+    if (on) {
+      text(ctx, M.CURSOR, M.PANEL_X + 24, y,
+        { size: M.ROW_SIZE, weight: '800', color: C.COLORS.GOLD, align: 'left' });
+    }
+    text(ctx, label, M.PANEL_X + 48, y,
+      { size: M.ROW_SIZE, weight: on ? '800' : '600', color: on ? C.COLORS.WHITE : C.COLORS.TEXT,
+        align: 'left', spacing: 1 });
+    if (value !== null && value !== undefined) {
+      text(ctx, value, M.PANEL_X + M.PANEL_W - 40, y,
+        { size: M.ROW_SIZE, weight: '700', color: valueColor || (on ? C.COLORS.GOLD : C.COLORS.TEXT_DIM),
+          align: 'right', family: C.FONT.MONO });
+    }
+  }
+
+  function menuFrame(ctx, game, head) {
+    var M = C.MENU;
+    dim(ctx, 0.74);
+    panel(ctx, M.PANEL_X, M.PANEL_Y, M.PANEL_W, M.PANEL_H, 1);
+    text(ctx, head, V.W / 2, M.HEAD_Y,
+      { size: 26, weight: '800', color: C.COLORS.WHITE, spacing: 8, glow: C.COLORS.PLAYER, blur: 16 });
+    if (game.menuMsgT > 0 && game.menuMsg) {
+      text(ctx, game.menuMsg, V.W / 2, M.MSG_Y,
+        { size: 12, weight: '800', color: C.COLORS.RED, spacing: 2 });
+    }
+  }
+
+  /** 옵션 행의 현재 값 문자열 */
+  function optionValue(game, row) {
+    var M = C.MENU;
+    var s = game.save.settings;
+    if (row.type === 'range') return String(s.volume);
+    if (row.type === 'toggle') return s[row.id] ? M.ON : M.OFF;
+    if (row.type === 'choice') return C.ASSIST[row.table][s[row.id]].label;
+    return '';
+  }
+
+  UI.drawOptions = function (ctx, game) {
+    var M = C.MENU;
+    menuFrame(ctx, game, 'OPTIONS');
+    var rows = M.OPTIONS;
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var assistOff = row.type === 'choice' && game.save.settings[row.id] > 0;
+      menuRow(ctx, M.ROW_Y + i * M.ROW_GAP, row.label, optionValue(game, row), i === game.menuIndex,
+        assistOff ? C.COLORS.GOLD : null);
+    }
+    if (game.assistOn()) {
+      text(ctx, M.ASSIST_BADGE, V.W / 2, M.MSG_Y - 18,
+        { size: 11, weight: '800', color: C.COLORS.GOLD, spacing: 3 });
+    }
+    text(ctx, M.OPTION_HINT, V.W / 2, M.HINT_Y,
+      { size: 10, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
+  };
+
+  UI.drawBossSelect = function (ctx, game) {
+    var M = C.MENU;
+    menuFrame(ctx, game, 'BOSS SELECT');
+    var list = game.clearedBosses();
+    if (!list.length) {
+      text(ctx, M.NO_BOSSES, V.W / 2, M.ROW_Y + 40,
+        { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
+    }
+    for (var i = 0; i < list.length; i++) {
+      var d = game.defs[list[i]];
+      var rk = game.save.ranks[d.key];
+      menuRow(ctx, M.ROW_Y + i * M.ROW_GAP, (list[i] + 1) + '.  ' + d.name, rk || '-',
+        i === game.menuIndex, rankColor(rk || 'C'));
+    }
+    text(ctx, M.OPTION_HINT, V.W / 2, M.HINT_Y,
+      { size: 10, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
+  };
+
+  UI.drawKeybind = function (ctx, game) {
+    var M = C.MENU;
+    menuFrame(ctx, game, 'KEY BINDINGS');
+    var acts = M.BINDABLE;
+    for (var i = 0; i < acts.length; i++) {
+      var a = acts[i];
+      var codes = Input.KEYMAP[a] || [];
+      var val = game.bindWait === a ? M.PRESS_KEY : codes.join(' / ');
+      menuRow(ctx, M.ROW_Y + i * M.ROW_GAP, a.toUpperCase(), val, i === game.menuIndex,
+        game.bindWait === a ? C.COLORS.GOLD : null);
+    }
+    text(ctx, M.BIND_HINT, V.W / 2, M.HINT_Y,
+      { size: 10, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 
   UI.drawIntro = function (ctx, game) {
@@ -589,6 +694,11 @@
         { size: Math.round(58 * sc), weight: '800', color: col, glow: col, blur: 26, alpha: clamp(k * 1.6, 0, 1) });
       text(ctx, 'RANK', V.W / 2, y + 271,
         { size: 10, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: k });
+    }
+
+    if (game.assistOn()) {
+      text(ctx, C.MENU.ASSIST_BADGE, V.W / 2, y + L.CARD_H - 12,
+        { size: 10, weight: '800', color: C.COLORS.GOLD, spacing: 3 });
     }
 
     var blink = 0.5 + 0.5 * Math.sin(t * 4);

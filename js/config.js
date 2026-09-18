@@ -345,6 +345,62 @@
       KEY: 'riposte.progress.v1'
     },
 
+    /* ---- 옵션 기본값 (별도 키를 만들지 않고 STORAGE.KEY 안 settings 에 합류) ---- */
+    SETTINGS: {
+      DEFAULTS: {
+        volume: 100,        // 0~100, VOLUME_STEP 단위. 0 이면 음소거와 같다
+        fullscreen: false,
+        flash: true,        // FX.whiteFlashEnabled (= ?flash=0 의 UI 판)
+        particles: true,    // FX.enabled (= ?nofx=1 의 UI 판)
+        assistHp: 0,        // ASSIST.HP 인덱스
+        assistWindup: 0,    // ASSIST.WINDUP 인덱스
+        keys: null          // 액션 -> code 목록 (null 이면 Input 기본 KEYMAP)
+      },
+      VOLUME_STEP: 10,
+      VOLUME_MAX: 100
+    },
+
+    /* ---- 접근성 보조 (옵트인 — 기본값이 아니면 랭크·최고 기록을 저장하지 않는다) ---- */
+    ASSIST: {
+      HP:     [{ mult: 1, label: 'x1' }, { mult: 1.5, label: 'x1.5' }, { mult: 2, label: 'x2' }],
+      WINDUP: [{ mult: 1, label: 'x1' }, { mult: 1.2, label: 'x1.2' }, { mult: 1.5, label: 'x1.5' }]
+    },
+
+    /* ---- 메뉴 (타이틀 세로 메뉴 · 옵션 · 보스 선택 · 키 설정) -------------- */
+    MENU: {
+      ITEM_Y: 398, ITEM_GAP: 28, ITEM_SIZE: 18,
+      CURSOR: '>',
+      CURSOR_X: 300, LABEL_X: 330, VALUE_X: 660,
+      PANEL_X: 200, PANEL_Y: 96, PANEL_W: 560, PANEL_H: 380,
+      HEAD_Y: 132, ROW_Y: 182, ROW_GAP: 34, ROW_SIZE: 15,
+      MSG_Y: 462, HINT_Y: 502, RANKS_Y: 520,
+      TITLE_HINT: 'W S / ARROWS  MOVE      ENTER  SELECT',
+      OPTION_HINT: 'LEFT RIGHT  CHANGE      ENTER  SELECT      ESC  BACK',
+      BIND_HINT: 'ENTER  REBIND      ESC  BACK',
+      PRESS_KEY: 'PRESS A KEY',
+      CONFLICT: 'KEY ALREADY USED',
+      RESERVED: 'ENTER / ESC CANNOT BE REBOUND',
+      MSG_TIME: 1.8,
+      ON: 'ON', OFF: 'OFF',
+      ASSIST_BADGE: 'ASSIST  —  NO RANK SAVED',
+      NO_BOSSES: 'NO BOSSES CLEARED YET',
+      /* 옵션 행 — type: range(좌우 증감) / toggle / choice(ASSIST 표) / action(Enter) */
+      OPTIONS: [
+        { id: 'volume',       label: 'MASTER VOLUME',      type: 'range' },
+        { id: 'fullscreen',   label: 'FULLSCREEN',         type: 'toggle' },
+        { id: 'flash',        label: 'SCREEN FLASH',       type: 'toggle' },
+        { id: 'particles',    label: 'PARTICLES',          type: 'toggle' },
+        { id: 'assistHp',     label: 'ASSIST: PLAYER HP',  type: 'choice', table: 'HP' },
+        { id: 'assistWindup', label: 'ASSIST: BOSS WINDUP', type: 'choice', table: 'WINDUP' },
+        { id: 'keys',         label: 'KEY BINDINGS',       type: 'action' },
+        { id: 'reset',        label: 'RESET TO DEFAULTS',  type: 'action' }
+      ],
+      /* 재지정 가능한 액션 — confirm(Enter)·back(Esc) 는 메뉴 탈출 경로라 제외 */
+      BINDABLE: ['left', 'right', 'parry', 'riposte', 'dash', 'restart', 'mute'],
+      /* 재지정 금지 코드 */
+      RESERVED_CODES: ['Enter', 'NumpadEnter', 'Escape']
+    },
+
     /* ---- 튜토리얼 (스펙 §3.1 — Vesper P1 한정) --------------------------- */
     TUTORIAL: {
       PARRY: 'K  —  PARRY THE GOLD FLASH',
@@ -397,8 +453,11 @@
     PAD: {
       DEADZONE: 0.35,        // 좌스틱 X축 데드존
       AXIS_X: 0,              // Standard Gamepad 좌스틱 X축 인덱스
+      AXIS_Y: 1,              // 좌스틱 Y축 — 메뉴 커서 전용
       DPAD_LEFT: 14,           // Standard Gamepad D-Pad 좌
       DPAD_RIGHT: 15,          // Standard Gamepad D-Pad 우
+      DPAD_UP: 12,             // D-Pad 상 — 메뉴 커서 전용
+      DPAD_DOWN: 13,           // D-Pad 하 — 메뉴 커서 전용
       BUTTONS: {               // 액션 -> 버튼 인덱스 목록 (KEYMAP 과 동일한 액션 이름만 사용)
         confirm: [0],           // A / ×
         dash:    [1, 5, 7],     // B / ○ + RB·RT (소울라이크 관행 — 회피 = 오른쪽 숄더 계열)

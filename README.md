@@ -26,6 +26,7 @@ all first.
 | **`K`** / `Z` | **`X` / `□`** | **Parry** — answer the **gold** flash |
 | **`J`** / `X` | **`Y` / `△`** | **Riposte** — spend a stolen attack |
 | **`Space`** / `L` / `C` / `Shift` | **`B` / `○`, `RB`, `RT`** | **Dash** — i-frames; the only answer to **red** |
+| `↑` `↓` / `W` `S` | Left stick / D-pad | Move the menu cursor |
 | `Enter` | `A` / `×` | Confirm / start / next |
 | `R` | `Select` | Retry current boss |
 | `M` | — | Mute |
@@ -96,6 +97,18 @@ Retry a boss with `R` and the scene doesn't play again — only your first attem
 
 ---
 
+## Options
+
+The title screen is a menu: **NEW RUN**, **CONTINUE**, **BOSS SELECT** (bosses you have cleared),
+**OPTIONS**. Options cover master volume, fullscreen, the screen flash and particles, full key
+rebinding, and two **assist** sliders — more player HP, slower boss wind-ups.
+
+Assist is opt-in and the defaults change nothing. Turn either slider off default and that run
+stops writing ranks and best records; the victory card says so. The fight itself is never made
+easier behind your back.
+
+---
+
 ## Tech notes
 
 - **Vanilla JavaScript + Canvas 2D.** No framework, no build step, no bundler.
@@ -145,6 +158,7 @@ node tests/audio-smoke.mjs  # one keypress -> AudioContext running; every sound 
 node tests/story.mjs        # dialogue table rules: line/length limits, choice shape
 node tests/mash.mjs --all --riposte --expect-lose   # a bot that only mashes must lose every fight
 node tests/pad.mjs          # gamepad mapping via a mocked pad: buttons, stick, no stuck keys
+node tests/options.mjs      # options menu: volume, assist, rebinding, reset, boss select
 node tools/boss-overlap.mjs --check  # boss differentiation gate: no undeclared pattern/attack overlap
 node tools/shots.mjs        # re-capture the README screenshots into docs/media/
 ```

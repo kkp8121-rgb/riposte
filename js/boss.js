@@ -85,7 +85,10 @@
   };
 
   Boss.prototype.windupMult = function () {
-    return this.phase === 2 ? B.PHASE2_WINDUP_MULT : 1;
+    var m = this.phase === 2 ? B.PHASE2_WINDUP_MULT : 1;
+    // ASSIST: BOSS WINDUP — 기본 ×1 이면 곱이 1이라 밸런스가 그대로다
+    if (this.game && this.game.assistWindupMult) m *= this.game.assistWindupMult();
+    return m;
   };
 
   Boss.prototype.dist = function () {

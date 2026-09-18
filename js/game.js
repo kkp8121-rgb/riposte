@@ -13,9 +13,27 @@
   /* =========================================================================
    * 저장 (localStorage — file:// 에서 막힐 수 있으므로 전부 try/catch)
    * ====================================================================== */
+  /** 옵션 값 — 기본값 위에 저장분을 덮어쓰고 범위를 강제한다 (별도 저장 키를 만들지 않는다) */
+  function loadSettings(raw) {
+    var d = C.SETTINGS.DEFAULTS, out = {}, k;
+    for (k in d) { if (d.hasOwnProperty(k)) out[k] = d[k]; }
+    if (raw && typeof raw === 'object') {
+      for (k in out) { if (out.hasOwnProperty(k) && raw[k] !== undefined) out[k] = raw[k]; }
+    }
+    var step = C.SETTINGS.VOLUME_STEP;
+    out.volume = clamp(Math.round((+out.volume || 0) / step) * step, 0, C.SETTINGS.VOLUME_MAX);
+    out.assistHp = clamp(out.assistHp | 0, 0, C.ASSIST.HP.length - 1);
+    out.assistWindup = clamp(out.assistWindup | 0, 0, C.ASSIST.WINDUP.length - 1);
+    out.fullscreen = !!out.fullscreen;
+    out.flash = !!out.flash;
+    out.particles = !!out.particles;
+    if (out.keys && typeof out.keys !== 'object') out.keys = null;
+    return out;
+  }
+
   function loadSave(bossCount) {
     var n = bossCount || 1;
-    var fallback = { unlocked: 1, cleared: false, ranks: {}, bestTimes: {}, bestTries: {} };
+    var fallback = { unlocked: 1, cleared: false, ranks: {}, bestTimes: {}, bestTries: {}, settings: loadSettings(null) };
     try {
       var raw = global.localStorage.getItem(C.STORAGE.KEY);
       if (!raw) return fallback;
@@ -31,7 +49,8 @@
         cleared: cleared,
         ranks: o.ranks || {},
         bestTimes: o.bestTimes || {},
-        bestTries: o.bestTries || {}
+        bestTries: o.bestTries || {},
+        settings: loadSettings(o.settings)
       };
     } catch (e) { return fallback; }
   }
@@ -65,6 +84,10 @@
 
     this.scene = 'TITLE';
     this.sceneT = 0;
+    this.menuIndex = 0;        // 타이틀/옵션/보스 선택 공용 커서
+    this.menuMsg = '';         // 옵션 화면 하단 경고 (키 충돌 등)
+    this.menuMsgT = 0;
+    this.bindWait = false;     // 키 재지정 대기 중인 액션 이름
     this.time = 0;
     this.acc = 0;
 
@@ -124,6 +147,8 @@
 
   Game.prototype.goTitle = function () {
     this.setScene('TITLE');
+    this.menuIndex = 0;
+    this.bindWait = false;
     this.boss = null;
     this.story = null;
     this.clearWorld();
@@ -227,6 +252,9 @@
       case 'FIGHT':   this.stepFight(dt); break;
       case 'VICTORY': this.stepVictory(dt); break;
       case 'STORY':   this.stepStory(dt); break;
+      case 'OPTIONS': this.stepOptions(dt); break;
+      case 'BOSSSELECT': this.stepBossSelect(dt); break;
+      case 'KEYBIND': this.stepKeybind(dt); break;
       case 'INTERLUDE': this.stepInterlude(dt); break;
       case 'DEFEAT':  this.stepDefeat(dt); break;
       case 'ENDING':  this.stepEnding(dt); break;
@@ -243,11 +271,191 @@
       this.startRun(0);
       return;
     }
+    var items = this.titleItems();
+    if (this.menuIndex >= items.length) this.menuIndex = 0;
+    this.menuMove(items.length);
+    if (!Input.consume('confirm')) return;
+    RAudio.ui(true);
+    var id = items[this.menuIndex].id;
+    // NEW RUN 이 0번이라 "Enter 한 번 = 시작" 이 그대로 유지된다 (하네스 호환)
+    if (id === 'new') this.startRun(0);
+    else if (id === 'continue') this.startRun(this.save.cleared ? 0 : this.save.unlocked - 1);
+    else if (id === 'bosses') { this.menuIndex = 0; this.setScene('BOSSSELECT'); }
+    else if (id === 'options') { this.menuIndex = 0; this.setScene('OPTIONS'); }
+  };
+
+  /* =========================================================================
+   * 메뉴 (타이틀 세로 메뉴 · 옵션 · 보스 선택 · 키 설정)
+   * ====================================================================== */
+
+  /** 위/아래 커서 이동 — 메뉴 전용 액션이고 전투 동사를 늘리지 않는다 */
+  Game.prototype.menuMove = function (n) {
+    var d = 0;
+    if (Input.consume('up')) d -= 1;
+    if (Input.consume('down')) d += 1;
+    if (!d || n <= 0) return;
+    this.menuIndex = (this.menuIndex + d + n) % n;
+    RAudio.ui(false);
+  };
+
+  Game.prototype.setMenuMsg = function (m) { this.menuMsg = m; this.menuMsgT = C.MENU.MSG_TIME; };
+
+  /** 클리어한 보스 인덱스 목록 (보스 선택 화면) */
+  Game.prototype.clearedBosses = function () {
+    var out = [];
+    for (var i = 0; i < this.defs.length; i++) {
+      if (this.save.cleared || i < this.save.unlocked - 1) out.push(i);
+    }
+    return out;
+  };
+
+  Game.prototype.titleItems = function () {
+    var items = [{ id: 'new', label: 'NEW RUN' }];
+    if (this.save.unlocked > 1 || this.save.cleared) items.push({ id: 'continue', label: 'CONTINUE' });
+    if (this.clearedBosses().length) items.push({ id: 'bosses', label: 'BOSS SELECT' });
+    items.push({ id: 'options', label: 'OPTIONS' });
+    return items;
+  };
+
+  /* ---- ASSIST (옵트인 — 기본값이면 배율이 1이라 밸런스가 그대로다) -------- */
+
+  Game.prototype.assistMaxHp = function () {
+    var s = this.save && this.save.settings;
+    var e = C.ASSIST.HP[(s && s.assistHp) || 0] || C.ASSIST.HP[0];
+    return Math.round(C.PLAYER.HP * e.mult);
+  };
+
+  Game.prototype.assistWindupMult = function () {
+    var s = this.save && this.save.settings;
+    var e = C.ASSIST.WINDUP[(s && s.assistWindup) || 0] || C.ASSIST.WINDUP[0];
+    return e.mult;
+  };
+
+  /** 기본값이 아니면 true — 그 판은 랭크·최고 기록을 저장하지 않는다 */
+  Game.prototype.assistOn = function () {
+    var s = this.save && this.save.settings;
+    return !!s && (s.assistHp > 0 || s.assistWindup > 0);
+  };
+
+  /* ---- 옵션 적용 / 조작 --------------------------------------------------- */
+
+  /** 저장된 옵션을 실제 시스템에 반영한다 (부팅 1회 + 변경 시) */
+  Game.prototype.applySettings = function () {
+    var s = this.save.settings;
+    FX.enabled = !!s.particles;
+    FX.whiteFlashEnabled = !!s.flash;
+    RAudio.setVolume(s.volume / C.SETTINGS.VOLUME_MAX);
+    // 볼륨 0 = 음소거. 0 이 아닐 때 여기서 음소거를 풀지는 않는다 (M 키·?mute=1 존중)
+    if (s.volume <= 0) RAudio.setMuted(true);
+    Input.setKeymap(s.keys);
+  };
+
+  Game.prototype.applyFullscreen = function (on) {
+    try {
+      var d = global.document, pr;
+      if (on && d.documentElement.requestFullscreen) pr = d.documentElement.requestFullscreen();
+      else if (!on && d.exitFullscreen && d.fullscreenElement) pr = d.exitFullscreen();
+      if (pr && pr['catch']) pr['catch'](function () { /* 브라우저 정책 — 조용히 무시 */ });
+    } catch (e) { /* 무시 */ }
+  };
+
+  Game.prototype.optionToggle = function (row) {
+    var s = this.save.settings;
+    s[row.id] = !s[row.id];
+    if (row.id === 'flash') FX.whiteFlashEnabled = s.flash;
+    else if (row.id === 'particles') FX.enabled = s.particles;
+    else if (row.id === 'fullscreen') this.applyFullscreen(s.fullscreen);
+  };
+
+  Game.prototype.optionAdjust = function (row, d) {
+    var s = this.save.settings;
+    if (row.type === 'range') {
+      s.volume = clamp(s.volume + d * C.SETTINGS.VOLUME_STEP, 0, C.SETTINGS.VOLUME_MAX);
+      RAudio.setVolume(s.volume / C.SETTINGS.VOLUME_MAX);
+      RAudio.setMuted(s.volume <= 0);
+    } else if (row.type === 'toggle') {
+      this.optionToggle(row);
+    } else if (row.type === 'choice') {
+      var tbl = C.ASSIST[row.table];
+      s[row.id] = (s[row.id] + d + tbl.length) % tbl.length;
+      if (this.player) this.player.maxHp = this.assistMaxHp();
+    } else {
+      return;
+    }
+    RAudio.ui(d > 0);
+    this.persist();
+  };
+
+  Game.prototype.resetSettings = function () {
+    this.save.settings = loadSettings(null);
+    this.applySettings();
+    RAudio.setMuted(false);
+    if (this.player) this.player.maxHp = this.assistMaxHp();
+    this.persist();
+    this.setMenuMsg('');
+  };
+
+  Game.prototype.stepOptions = function (dt) {
+    var rows = C.MENU.OPTIONS;
+    if (this.menuMsgT > 0) this.menuMsgT -= dt;
+    this.menuMove(rows.length);
+    var row = rows[this.menuIndex];
+    var d = 0;
+    if (Input.consume('left')) d -= 1;
+    if (Input.consume('right')) d += 1;
+    if (d) this.optionAdjust(row, d);
     if (Input.consume('confirm')) {
       RAudio.ui(true);
-      // 완주한 저장 파일이면 Enter 는 처음부터 다시 (랭크 갱신용)
-      this.startRun(this.save.cleared ? 0 : this.save.unlocked - 1);
+      if (row.id === 'keys') { this.menuIndex = 0; this.bindWait = false; this.setScene('KEYBIND'); return; }
+      if (row.id === 'reset') { this.resetSettings(); return; }
+      if (row.type === 'toggle') { this.optionToggle(row); this.persist(); }
     }
+    if (Input.consume('back')) { this.persist(); this.menuIndex = 0; this.setScene('TITLE'); }
+  };
+
+  Game.prototype.stepBossSelect = function (dt) {
+    var list = this.clearedBosses();
+    this.menuMove(list.length);
+    if (list.length && Input.consume('confirm')) {
+      RAudio.ui(true);
+      // 고른 판은 진행도를 저장하지 않는다 (?boss=N 과 같은 규칙)
+      this.startRun(list[this.menuIndex], { noSave: true, noStory: true });
+      return;
+    }
+    if (Input.consume('back')) { this.menuIndex = 0; this.setScene('TITLE'); }
+  };
+
+  Game.prototype.stepKeybind = function (dt) {
+    if (this.menuMsgT > 0) this.menuMsgT -= dt;
+    if (this.bindWait) return;              // 키 대기 중 — Input.captureKey 가 다음 keydown 을 가져간다
+    var acts = C.MENU.BINDABLE;
+    this.menuMove(acts.length);
+    if (Input.consume('confirm')) { this.beginRebind(acts[this.menuIndex]); return; }
+    if (Input.consume('back')) { this.persist(); this.menuIndex = 0; this.setScene('OPTIONS'); }
+  };
+
+  Game.prototype.beginRebind = function (action) {
+    var self = this;
+    this.bindWait = action;
+    this.setMenuMsg('');
+    RAudio.ui(true);
+    Input.captureKey(function (code) { self.finishRebind(action, code); });
+  };
+
+  Game.prototype.finishRebind = function (action, code) {
+    this.bindWait = false;
+    if (C.MENU.RESERVED_CODES.indexOf(code) >= 0) { this.setMenuMsg(C.MENU.RESERVED); return; }
+    var map = Input.KEYMAP;
+    for (var a in map) {
+      if (!map.hasOwnProperty(a) || a === action) continue;
+      if (map[a].indexOf(code) >= 0) { this.setMenuMsg(C.MENU.CONFLICT); return; }
+    }
+    var keys = this.save.settings.keys || {};
+    keys[action] = [code];
+    this.save.settings.keys = keys;
+    Input.setKeymap(keys);
+    this.persist();
+    RAudio.ui(true);
   };
 
   Game.prototype.stepIntro = function (dt) {
@@ -941,6 +1149,8 @@
     // 저장 — 진행도 + 보스별 최고 랭크 (?boss=N 판은 메모리 상태도 건드리지 않는다)
     if (!this.noSave) {
       this.save.unlocked = clamp(Math.max(this.save.unlocked, this.bossIndex + 2), 1, this.defs.length);
+      // ASSIST 가 켜진 판은 진행만 남기고 랭크·최고 기록은 갱신하지 않는다
+      if (this.assistOn()) { this.persist(); FX.setZoom(1); this.setScene('VICTORY'); return; }
       var prev = this.save.ranks[r.key];
       if (!prev || C.RANK.VALUE[r.rank] > C.RANK.VALUE[prev]) this.save.ranks[r.key] = r.rank;
       var bt = this.save.bestTimes[r.key];
@@ -1014,6 +1224,9 @@
 
     return {
       scene: this.scene,
+      menuIndex: this.menuIndex,
+      settings: this.save.settings,
+      assist: { hp: this.assistMaxHp(), windup: this.assistWindupMult(), on: this.assistOn() },
       bossId: this.bossIndex + 1,
       chapter: ch ? ch.id : 0,
       story: this.story ? {
