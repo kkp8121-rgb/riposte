@@ -6,9 +6,9 @@
 
 A side-view 1:1 boss-rush parry duel for keyboard or gamepad. You start with **zero attacks**. Every
 weapon in your hands was taken out of someone else's — a perfect parry doesn't just deflect
-a strike, it *steals* it. Eight bosses across two chapters: a mirror waits at the end of
-chapter one to give everything back, and a taker waits at the end of chapter two to take it
-all first.
+a strike, it *steals* it. Twelve bosses across three chapters: a mirror waits at the end of
+chapter one to give everything back, a taker waits at the end of chapter two to take it all
+first, and at the end of chapter three stands a wall that neither gives nor takes.
 
 ![Title screen](docs/media/title.png)
 
@@ -82,6 +82,11 @@ The victory card also counts your tries on each boss and remembers your best.
 | 6 | **CHORUS** | *The Twin Blades* | Chained parries while it crosses to your other side. | `TWIN` `BOLT` |
 | 7 | **BASTION** | *The Warden* | Armor, a gate at its feet, and it bats your reflected shots back — strike the recovery. | `VOLLEY` `WARD` |
 | 8 | **AVARICE** | *The Taker* | It has no moves of its own — every hit you take, it takes a card and uses it. | `COUNT` + everything |
+| — | **CHAPTER III — THE WALL** | | | |
+| 9 | **SENTINEL** | *The Spear* | It never moves. Red zones eat the floor from the edges in — the room shrinks, and dashing becomes a resource. | `LANCE` `SWEEP` |
+| 10 | **TEMPEST** | *The Rain* | Volume. Three big shots at once, gold and red mixed — you cannot catch them all, so choose what to give up. | `SURGE` |
+| 11 | **HOLLOW** | *The Dark* | The arena goes dark and only the tells stay lit. Twelve fights of "read the flash", tested with nothing else to read. | `GRASP` `EMBER` |
+| 12 | **ADAMANT** | *The Wall* | A wall only your **reflected** shots can break — break it and it staggers wide open. In Phase II only a **counter** hurts it. | `CLEAVE` `SHARD` |
 
 ---
 
@@ -101,7 +106,7 @@ Retry a boss with `R` and the scene doesn't play again — only your first attem
 
 Clear the ending once and the title menu gains **NEW RUN (RIPOSTE+)**: every boss winds up
 faster, throws patterns closer together, and roars into Phase II at 60 % health instead of 50 %.
-No new bosses, no new attacks — the same eight fights, played at speed. Its records are kept
+No new bosses, no new attacks — the same twelve fights, played at speed. Its records are kept
 apart from your normal ones and ranks carry a `+`.
 
 ---
@@ -130,7 +135,7 @@ easier behind your back.
   Fixed-step simulation at 1/120 s with an accumulator; rendering on `requestAnimationFrame`.
 - Deterministic: boss pattern selection and deflect chance are the only consumers of RNG,
   and it's seeded.
-- Three arenas, drawn not loaded: the pillars, palette and floor change per boss out of a table,
+- Five arenas, drawn not loaded: the pillars, palette and floor change per boss out of a table,
   and each boss carries its own drone — wave, base note, filter — that shifts when Phase II hits.
 - Constants live in tables — `js/config.js` globally, `js/bosses/*.js` per boss. No magic
   numbers in the logic.
@@ -139,7 +144,7 @@ easier behind your back.
 
 | Param | Effect |
 |---|---|
-| `?boss=1..8` | Jump straight to a boss (skips its story scene too) |
+| `?boss=1..12` | Jump straight to a boss (skips its story scene too) |
 | `?story=0` | Skip every story scene |
 | `?seed=N` | Seed the pattern RNG |
 | `?mute=1` | Start muted |
@@ -164,13 +169,14 @@ That's it — double-click the file. No server needed.
 npm install                 # playwright-core, once
 
 node tests/smoke.mjs        # headless boot, title -> story -> fight, 60s idle -> defeat, 0 page errors
-node tests/bot.mjs --all    # a reactive bot beats all eight bosses; a passive bot loses
+node tests/bot.mjs --all    # a reactive bot beats all twelve bosses; a passive bot loses
 node tests/state.mjs        # boss definition tables stay byte-identical across a whole fight
 node tests/audio-smoke.mjs  # one keypress -> AudioContext running; every sound path callable
 node tests/story.mjs        # dialogue table rules: line/length limits, choice shape
 node tests/mash.mjs --all --riposte --expect-lose   # a bot that only mashes must lose every fight
 node tests/pad.mjs          # gamepad mapping via a mocked pad: buttons, stick, no stuck keys
 node tests/options.mjs      # options menu: volume, assist, rebinding, reset, boss select
+node tests/zone.mjs         # lingering hazard zones never leave you without room to dash out
 node tools/boss-overlap.mjs --check  # boss differentiation gate: no undeclared pattern/attack overlap
 node tools/shots.mjs        # re-capture the README screenshots into docs/media/
 ```
@@ -186,4 +192,4 @@ screenshots land in `tests/shots/`.
 Built for a game jam. Design, code, audio synthesis and art direction are all in this repo —
 `docs/superpowers/specs/2026-09-09-riposte-design.md` is the full design document.
 
-*Nothing is given. Everything is taken.*
+*Nothing is given. Everything is taken. Nothing is kept. Nothing is left to take.*
