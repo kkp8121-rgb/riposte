@@ -606,6 +606,41 @@ git commit -m "feat(bosses): 챕터 2 보스 4종 재설계 — 순간이동·�
 
 ---
 
+
+### Task 4b: 트라이 수 — 승리 카드·INTERLUDE·ENDING·DEFEAT 표시 + 최소 기록 저장 (스펙 §2.6, 2026-09-18 사용자 요청)
+
+**Files:**
+- Modify: `js/game.js` (`newRun`, `loadSave`/세이브 필드, `startBoss`, `onBossDown`/`onPlayerDown` result, `finishVictory` 저장, `getState`)
+- Modify: `js/ui.js` (`drawVictory` rows, `drawDefeat`, `drawInterlude` 행, `drawEnding` 행)
+- Modify: `tests/smoke.mjs` (R 재도전 뒤 `getState().tries === 2` 단언)
+- Modify: `js/config.js` (`RANK` 또는 `SCENE` 근처에 표시 문구 상수 `TRIES: { LABEL: 'TRIES', BEST: 'best', TRY: 'TRY' }`)
+
+**Interfaces:**
+- Produces: `game.run.tries[key]`(number), `result.tries`, `run.bosses[].tries`, `save.bestTries[key]`, `getState().tries`.
+
+- [ ] **Step 1: `tests/smoke.mjs` 먼저** — 기존 "R retry skips STORY" 체크 뒤에 추가:
+
+```js
+  const s4 = await page.evaluate(state);
+  check('retry counts as a second try', s4.tries === 2, `(tries ${s4.tries})`);
+```
+Run → Expected: FAIL (`tries undefined`).
+
+- [ ] **Step 2: `js/game.js`**
+  - `newRun()` 반환에 `tries: {}` 추가.
+  - `loadSave` 의 fallback 과 반환 객체에 `bestTries: o.bestTries || {}`.
+  - `startBoss` 에서 `def` 를 잡은 직후: `this.run.tries[def.key] = (this.run.tries[def.key] || 0) + 1;`
+  - `onBossDown` result 와 `onPlayerDown` result 에 `tries: this.run.tries[boss.key]` / `this.run.tries[this.boss.key]`.
+  - `finishVictory` 의 `run.bosses.push({...})` 에 `tries: r.tries`; 저장 블록에 `var bt2 = this.save.bestTries[r.key]; if (!bt2 || r.tries < bt2) this.save.bestTries[r.key] = r.tries;`
+  - `getState()` 에 `tries: this.boss ? (this.run.tries[this.boss.key] || 0) : 0`.
+- [ ] **Step 3: `js/ui.js`**
+  - `drawVictory` rows 에 `[C.TRIES.LABEL, String(r.tries) + (best && best < r.tries ? '   (' + C.TRIES.BEST + ' ' + best + ')' : '')]` — `best = game.save.bestTries[r.key]`. 카드 높이(`L.CARD_H`)가 4행을 담도록 26px 늘리고 랭크·프롬프트 y 도 같이 내린다.
+  - `drawDefeat` 의 보스명 줄에 `  ·  TRY N` 추가(`r.tries`).
+  - `drawInterlude` 행과 `drawEnding` 행에 `b.tries + ' try'` 열 추가(기존 hit/perfect 열과 같은 스타일, x 위치는 겹치지 않게 조정).
+- [ ] **Step 4: `node tests/smoke.mjs && node tests/state.mjs` PASS**, 스크린샷 1장(`?boss=1` 로 들어가 봇 승리 후 VICTORY 카드 — `tools/shots.mjs` 의 perfect-parry 블록 방식 재사용)으로 카드 레이아웃 육안 확인.
+- [ ] **Step 5: Commit** `feat(ui): 보스별 트라이 수 — 승리 카드·챕터 카드·엔딩·패배 화면 표시 + 최소 기록 저장` (+ 트레일러).
+
+---
 ### Task 5: 최종 검증 · 머지 · push
 
 - [ ] `node tools/boss-overlap.mjs --check && node tests/story.mjs && node tests/state.mjs && node tests/audio-smoke.mjs && node tests/smoke.mjs && node tests/bot.mjs --all` 전부 PASS.

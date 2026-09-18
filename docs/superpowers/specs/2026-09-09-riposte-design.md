@@ -113,6 +113,7 @@
 - 보스 HP 0 → 슬로모 0.25× 1.4s + 줌인 → **VICTORY 카드**(시간, 피격, 퍼펙트 수, 랭크) → Enter로 다음 보스.
 - 플레이어 HP 0 → 슬로모 → **DEFEAT** ("R: 재도전", "Esc: 타이틀").
 - 4번째 보스(챕터 1 마지막) 격파 → **INTERLUDE** (챕터 I 랭크·시간 카드) → Enter → 5번째 보스 STORY/INTRO. 8번째 보스 격파 → **ENDING** (총 시간, 총 피격, 총 퍼펙트, 종합 랭크). localStorage에 보스별 최고 랭크·진행도 저장. 챕터 경계는 `config.CHAPTERS` 테이블이 정한다(§3 공통).
+- **트라이 수 (2026-09-18, 사용자 요청)**: 보스별 **전투 시작 횟수**를 런 단위로 센다(`run.tries[key]` — 첫 도전 1, DEFEAT 뒤 R 재도전마다 +1, 타이틀로 나가 Continue 하면 새 런이라 1부터, `?boss=N` 도 센다). 표시: VICTORY 카드 `TRIES N`(저장된 최소 기록이 있으면 `best M` 병기), INTERLUDE·ENDING 보스 행에 트라이 열, DEFEAT 화면 `TRY N`. 저장: 보스별 최소 트라이 `bestTries[key]`(승리 시 갱신, `?boss=N` 판은 저장 안 함). `getState().tries` 로 노출(테스트가 R 재도전 후 2 가 되는지 본다).
 
 ### 2.7 랭크
 
