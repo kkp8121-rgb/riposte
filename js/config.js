@@ -159,11 +159,11 @@
       MIN_VOLLEY_GAP: 0.35,
       /* 되받아치기(deflect) — 스펙 §3.7. 플레이어 쪽 투사체가 이 거리 안이면 판정 */
       DEFLECT_REACH: 120,
-      DEFLECT_CHANCE_P1: 0.6,
-      DEFLECT_CHANCE_P2: 0.9,
-      DEFLECT_FORCE_RALLY: 3,     // 랠리 3회째부터는 반드시 되받는다
-      DEFLECT_SPEED_MULT: 1.25,
-      DEFLECT_SPEED_MAX: 720,
+      DEFLECT_CHANCE_P1: 0.35,
+      DEFLECT_CHANCE_P2: 0.55,
+      DEFLECT_MAX_RALLY: 3,       // 랠리 상한 — 3회째엔 되받지 않는다. rally 는 reflect() 로 리셋되지 않으므로 이게 없으면 무한 랠리
+      DEFLECT_SPEED_MULT: 0.55,
+      DEFLECT_SPEED_MAX: 380,
       DEFLECT_RECOVER: 0.45,      // 되받은 직후 경직 = 카운터 창
       /* 챕터 2 재설계 (스펙 §3.5~3.7) */
       BLINK_PAUSE: 0.12,          // move:'behind' 순간이동 뒤 멈춤 — 잔상을 볼 시간

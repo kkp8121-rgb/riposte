@@ -228,7 +228,7 @@
 
 - P1 패턴: `[salvo]`, `[gate, salvo]`, `[far, salvo, wait .45, salvo]`, `[ward]`
 - P2 패턴: `[gate, salvo, wait .4, salvo, wait .4, salvo]`(랠리), `[far, gate]`, `[ward, gate]`, `[salvo, far, salvo]`
-- deflect(스펙 유지): 플레이어 쪽 투사체가 `DEFLECT_REACH` 안이면 idle/recover 중 확률(`DEFLECT_CHANCE_P1/P2`, 랠리 `DEFLECT_FORCE_RALLY` 회째부터 1.0)로 되받는다. 되받은 직후 `DEFLECT_RECOVER` 경직 = 카운터 창.
+- deflect(스펙 유지): 플레이어 쪽 투사체가 `DEFLECT_REACH` 안이면 idle/recover 중 확률(`DEFLECT_CHANCE_P1/P2`, 랠리 `DEFLECT_MAX_RALLY` 회째엔 0 (랠리 상한))로 되받는다. 되받은 직후 `DEFLECT_RECOVER` 경직 = 카운터 창.
 - 챕터 1 이 쓰지 않는 공간 모양: **보스 앞이 막힌다.** 문이 닫힌 동안은 원거리(반사·shot)만 통하고, 되받는 순간만이 열린 틈. 돌진(bulwark)은 GRAVEN 과 겹쳐 삭제.
 - 판정기 예상: 실루엣 고유 · 비기본 모양(`m:far …`) 0% · 공격 구성 [p/g, z/r, m/g] vs GRAVEN 50% · vs SERAPH 60%.
 

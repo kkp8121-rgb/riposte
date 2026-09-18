@@ -26,7 +26,7 @@
     silhouette: 'taker',
     overlapIntended: '되돌림용 공격표는 챕터 1·2 기술 정의를 그대로 담는다 (스펙 §3.8)',
     hp: 400,
-    par: 55,                    // 출발점 — Task 3 봇 실측으로 확정
+    par: 55,                    // Task 3 봇 실측 확정 (숙련 29.9s ×2 = 60, 기존 55 와 차이 <10 → 유지)
     armor: false,
     stealOnHit: true,
     spawnX: 680,
@@ -47,7 +47,7 @@
         id: 'count', label: 'COUNT', tell: 'gold', kind: 'melee',
         windup: 0.90, active: 0.14, recover: 0.70,
         reach: 190, approach: 50, damage: 1, swing: 'arc',
-        steal: { id: 'COUNT', label: 'COUNT', kind: 'slash', damage: 15 }
+        steal: { id: 'COUNT', label: 'COUNT', kind: 'slash', damage: 25 }
       },
       plunder: {                                   // 적 잡기 — 손패 전부 강탈, 대시로만 회피
         id: 'plunder', label: 'PLUNDER', tell: 'red', kind: 'melee',

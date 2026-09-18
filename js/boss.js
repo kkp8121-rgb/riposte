@@ -682,7 +682,7 @@
   /**
    * 플레이어 쪽에서 되돌아오는 투사체를 되받아친다. true 면 투사체는 다시 보스 것이 됐다.
    * 조건: def.deflect, 살아 있음, 무적 아님, idle/wait/move 또는 공격 recover 중.
-   * 랠리(pr.rally)가 DEFLECT_FORCE_RALLY 회째부터는 반드시 되받는다.
+   * 랠리(pr.rally)가 DEFLECT_MAX_RALLY 회째가 되면 되받지 않는다 — 랠리는 반드시 끝난다.
    * 되받은 직후 DEFLECT_RECOVER 만큼 경직 = 모든 리포스트가 카운터 판정(stagger counter).
    */
   Boss.prototype.tryDeflect = function (pr) {
@@ -692,7 +692,7 @@
     if (!open) return false;
 
     var rally = pr.rally || 0;
-    var chance = (rally + 1 >= B.DEFLECT_FORCE_RALLY) ? 1
+    var chance = (rally + 1 >= B.DEFLECT_MAX_RALLY) ? 0
                : (this.phase === 2 ? B.DEFLECT_CHANCE_P2 : B.DEFLECT_CHANCE_P1);
     if (!this.game.rng.chance(chance)) return false;
 
@@ -706,6 +706,7 @@
     pr.reflectDamage = pr.damage;              // 되돌리면 같은 피해로 보스에게 간다
     pr.damage = 1;                             // 보스 투사체 피해 = 하트 1
     pr.fromHand = null;
+    pr.label = 'DEFLECT';             // 사인(死因)·패배 화면에서 되받아친 탄임을 구분
     pr.pierced = false;
     pr.trail.length = 0;
 

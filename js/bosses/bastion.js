@@ -14,7 +14,7 @@
     color: '#a8b8c8',
     silhouette: 'shield',
     hp: 310,
-    par: 50,                    // 출발점 — Task 3 봇 실측으로 확정
+    par: 50,                    // Task 3 봇 실측 확정 (숙련 ×2 = 45, 기존 50 과 차이 <10 → 유지)
     armor: true,
     deflect: true,              // 확률·사거리·경직은 CONFIG.BOSS.DEFLECT_*
     spawnX: 700,
@@ -28,7 +28,7 @@
       salvo: {                                     // 지면 투사체 — 반사되면 deflect 대상
         id: 'salvo', label: 'VOLLEY', tell: 'gold', kind: 'projectile',
         windup: 0.65, active: 0.10, recover: 0.55,
-        proj: { speed: 280, r: 13, y: 18, damage: 1, reflectDamage: 20, shape: 'wave' },
+        proj: { speed: 380, r: 13, y: 18, damage: 1, reflectDamage: 20, shape: 'wave' },
         steal: { id: 'VOLLEY', label: 'VOLLEY', kind: 'shot', damage: 20 }
       },
       gate: {                                      // 문 — 보스 앞 고정 존, 대시로만 통과
@@ -53,7 +53,7 @@
         { name: 'ward',            steps: [{ atk: 'ward' }] }
       ],
       2: [
-        { name: 'gate-rally',      steps: [{ atk: 'gate' }, { atk: 'salvo' }, { wait: 0.4 }, { atk: 'salvo' }, { wait: 0.4 }, { atk: 'salvo' }] },
+        { name: 'gate-rally',      steps: [{ atk: 'gate' }, { atk: 'salvo' }, { wait: 0.4 }, { atk: 'salvo' }] },
         { name: 'far-gate',        steps: [{ move: 'far' }, { atk: 'gate' }] },
         { name: 'ward-gate',       steps: [{ atk: 'ward' }, { atk: 'gate' }] },
         { name: 'salvo-far-salvo', steps: [{ atk: 'salvo' }, { move: 'far' }, { atk: 'salvo' }] }

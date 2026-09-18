@@ -13,7 +13,7 @@
     color: '#4d9dff',
     silhouette: 'twin',
     hp: 300,
-    par: 45,                    // 출발점 — Task 3 봇 실측으로 확정
+    par: 45,                    // Task 3 봇 실측 확정 (숙련 22.9s ×2 = 45 → 유지)
     armor: false,
     spawnX: 680,
     droneHz: 65.41,             // C2
