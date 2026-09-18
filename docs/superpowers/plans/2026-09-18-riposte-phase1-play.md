@@ -79,10 +79,64 @@
 - **보스 선택**: `?boss=N`이 이미 있음 → 클리어한 보스만 타이틀에서 선택 가능하게 승격. 진행 저장(`localStorage`)과 연동.
 - 저장은 기존 `C.STORAGE` 키에 합류.
 
+**확정 설계**
+
+타이틀을 "Enter 한 번 = 시작"에서 **세로 메뉴**로 바꾼다. 항목은 진행도에 따라 달라진다.
+
+```
+RIPOSTE
+  ▸ NEW RUN            (항상)
+    CONTINUE           (저장된 진행도가 있을 때만)
+    BOSS SELECT        (클리어한 보스가 1 이상일 때만)
+    OPTIONS            (항상)
+```
+
+- 조작: ↑↓ 또는 W/S(패드 D-Pad·좌스틱) 이동, Enter/A 확정, Esc/Start 뒤로. **새 동사 아님** — 기존 `confirm`/`back`/축 입력 재사용.
+- 🔴 **`tests/smoke.mjs`·`bot.mjs`·`audio-smoke.mjs` 가 "TITLE→Enter→(STORY)→FIGHT" 를 전제한다**(handover 교훈 6에서 STORY 삽입으로 한 번 깨진 적 있다). 첫 항목이 `NEW RUN` 이라 **Enter 한 번이 그대로 시작**이 되게 커서 기본값을 0번에 둔다. 그래도 하네스 3종을 반드시 다시 돌려 확인한다.
+
+**OPTIONS 화면 항목** (값은 전부 `C.STORAGE` 저장, 타이틀에서만 접근)
+
+| 항목 | 값 | 비고 |
+|---|---|---|
+| MASTER VOLUME | 0~100 (10 단위) | `RAudio` 마스터 게인. 0 = 음소거(M 키와 동기) |
+| FULLSCREEN | ON/OFF | `requestFullscreen()`/`exitFullscreen()`. 실패해도 조용히 무시(브라우저 정책) |
+| SCREEN FLASH | ON/OFF | `FX.whiteFlashEnabled` — `?flash=0` 과 같은 값을 UI 로도 |
+| PARTICLES | ON/OFF | `FX.enabled` — `?nofx=1` 과 같은 값 |
+| ASSIST: PLAYER HP | ×1 / ×1.5 / ×2 | 기본 ×1 |
+| ASSIST: BOSS WINDUP | ×1 / ×1.2 / ×1.5 | 느릴수록 쉬움. 기본 ×1 |
+| KEY BINDINGS | 하위 화면 | 액션별 키 재지정 |
+| RESET TO DEFAULTS | 실행 | |
+
+- 🔴 **ASSIST 가 기본값(×1, ×1)이 아니면 그 판은 랭크·트라이 최고 기록을 저장하지 않는다.** 승리 카드에 `ASSIST` 배지를 띄운다. 근거: Celeste·Nine Sols 는 "코어 난도 무손상 + 옵트인"으로 호평받았다. 난도 기본값은 사용자 결정(2026-09-10)이라 **바꾸지 않는다**.
+- ASSIST 배율은 `C.ASSIST` 상수 테이블(선택지 배열)로 두고, 적용 지점은 플레이어 최대 HP 1곳·보스 windup 1곳만. 밸런스 상수 자체는 건드리지 않는다.
+- 키 리바인드: `Input.KEYMAP` 을 런타임 테이블로 바꾸고 저장된 매핑을 덮어쓴다. **충돌(같은 키 중복) 시 거부하고 붉은 메시지.** `Esc`·`Enter` 는 재지정 금지(메뉴 탈출 불가 방지).
+
+**보스 선택 화면**: 클리어한 보스만 목록에 띄우고 고르면 그 보스로 바로 간다(`?boss=N` 과 같은 경로). 이 판은 **진행도를 저장하지 않는다**(기존 `?boss=N` 규칙과 동일).
+
 ### 그룹 4 — 아레나·음악·하드 모드
 - **아레나**: 현재 8보스 공용 1종(`Render.drawArena`). Titan Souls가 아트 호평에도 "환경이 따분하다"로 감점된 사례 → 챕터/보스별 배경 팔레트·기둥 배치·바닥선을 테이블화. **이미지 에셋 0 유지.**
 - **음악**: 현재 2오실레이터 드론 1곡 고정. 보스별 베이스 음정·LFO·컷오프를 `js/bosses/*.js` 로컬 상수로, Phase 2에서 디튠·컷오프 변조. **작곡 없이 파라미터만.**
 - **하드 모드 "RIPOSTE+"**: 엔딩 클리어 후 언락. windup 단축·Phase 2 조기 진입·패턴 간격 축소를 보스 테이블 배율로. Furi(Furier)·Katana Zero(Hard)가 "쉬운 옵션 확장"이 아니라 "어려운 옵션 후속 언락"을 택한 관행.
+
+**확정 설계**
+
+*아레나* — `Render.drawArena`/`drawBackground` 가 쓰는 값을 `C.ARENA` 테이블로 뽑고, 보스 정의가 `arena: 'id'` 로 고른다. 이미지 에셋 0 유지.
+
+| 아레나 | 쓰는 보스 | 배경 / 바닥선 / 기둥 |
+|---|---|---|
+| `hall` (현행) | VESPER · GRAVEN · MIRROR | 지금 값 그대로 — 기존 스크린샷이 깨지지 않게 |
+| `range` | SERAPH · LANTERN | 더 어둡고 기둥이 멀다(원거리 보스 = 넓은 공간) |
+| `gate` | CHORUS · BASTION · AVARICE | 기둥이 촘촘하고 바닥선이 높다(닫힌 문 앞) |
+
+- 바꾸는 것은 **색·개수·간격·시차(parallax) 계수뿐**. 도형 추가·새 렌더 패스 금지(비용을 낮게 유지).
+- 플레이어/보스 실루엣 색은 그대로 — 아레나 색이 바뀌어도 금/적 텔 대비가 유지되는지 눈으로 확인(스크린샷).
+
+*음악* — 보스 정의에 `drone: { root, lfo, cutoff }` 를 두고 `RAudio.startDrone` 이 읽는다. Phase 2 진입 시 `detune`·`cutoff` 만 변조(이미 `DRONE_CUTOFF_P1` 상수가 있다). **작곡 없이 파라미터만.** 보스 8종이 같은 악기로 다른 곡처럼 들리게 하는 것이 목표.
+
+*하드 모드* — `C.HARD` 배율 테이블 하나(`windup ×0.85` · `gap ×0.85` · `phase2At 0.6`) 를 전 보스에 곱한다. **보스별 개별 수치를 새로 쓰지 않는다** — 새 보스를 만드는 것이 아니라 같은 보스를 빠르게 돌리는 것이다.
+- 🔴 **적 컨셉 중복 금지 원칙과의 관계**: 하드 모드는 새 적이 아니라 기존 적의 배율이므로 실루엣·패턴이 겹칠 여지가 없다. 그래도 `js/bosses/` 를 건드리면 `tools/boss-overlap.mjs --check` 를 돌린다. **새 보스를 만드는 것은 Phase 3(챕터 3)이며, 그때는 판정기 통과가 채택 조건이다.**
+- 언락 저장: `C.STORAGE` 에 `hardUnlocked`. 타이틀 메뉴에 `NEW RUN (RIPOSTE+)` 항목 추가.
+- 밸런스 기준: 하드 모드에서 **완벽 봇 8/8 승리**, 숙련 봇은 져도 된다(그게 하드 모드의 목적). 연타 봇은 당연히 0승.
 
 ---
 
