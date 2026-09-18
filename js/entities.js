@@ -312,6 +312,8 @@
     this.struck = false;
     this.strikeT = 0;
     this.dead = false;
+    this.linger = o.linger || 0;   // > 0 이면 첫 타격 뒤에도 남아 LINGER_TICK 마다 다시 때린다
+    this.everStruck = false;       // 렌더 전용 — 한 번이라도 때렸는지(재무장 구간 표시용)
   }
 
   Zone.prototype.contains = function (x) {
@@ -324,12 +326,22 @@
       this.t -= dt;
       if (this.t <= 0) {
         this.struck = true;
+        this.everStruck = true;
         this.strikeT = C.ZONE.STRIKE_TIME;
         game.onZoneStrike(this);
       }
     } else {
       this.strikeT -= dt;
-      if (this.strikeT <= 0) this.dead = true;
+      if (this.strikeT <= 0) {
+        if (this.linger > 0) {
+          this.linger -= C.ZONE.LINGER_TICK;   // 다음 타격까지
+          this.struck = false;
+          this.t = C.ZONE.LINGER_TICK;
+          if (this.linger <= 0) this.dead = true;
+        } else {
+          this.dead = true;
+        }
+      }
     }
   };
 

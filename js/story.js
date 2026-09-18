@@ -4,12 +4,13 @@
  * 정본은 docs/superpowers/specs/2026-09-17-riposte-story-bible.md 다 — 대사를 고칠 땐 그쪽을 먼저 고친다.
  * 정의 테이블이다: 절대 변형하지 않는다 (tests/state.mjs 가 불변을 검사한다).
  *
- * 줄 형식: 문자열 | { text, hideSpeaker: true }(콜드 오픈 — 화자 라벨 ???).
+ * 줄 형식: 문자열 | { text, hideSpeaker: true }(콜드 오픈 — 화자 라벨 ???) | { text, dissolve: true }.
  *          '……' 만 있는 줄은 침묵행(타자기 없이 즉시 표시).
  *          ' / ' 는 CHORUS 두 목소리 교대(ui 가 색을 번갈아 칠한다).
- * choice: { at: 'before'|'after', K: { text, ok, reply }, J: { text, ok, reply, dissolve? } }
+ * choice: { at: 'before'|'after', K: { text, ok, reply, dissolve? }, J: { text, ok, reply, dissolve? } }
  *         K = PARRY(받아넘김) / J = RIPOSTE(되받아침). ok:false 의 reply 는 TAKEN 카드 본문.
- *         dissolve:true 는 reply 중 보스 실루엣이 사라진다(AVARICE 정답 — 엔딩 직전).
+ *         dissolve:true 는 줄 객체 또는 choice 항목(reply)에 붙는다 — 그 줄/reply 중 보스 실루엣이 사라진다.
+ *         현재 쓰는 곳은 ADAMANT after 마지막 줄(엔딩 직전) 하나. game.js 가 둘을 같은 규칙으로 처리한다.
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -134,9 +135,64 @@
       ],
       choice: {
         at: 'after',
-        K: { text: '빈손.', ok: true,  reply: '빈손……이요. 그럼, 여기엔', dissolve: true },
+        K: { text: '빈손.', ok: true,  reply: '빈손……이요. 그럼 다음 문을 열죠. 창 하나, 서 있기만 합니다.' },
         J: { text: '전부.', ok: false, reply: '그럼 고객님이 그걸 가진 게 아니라, 그게 고객님을 가진 거죠.' }
       }
+    },
+
+    /* ---- 챕터 3 THE WALL — 주지도 않고 되빼앗지도 않고, 막아선다 ---------- */
+
+    sentinel: {
+      before: [
+        cold('그 자리에 서시오.'),
+        '나는 가지 않소. 창이 가오.',
+        '뺏을 것도 없소. 거기가 설 자리만 지우겠소.'
+      ],
+      after: [
+        '……자리를 내주었소.',
+        '한 발도 물러선 적 없던 자리였소.',
+        '다음은 폭풍이오. 피할 곳부터 고르시오.'
+      ]
+    },
+
+    tempest: {
+      before: [
+        cold('고르라고.'),
+        '전부는 못 받는다고. 쪽배, 손이 둘뿐이라고.',
+        '버릴 걸 먼저 고르라고. 그게 폭풍을 지나는 법이라고.'
+      ],
+      after: [
+        '……골랐다고?',
+        '나머지는 버렸다고. 쪽배, 그게 받는 거라고.',
+        '다음은 어둠이라고. 거기선 고를 것도 안 보인다고.'
+      ]
+    },
+
+    hollow: {
+      before: [
+        cold('다 꺼졌더라.'),
+        '검도, 활도, 망치도. 여기 오면 빛을 잃더라.',
+        '남은 건 하나더라. 칼끝이 빛나는 그 순간.',
+        '불빛, 그거면 되던가?'
+      ],
+      after: [
+        '보이더라.',
+        '빛만 보더라, 불빛은. 나머진 안 보더라.',
+        '다음은 벽이더라. 보여도 못 넘더라.'
+      ]
+    },
+
+    adamant: {
+      before: [
+        cold('막을 뿐.'),
+        '주지 않고, 뺏지 않고. 손, 여기선 그 둘 다 없을 뿐.',
+        '훔친 것으론 못 깰 뿐. 내 조각을 내게 되던져 볼 뿐.'
+      ],
+      after: [
+        '금이 갔을 뿐.',
+        '벽도 뺏기는가.',
+        { text: '손, 넘었으니 이제 벽은', dissolve: true }
+      ]
     }
   };
 

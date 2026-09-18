@@ -83,6 +83,9 @@
     this.forceHard = !!opts.hard;
     this.hard = this.forceHard;
     this.speed = opts.speed || 1;
+    /* dev 모드(스펙 §5.5) — 기본 꺼짐. 타이틀 THIEF 입력으로 토글하거나 ?dev=1 로 곧장 켠다 */
+    this.dev = !!opts.dev;
+    this.devOverlay = false;
     this.debugScale = 1;
     this.rng = new RNG(this.seed);
 
@@ -122,6 +125,15 @@
     this.endingHand = [];
 
     this.skillTable = this.buildSkillTable();
+
+    /* dev 커맨드 토글 — 타이틀 화면일 때만 반응한다(전투 중 오발동 방지) */
+    Input.onDevCode = (function (g) {
+      return function () {
+        if (g.scene !== 'TITLE') return;
+        g.dev = !g.dev;
+        RAudio.ui(g.dev);
+      };
+    })(this);
   }
 
   Game.prototype.newRun = function () {
@@ -315,11 +327,11 @@
 
   Game.prototype.setMenuMsg = function (m) { this.menuMsg = m; this.menuMsgT = C.MENU.MSG_TIME; };
 
-  /** 클리어한 보스 인덱스 목록 (보스 선택 화면) */
+  /** 클리어한 보스 인덱스 목록 (보스 선택 화면). dev 모드면 클리어 여부와 무관하게 전부 반환한다 */
   Game.prototype.clearedBosses = function () {
     var out = [];
     for (var i = 0; i < this.defs.length; i++) {
-      if (this.save.cleared || i < this.save.unlocked - 1) out.push(i);
+      if (this.dev || this.save.cleared || i < this.save.unlocked - 1) out.push(i);
     }
     return out;
   };
@@ -598,7 +610,7 @@
     for (var i = 0; i < s[beat].length; i++) {
       var raw = s[beat][i];
       var t = (typeof raw === 'string') ? raw : raw.text;
-      lines.push({ text: t, hideSpeaker: !!(raw && raw.hideSpeaker), silent: t === '……' });
+      lines.push({ text: t, hideSpeaker: !!(raw && raw.hideSpeaker), silent: t === '……', dissolve: !!(raw && raw.dissolve) });
     }
     this.story = {
       beat: beat, lines: lines, index: 0, shown: 0,
@@ -656,10 +668,16 @@
     var line = st.lines[st.index];
     var len = line.text.length;
     st.shown = line.silent ? len : Math.min(len, st.shown + S.CPS * dt);
+    // 소멸 줄(ADAMANT after 마지막 줄) — 절반 찍힌 뒤 실루엣이 사라진다. reply 의 dissolve 와 같은 규칙
+    if (line.dissolve && st.shown >= len * 0.5) {
+      st.dissolveT += dt;
+      st.bossAlpha = 1 - clamp(st.dissolveT / S.DISSOLVE, 0, 1);
+    }
     if (Input.consume('parry') || Input.consume('riposte') || Input.consume('dash')) st.shown = len;
     if (Input.consume('confirm')) {
       RAudio.ui(true);
       if (st.shown < len) { st.shown = len; return; }
+      if (line.dissolve && st.bossAlpha > 0) { st.bossAlpha = 0; return; }
       st.index++;
       st.shown = 0;
       if (st.index >= st.lines.length) {
@@ -726,6 +744,19 @@
     // 리포스트 (짧은 입력 버퍼)
     if (Input.consume('riposte')) p.riposteBuffer = C.COMBAT.INPUT_BUFFER;
     if (p.riposteBuffer > 0 && p.canRiposte()) { p.riposteBuffer = 0; this.doRiposte(); }
+
+    /* 개발용 치트 — dev 모드에서만. 이 판은 저장하지 않는다 */
+    if (this.dev) {
+      if (Input.consumeCode('F1')) this.devOverlay = !this.devOverlay;
+      if (Input.consumeCode('F2') && b) { this.noSave = true; b.takeDamage(b.maxHp * C.DEV.HP_CUT, { dev: true }); }
+      if (Input.consumeCode('F3') && b) { this.noSave = true; b.takeDamage(b.hp, { dev: true }); }
+      if (Input.consumeCode('F4')) {
+        this.noSave = true;
+        // 물리 Shift 키로 판정 — dash 를 리바인드해도 "이전 보스" 가 깨지지 않는다 (스펙 C10)
+        var dir = (Input.codeDown('ShiftLeft') || Input.codeDown('ShiftRight')) ? -1 : 1;
+        this.startBoss(clamp(this.bossIndex + dir, 0, this.defs.length - 1), { skipBefore: true });
+      }
+    }
 
     this.stepWorld(dt, axis, false);
   };
@@ -807,7 +838,11 @@
 
   /** 보스가 무적(페이즈 전환 포효 포함)이라 타격이 통하지 않았음을 알린다 */
   Game.prototype.immunePop = function (b) {
-    FX.pop('IMMUNE', b.x, V.FLOOR_Y - C.BOSS.HEIGHT * 0.55, C.COLORS.GREY, { size: 15, rise: 26 });
+    /* 막힌 이유를 그대로 읽힌다 — 방벽(스펙 §2.4) · 카운터 전용 · 포효 무적 */
+    var label = 'IMMUNE';
+    if (b.wallUp()) label = C.BOSS.WALL_POP;
+    else if (b.def.counterOnly && b.phase === 2 && b.invuln <= 0) label = C.BOSS.COUNTER_POP;
+    FX.pop(label, b.x, V.FLOOR_Y - C.BOSS.HEIGHT * 0.55, C.COLORS.GREY, { size: 15, rise: 26 });
     RAudio.parryBlock();
   };
 
@@ -823,9 +858,9 @@
     if (rp.empowered) mult *= C.COMBAT.EMPOWER_MULT;
     if (counter) mult *= C.COMBAT.COUNTER_MULT;
     var dmg = Math.round(rp.skill.damage * mult);
-    var applied = b.takeDamage(dmg);
+    var applied = b.takeDamage(dmg, { counter: counter });
 
-    // 무적(포효 중)에 막혔다 — 손패를 태우지 않고 "IMMUNE" 만 띄운다
+    // 무적(포효 중)·방벽·counterOnly 에 막혔다 — 손패를 태우지 않고 이유만 띄운다
     if (applied <= 0) {
       this.refundHand(rp.skill);
       this.immunePop(b);
@@ -1063,11 +1098,32 @@
         }
         if (Math.abs(pr.x - b.x) <= C.BOSS.HALF_W + pr.r + 6) {
           pr.dead = true;
-          this.resolveProjectileHitBoss(pr);
+          /* 엔진 방벽(스펙 §2.4) — 서 있으면 **반사탄**(fromHand 없음)만 벽을 깎고 보스 피해는 없다.
+             손패 shot(fromHand 있음)은 벽을 깎지 않는다 — resolveProjectileHitBoss 가 takeDamage→0→환급 경로를 탄다 */
+          if (b.wallUp() && !pr.fromHand) this.onWallHit(b, pr, b.wallHit());
+          else this.resolveProjectileHitBoss(pr);
         }
       }
 
       if (pr.dead) this.projectiles.splice(i, 1);
+    }
+  };
+
+  /** 반사탄이 방벽에 맞았다 / 방벽이 깨졌다 (스펙 §2.4). broke=true 면 카운터 경직이 열렸다 */
+  Game.prototype.onWallHit = function (b, pr, broke) {
+    var wx = b.x + b.facing * C.BOSS.WALL_GAP;
+    var wy = V.FLOOR_Y - C.BOSS.WALL_H * 0.5;
+    if (broke) {
+      FX.addHitstop(C.HITSTOP.CHARGE_WALL);
+      FX.addShake(C.SHAKE.CHARGE_WALL);
+      FX.sparks(wx, wy, C.FX.HIT_SPARKS, b.color, { speed: 360, life: 0.6, size: 3 });
+      FX.ring(wx, wy, 8, 90, C.COLORS.COUNTER, 0.35, 3);
+      FX.pop(C.BOSS.WALL_BREAK_POP, b.x, V.FLOOR_Y - C.BOSS.HEIGHT - 16, C.COLORS.COUNTER, { size: 19 });
+      RAudio.counter();
+    } else {
+      FX.addShake(C.SHAKE.BLOCK);
+      FX.sparks(wx, pr.y, C.FX.BLOCK_SPARKS, b.color, { speed: 240, life: 0.4, size: 2.4 });
+      RAudio.parryBlock();
     }
   };
 
@@ -1078,7 +1134,7 @@
     var empowered = this.player.isEmpowered();
     var mult = counter ? C.COMBAT.COUNTER_MULT : 1;
     var dmg = Math.round(pr.damage * mult);
-    var applied = b.takeDamage(dmg);
+    var applied = b.takeDamage(dmg, { counter: counter });
 
     // 무적(포효)에 막힘 — 손패에서 쓴 탄이면 슬롯을 돌려준다
     if (applied <= 0) {
@@ -1250,6 +1306,7 @@
 
     return {
       scene: this.scene,
+      dev: this.dev,
       menuIndex: this.menuIndex,
       hard: this.hard,
       arena: b ? (b.def.arena || C.ARENA.DEFAULT) : null,

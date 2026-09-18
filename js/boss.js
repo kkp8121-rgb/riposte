@@ -74,6 +74,10 @@
     /* 약탈 보스(스펙 §3.8)가 빼앗아 간 손패. 정의 테이블(def)이 아니라 인스턴스에만 둔다. */
     this.loot = [];
     this.moveSpeed = B.WALK_SPEED;
+    /* 엔진 방벽 (스펙 §2.4) — def.wall 이 있을 때만 의미가 있다. 시작은 선 상태 */
+    this.wallHits = this.def.wall ? this.def.wall.hits : 0;
+    this.wallT = this.def.wall ? this.def.wall.up : 0;
+    this.wallBreakStagger = false;
 
     if (this.def.onReset) this.def.onReset(this, this.game);
   };
@@ -304,7 +308,8 @@
         delay: windupTotal,
         damage: def.zone.damage === undefined ? 1 : def.zone.damage,
         tell: def.tell,
-        label: def.label || def.id
+        label: def.label || def.id,
+        linger: def.zone.linger || 0
       });
       a.zones.push(z);
       this.game.spawnZone(z);
@@ -499,8 +504,50 @@
 
   /* ---- 피격 / 경직 / 페이즈 ---------------------------------------------- */
 
-  Boss.prototype.takeDamage = function (dmg) {
+  /* ---- 엔진 방벽 (스펙 §2.4) ------------------------------------------- */
+
+  Boss.prototype.wallUp = function () { return this.wallHits > 0; };
+
+  /** 방벽 타이머. 서 있으면 up 이 다 되면 저절로 내려가고(보상 없음), 내려가 있으면 WALL_DOWN 뒤 다시 선다 */
+  Boss.prototype.updateWall = function (dt) {
+    var w = this.def.wall;
+    if (!w) return;
+    this.wallT -= dt;
+    if (this.wallT > 0) return;
+    if (this.wallUp()) { this.wallHits = 0; this.wallT = B.WALL_DOWN; }
+    else { this.wallHits = w.hits; this.wallT = w.up; }
+  };
+
+  /** 반사탄이 방벽에 맞았다. hits 가 0 이 되면 깨진다 = 카운터 경직(기믹의 리턴). true 면 깨졌다 */
+  Boss.prototype.wallHit = function () {
+    if (!this.wallUp()) return false;
+    this.wallHits--;
+    if (this.wallHits > 0) return false;
+    this.wallT = B.WALL_DOWN;
+    if (this.invuln <= 0) {                       // 포효는 덮어쓰지 않는다
+      this.stagger(this.def.wall.breakStagger, true);
+      this.wallBreakStagger = true;               // 이 창은 카운터 히트로 닫히지 않는다 (interrupt 참조)
+    }
+    return true;
+  };
+
+  /**
+   * @param {object} [opt] — counter: 카운터 판정이었는가 (counterOnly 게이트용) · dev: 치트, 게이트 무시
+   * 두 번째 인자는 선택이다. def.wall / def.counterOnly 가 없는 보스는 게이트를 읽지 않는다.
+   */
+  Boss.prototype.takeDamage = function (dmg, opt) {
     if (this.dead || this.invuln > 0) return 0;
+    if (!(opt && opt.dev)) {
+      /* 방벽이 서 있으면 리포스트는 튕긴다 — 반사탄은 game.js 가 먼저 wallHit 으로 처리한다 */
+      if (this.wallUp()) { this.hurtFlash = B.HURT_FLASH; return 0; }
+      /* counterOnly (스펙 §2.4) — Phase 2 는 카운터(윈드업·카운터 경직 중 명중)로만 피해가 들어간다.
+         완화안(softMult)이 있으면 일반 피해도 그 배수로 통과시킨다 */
+      var co = this.def.counterOnly;
+      if (co && this.phase === 2 && !(opt && opt.counter)) {
+        dmg = Math.round(dmg * (co.softMult === undefined ? 0 : co.softMult));
+        if (dmg <= 0) { this.hurtFlash = B.HURT_FLASH; return 0; }
+      }
+    }
     var applied = Math.min(this.hp, dmg);
     this.hp -= applied;
     this.hurtFlash = B.HURT_FLASH;
@@ -536,12 +583,17 @@
     this.state = 'stagger';
     this.stateT = dur;
     this.staggerCounter = !!counter;
+    this.wallBreakStagger = false;
     this.vx = 0;
   };
 
   /** 공격 취소 + 경직 (카운터 히트 interrupt) */
   Boss.prototype.interrupt = function (dur) {
-    this.stagger(dur === undefined ? C.PARRY.FLINCH : dur, false);
+    dur = dur === undefined ? C.PARRY.FLINCH : dur;
+    /* 방벽 파괴 보상 창(스펙 §2.4)은 카운터 히트가 들어와도 짧은 일반 경직으로 덮어 닫지 않는다 —
+       "창 안의 리포스트 전부가 카운터" 라는 약속. def.wall 이 없는 보스는 이 분기를 타지 않는다 */
+    if (this.wallBreakStagger && this.state === 'stagger' && this.stateT > dur) return;
+    this.stagger(dur, false);
   };
 
   Boss.prototype.enterPhase2 = function () {
@@ -574,6 +626,7 @@
     if (this.hurtFlash > 0) this.hurtFlash -= dt;
     if (this.flashT > 0) this.flashT -= dt;
     if (this.dead) return;
+    this.updateWall(dt);
 
     var p = this.game.player;
     if (this.state !== 'charging') this.facing = this.dirToPlayer();
@@ -650,6 +703,7 @@
         this.stateT -= dt;
         if (this.stateT <= 0) {
           this.staggerCounter = false;
+          this.wallBreakStagger = false;
           this.watch = 0;
           // 경직이 풀리면 진행 중이던 패턴을 이어간다 (charge→slam 같은 연결 보존)
           if (this.pattern && this.stepIndex < this.pattern.length) this.nextStep();

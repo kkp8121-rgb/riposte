@@ -62,6 +62,9 @@
     _just: {},     // 현재 고정 스텝에서 true
     _padHeld: {},  // 패드가 "스스로" 쥐고 있는 액션 — 놓을 때만 false 를 내보내 키보드 동시입력을 보호
     _padCount: 0,  // 연결된 패드 수 — 0이면 pollGamepad 가 navigator 를 아예 건드리지 않는다 (매 프레임 비용 방지)
+    _codeBuf: {},  // 물리 키 코드 keydown 누적 (다음 beginStep 에서 소비) — 액션 없는 dev 치트 키용
+    _justCode: {}, // 현재 고정 스텝에서 true 인 물리 키 코드
+    _codeDown: {}, // 물리 키 코드 -> bool (현재 눌림, 리바인드와 무관 — dev 전용 조회용)
     _anyKey: false,
     enabled: true,
     /* 모든 keydown 에서 호출된다 (첫 입력 한 번이 아니다).
@@ -110,6 +113,27 @@
     }
   }
 
+  /* dev 커맨드 — 물리 키 코드 시퀀스. 타이틀에서만 소비한다(게임이 판단).
+     여기서는 "방금 코드가 완성됐다"만 알려 준다. */
+  Input._devSeq = 0;
+  Input._devT = 0;
+  Input.onDevCode = null;          // 게임이 붙인다
+
+  function feedDevCode(code, nowSec) {
+    var C2 = global.CONFIG.DEV;
+    if (nowSec - Input._devT > C2.CODE_GAP) Input._devSeq = 0;
+    Input._devT = nowSec;
+    if (code === C2.CODE[Input._devSeq]) {
+      Input._devSeq++;
+      if (Input._devSeq >= C2.CODE.length) {
+        Input._devSeq = 0;
+        if (typeof Input.onDevCode === 'function') Input.onDevCode();
+      }
+    } else {
+      Input._devSeq = (code === C2.CODE[0]) ? 1 : 0;
+    }
+  }
+
   function handleDown(e) {
     if (!Input.enabled) return;
     if (PREVENT[e.code]) e.preventDefault();
@@ -127,6 +151,10 @@
     if (typeof Input.onGesture === 'function') {
       try { Input.onGesture(); } catch (err) { /* 오디오 없음 — 무시 */ }
     }
+    // dev 커맨드 시퀀스 감지 + 치트 키(F1~F4) 코드 버퍼링 — 액션 매핑과 무관하게 항상 먹인다
+    feedDevCode(e.code, (global.performance ? global.performance.now() : Date.now()) / 1000);
+    Input._codeBuf[e.code] = true;
+    Input._codeDown[e.code] = true;
     var actions = codeToActions[e.code];
     if (!actions) return;
     for (var i = 0; i < actions.length; i++) setAction(actions[i], true);
@@ -134,6 +162,7 @@
 
   function handleUp(e) {
     if (PREVENT[e.code]) e.preventDefault();
+    Input._codeDown[e.code] = false;
     var actions = codeToActions[e.code];
     if (!actions) return;
     for (var i = 0; i < actions.length; i++) setAction(actions[i], false);
@@ -143,6 +172,9 @@
     Input.down = {};
     Input._buffer = {};
     Input._just = {};
+    Input._codeBuf = {};
+    Input._justCode = {};
+    Input._codeDown = {};
   }
 
   Input.attach = function (target) {
@@ -176,6 +208,8 @@
   Input.beginStep = function () {
     Input._just = Input._buffer;
     Input._buffer = {};
+    Input._justCode = Input._codeBuf;
+    Input._codeBuf = {};
   };
 
   Input.pressed = function (action) { return !!Input.down[action]; };
@@ -186,6 +220,16 @@
     if (Input._just[action]) { Input._just[action] = false; return true; }
     return false;
   };
+
+  /** 이번 스텝의 물리 키 코드 justPressed 를 소비(1회성)한다.
+      액션에 안 묶인 코드(F1~F4 등 dev 치트 키)용 — 의미는 consume() 과 같다. */
+  Input.consumeCode = function (code) {
+    if (Input._justCode[code]) { Input._justCode[code] = false; return true; }
+    return false;
+  };
+
+  /** 물리 키 코드가 지금 눌려 있는가 (리바인드와 무관 — dev 전용 조합키 조회용). */
+  Input.codeDown = function (code) { return !!Input._codeDown[code]; };
 
   /** 이동 축 (-1 / 0 / +1) */
   Input.axis = function () {

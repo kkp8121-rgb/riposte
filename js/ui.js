@@ -754,7 +754,7 @@
       { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 
-  /** 엔딩 — 태그라인 3박 + 8보스 결과 + 종합 랭크 + 손패가 한 칸씩 비어 간다 (스펙 §10) */
+  /** 엔딩 — 태그라인 4박 + 12보스 결과 + 종합 랭크 + 손패가 한 칸씩 비어 간다 (스펙 §10) */
   UI.drawEnding = function (ctx, game) {
     dim(ctx, 0.72);
     var t = game.sceneT;
@@ -765,7 +765,7 @@
       var last = li === E.LINES.length - 1;
       text(ctx, E.LINES[li], V.W / 2, E.LINE_Y[li],
         { size: last ? 26 : 20, weight: '800', color: last ? C.COLORS.GOLD : C.COLORS.WHITE, spacing: 6,
-          glow: last ? C.COLORS.GOLD : false, blur: 18, alpha: clamp((t - li * 0.5) / 0.4, 0, 1) });
+          glow: last ? C.COLORS.GOLD : false, blur: 18, alpha: clamp((t - E.LINE_AT[li]) / 0.4, 0, 1) });
     }
 
     var y = E.ROWS_Y;
@@ -813,6 +813,33 @@
     var blink = 0.5 + 0.5 * Math.sin(t * 4);
     text(ctx, 'ENTER  —  TITLE', V.W / 2, V.H - 24,
       { size: 15, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
+  };
+
+  /* ---- 개발용 (스펙 §5.5) — dev 모드 배지 + 상태 오버레이 --------------- */
+
+  /** 우상단 DEV 배지 — game.dev 인 동안 장면과 무관하게 그린다 */
+  UI.drawDevBadge = function (ctx, game) {
+    text(ctx, C.DEV.BADGE, C.DEV.BADGE_X, C.DEV.BADGE_Y,
+      { size: 13, weight: '800', color: C.COLORS.RED, align: 'right', baseline: 'top',
+        spacing: 2, glow: C.COLORS.RED, blur: 8 });
+  };
+
+  /** F1 오버레이 — 보스/HP/스태미너/페이즈/시드를 한 줄씩. 전투 중(보스 존재)에만 의미가 있다 */
+  UI.drawDevOverlay = function (ctx, game) {
+    var b = game.boss;
+    if (!b) return;
+    var p = game.player;
+    var lines = [
+      'BOSS   ' + b.name + '  (#' + (game.bossIndex + 1) + ')',
+      'HP     ' + Math.ceil(b.hp) + ' / ' + b.maxHp,
+      'STAM   ' + Math.ceil(p.stamina) + ' / ' + C.STAMINA.MAX,
+      'PHASE  ' + b.phase,
+      'SEED   ' + game.seed
+    ];
+    for (var i = 0; i < lines.length; i++) {
+      text(ctx, lines[i], C.DEV.OVERLAY_X, C.DEV.OVERLAY_Y + i * C.DEV.OVERLAY_LINE_H,
+        { size: 12, weight: '700', color: C.COLORS.TEXT, align: 'left', family: C.FONT.MONO });
+    }
   };
 
   UI.text = text;

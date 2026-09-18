@@ -91,6 +91,9 @@
       case 'ENDING':  UI.drawEnding(ctx, game); break;
     }
 
+    if (game.dev) UI.drawDevBadge(ctx, game);
+    if (game.dev && game.devOverlay) UI.drawDevOverlay(ctx, game);
+
     ctx.restore();
   }
 
@@ -119,7 +122,8 @@
       seed: numParam(p, 'seed', 20260909),
       speed: numParam(p, 'speed', 1),
       story: p.story !== '0',                 // ?story=0 — 대화 전부 건너뜀 (테스트/봇)
-      hard: p.hard !== undefined && p.hard !== '0'   // ?hard=1 — RIPOSTE+ (언락 없이 진입, 테스트/밸런스)
+      hard: p.hard !== undefined && p.hard !== '0',  // ?hard=1 — RIPOSTE+ (언락 없이 진입, 테스트/밸런스)
+      dev: p.dev !== undefined                // ?dev=1 — dev 모드로 곧장 진입 (테스트/개발용)
     });
 
     // 저장된 옵션 먼저 → URL 파라미터가 항상 이긴다 (테스트/봇이 옵션에 흔들리지 않게)

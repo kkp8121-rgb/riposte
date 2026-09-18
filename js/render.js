@@ -24,7 +24,15 @@
     lantern: { h: 82,  w: 13, head: 0.080, hood: true,  weapon: 'dagger', thick: 6 },
     twin:    { h: 84,  w: 12, head: 0.078, hood: false, weapon: 'twin',   thick: 5 },
     shield:  { h: 96,  w: 30, head: 0.088, hood: false, weapon: 'shield', thick: 13 },
-    taker:   { h: 90,  w: 17, head: 0.084, hood: true,  weapon: 'none',   thick: 8 }
+    taker:   { h: 90,  w: 17, head: 0.084, hood: true,  weapon: 'none',   thick: 8 },
+    /* 챕터 3 (스펙 §2.1) — 움직이지 않는 파수꾼. 키가 크고 창이 길다 */
+    spear:   { h: 104, w: 18, head: 0.075, hood: false, weapon: 'spear',  thick: 9 },
+    /* 챕터 3 (스펙 §2.2) — 던지는 자. 무기 없이 어깨가 넓고 머리가 작다 */
+    storm:   { h: 88,  w: 26, head: 0.066, hood: false, weapon: 'none',   thick: 11 },
+    /* 챕터 3 (스펙 §2.3) — 빈 것. 무기 없이 키만 크고 몹시 가늘다. 머리가 가장 작다 */
+    hollow:  { h: 98,  w: 12, head: 0.060, hood: false, weapon: 'none',   thick: 5 },
+    /* 챕터 3 (스펙 §2.4) — 최종 보스. 가장 크고 가장 두껍다. 대검 하나 */
+    adamant: { h: 116, w: 36, head: 0.082, hood: false, weapon: 'great',  thick: 15 }
   };
 
   /* 포즈별 무기팔 각도(rad). 0 = 정면(facing 방향), 음수 = 위. */
@@ -45,7 +53,7 @@
   /* 무기 길이 (실루엣 기준 비율) — 텔 버스트를 무기 "끝"에 정확히 찍기 위해 필요 */
   var WEAPON_LEN = {
     none: 0.10, rapier: 0.62, blade: 0.50, hammer: 0.52, bow: 0.26, spear: 0.66,
-    dagger: 0.28, twin: 0.30, shield: 0.26
+    dagger: 0.28, twin: 0.30, shield: 0.26, great: 0.58
   };
 
   var Render = {};
@@ -375,6 +383,12 @@
         ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(h * 0.66, 0); ctx.stroke();
         break;
+      case 'great':                                    // ADAMANT — 넓은 대검 + 긴 크로스가드
+        ctx.lineWidth = 9;
+        ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(h * 0.58, 0); ctx.stroke();
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(4, -13); ctx.lineTo(4, 13); ctx.stroke();
+        break;
       case 'dagger':                                   // LANTERN — 단검 + 등불
         ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(h * 0.28, 0); ctx.stroke();
@@ -556,7 +570,10 @@
     var x0 = z.x - z.w / 2;
     ctx.save();
     if (!z.struck) {
-      var prog = 1 - clamp(z.t / z.delay, 0, 1);
+      // 지속 구역(everStruck)이 재무장 대기 중일 때는 최초 낙하 delay 가 아니라
+      // LINGER_TICK 을 기준으로 게이지를 채운다 — 그래야 "다음 타격까지"가 맞게 보인다.
+      var cycle = z.everStruck ? C.ZONE.LINGER_TICK : z.delay;
+      var prog = 1 - clamp(z.t / cycle, 0, 1);
       // 바닥 경고 스트립
       ctx.globalAlpha = 0.30 + 0.35 * Math.abs(Math.sin(prog * 14));
       ctx.fillStyle = C.COLORS.RED;
@@ -753,7 +770,7 @@
 
   /* ---- 대화 장면 (스펙 §10) -----------------------------------------------
    * 아레나 위에 플레이어(좌)와 보스(우) 실루엣을 STORY.SCALE 배로 세운다.
-   * 보스 알파는 game.story.bossAlpha (AVARICE 정답 반응에서 0 으로 내려간다).
+   * 보스 알파는 game.story.bossAlpha (ADAMANT after 마지막 줄에서 0 으로 내려간다).
    * ---------------------------------------------------------------------- */
   Render.drawStoryScene = function (ctx, game) {
     var b = game.boss;
@@ -792,8 +809,10 @@
     // 아레나는 보스 정의가 고른다 (C.ARENA 테이블)
     Render.drawArena(ctx, camX, b && b.def ? b.def.arena : null);
 
-    // 존 (바닥 경고)
-    for (var i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
+    /* 어둠 (스펙 §2.3) — 아레나에 darkness 가 있으면 존은 어둠 위에 그린다(붉은 텔이다) */
+    var dark = b && b.def && C.ARENA[b.def.arena] && C.ARENA[b.def.arena].darkness;
+    var i;
+    if (!dark) for (i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
 
     var pp = playerPose(p);
     var bp = b ? bossPose(b) : null;
@@ -822,7 +841,21 @@
     }
 
     if (b) drawBoss(ctx, b, bp, false);
+    if (b && b.wallUp()) drawWall(ctx, b);
+
+    /* 어둠 (스펙 §2.3) — 배경·기둥·바닥·보스 몸통만 덮는다. 텔(무기 끝 글로우·궤적)·존·투사체·
+       플레이어·파티클·HUD 는 전부 이 뒤에(= 어둠 위에) 그린다. 정보를 없애는 것이 아니라 채널을
+       텔 하나로 줄이는 것이다. ?nofx=1 과 무관 — 판정의 일부다. */
+    if (dark) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(2,3,7,' + (b.phase === 2 ? dark.p2 : dark.p1) + ')';
+      ctx.fillRect(0, 0, V.W, V.H);
+      ctx.restore();
+      for (i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
+    }
+
     drawPlayer(ctx, p, pp, false);
+    if (b) drawBossTells(ctx, b);
 
     for (i = 0; i < game.projectiles.length; i++) drawProjectile(ctx, game.projectiles[i]);
 
@@ -890,8 +923,41 @@
       flash: b.hurtFlash > 0 ? 1 : 0
     });
 
+    // charge 중 잔상 (몸통과 함께 어두워진다)
+    if (b.state === 'charging' && !isReflection) {
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(b.x - b.chargeDir * 90, V.FLOOR_Y - C.BOSS.HEIGHT, 90, C.BOSS.HEIGHT);
+      ctx.restore();
+    }
+  }
+
+  /** 엔진 방벽 (스펙 §2.4) — 보스 앞에 선 슬래브. 남은 hits 만큼 가로 칸이 밝고, 깎인 칸은 갈라진다 */
+  function drawWall(ctx, b) {
+    var W = C.BOSS;
+    var x = b.x + b.facing * W.WALL_GAP - W.WALL_W * 0.5;
+    var top = V.FLOOR_Y - W.WALL_H;
+    var total = b.def.wall.hits;
+    var segH = W.WALL_H / total;
+    ctx.save();
+    ctx.globalAlpha = W.WALL_ALPHA;
+    ctx.shadowColor = b.color;
+    ctx.shadowBlur = 18;
+    for (var i = 0; i < total; i++) {
+      var y = top + i * segH;
+      var alive = i >= total - b.wallHits;      // 위에서부터 깎인다
+      ctx.fillStyle = alive ? b.color : C.COLORS.GREY;
+      ctx.globalAlpha = W.WALL_ALPHA * (alive ? 1 : 0.35);
+      ctx.fillRect(x, y + 2, W.WALL_W, segH - 4);
+    }
+    ctx.restore();
+  }
+
+  /** 보스의 텔 — 무기 끝 글로우·공격 궤적. 몸통과 분리해 어둠 레이어 위에 그린다 (스펙 §2.3) */
+  function drawBossTells(ctx, b) {
     // 텔 플래시가 살아있는 동안 무기 끝 글로우
-    if (b.flashT > 0 && !isReflection) {
+    if (b.flashT > 0) {
       var tip = b.weaponTip();
       var k = b.flashT / C.BOSS.FLASH_TIME;
       ctx.save();
@@ -906,8 +972,7 @@
     }
 
     // 공격 active 중 무기 호 궤적
-    if (b.attack && b.attack.stage === 'active' && !isReflection &&
-        b.attack.def.kind === 'melee') {
+    if (b.attack && b.attack.stage === 'active' && b.attack.def.kind === 'melee') {
       var a = b.attack;
       var kk = 1 - a.t / Math.max(0.01, a.def.active);
       var bh = BUILD[b.silhouette] ? BUILD[b.silhouette].h : 84;
@@ -915,15 +980,6 @@
       drawSwing(ctx, b.x, b.facing, bh,
         a.tell === 'red' ? C.COLORS.RED : C.COLORS.GOLD,
         sk, a.def.reach, kk, 0.75);
-    }
-
-    // charge 중 잔상
-    if (b.state === 'charging' && !isReflection) {
-      ctx.save();
-      ctx.globalAlpha = 0.25;
-      ctx.fillStyle = b.color;
-      ctx.fillRect(b.x - b.chargeDir * 90, V.FLOOR_Y - C.BOSS.HEIGHT, 90, C.BOSS.HEIGHT);
-      ctx.restore();
     }
   }
 

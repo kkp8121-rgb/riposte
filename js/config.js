@@ -29,6 +29,12 @@
       SEED: 20260909,          // 배치 생성 시드 — 고정이라 매 실행 같은 그림이다
       STAR_Y: [10, 20],        // 별 y 범위 (아래값은 HORIZON_Y 에서 뺀다)
       STAR_SIZE: [0.6, 1.6],
+      /* 지속 구역(zone.linger)이 깔려도 플레이어가 갇히지 않기 위한 안전 지대 폭 하한.
+         근거: 대시 한 번이 190px(C.DASH.DISTANCE)이므로, 남는 맨바닥이 그보다 좁으면
+         대시로 빠져나갈 수 없어 구역에 끼어 죽는다. 190 에 여유 10 을 더해 200 으로 둔다.
+         아레나 폭은 840px(MIN_X 60 ~ MAX_X 900)이므로 동시에 살아 있는 구역 폭의 합은
+         840 - 200 = 640px 를 넘지 않아야 한다. */
+      SAFE_MIN_W: 200,
       /* hall — 현행 값 그대로 (기존 스크린샷이 깨지지 않게) */
       hall: {
         bg: ['#070910', '#0b0d14', '#0e1220'], bgMid: 0.62,
@@ -55,6 +61,29 @@
         farStep: 84, farJitter: 12, farW: [42, 70], farH: [200, 300], farPar: 0.08,
         nearStep: 150, nearJitter: 16, nearW: [62, 104], nearH: [280, 400], nearPar: 0.20,
         stars: 34, starAlpha: [0.05, 0.20]
+      },
+      /* wall — 챕터 3 "THE WALL". gate 를 본뜨되 더 차갑고(보라 → 청회색) 기둥이 벽처럼 촘촘하다.
+         배경 밝기는 gate 이하로 유지한다 — 금(#ffd166)/적(#ff3b3b) 텔 대비가 살아야 한다. */
+      wall: {
+        bg: ['#05080d', '#080c13', '#0c1119'], bgMid: 0.68,
+        floor: '#161d26', line: '#222c38', reflect: 'rgba(143,227,200,0.05)',
+        farColor: '#0f151c', farAlpha: 0.95, nearColor: '#141c24', nearAlpha: 1,
+        farStep: 62, farJitter: 8, farW: [46, 66], farH: [230, 320], farPar: 0.07,
+        nearStep: 112, nearJitter: 10, nearW: [70, 108], nearH: [310, 420], nearPar: 0.18,
+        stars: 22, starAlpha: [0.04, 0.16]
+      },
+      /* void — HOLLOW 전용 (스펙 §2.3). wall 과 같은 무대에 어둠 계수만 더한다.
+         darkness 는 배경·기둥·바닥·보스 몸통을 덮는 검정의 불투명도(Phase 1 / Phase 2).
+         🔴 텔·투사체·존·플레이어·HUD 는 이 위에 그린다 — 렌더 순서가 규칙이고 계수는 세기일 뿐이다.
+         ?nofx=1 로 꺼지지 않는다(판정의 일부). */
+      void: {
+        bg: ['#05080d', '#080c13', '#0c1119'], bgMid: 0.68,
+        floor: '#161d26', line: '#222c38', reflect: 'rgba(143,227,200,0.05)',
+        farColor: '#0f151c', farAlpha: 0.95, nearColor: '#141c24', nearAlpha: 1,
+        farStep: 62, farJitter: 8, farW: [46, 66], farH: [230, 320], farPar: 0.07,
+        nearStep: 112, nearJitter: 10, nearW: [70, 108], nearH: [310, 420], nearPar: 0.18,
+        stars: 22, starAlpha: [0.04, 0.16],
+        darkness: { p1: 0.72, p2: 0.85 }
       }
     },
 
@@ -246,7 +275,19 @@
       BLINK_GHOSTS: 3,            // 순간이동 잔상 수
       CROSS_SPEED: 700,           // move:'cross' 플레이어를 지나쳐 반대편으로 달리는 속도
       SIDE_MIN_RATIO: 0.6,        // 반대편 목표가 prefer.close 의 이 비율보다 가까우면(벽) 이동 스텝을 건너뛴다
-      ZONE_OFFSET_DEFAULT: 140    // zone.anchor:'boss' 존의 보스 앞 거리 기본값
+      ZONE_OFFSET_DEFAULT: 140,   // zone.anchor:'boss' 존의 보스 앞 거리 기본값
+      /* 엔진 방벽 (챕터 3 스펙 §2.4 — ADAMANT). 보스 정의의 wall:{hits,up,breakStagger} 가 켠다.
+         방벽이 서 있는 동안 리포스트는 튕기고(피해 0·손패 환급) 반사탄만 hits 를 깎는다.
+         hits 가 0 이 되면 breakStagger 동안 카운터 경직(보상) → WALL_DOWN 뒤 다시 선다.
+         up 초 동안 깨지지 않으면 보상 없이 저절로 내려간다 — 기믹은 의무가 아니라 노리는 기회다. */
+      WALL_DOWN: 5.0,             // 방벽이 내려가 있는 시간 (깨졌든 저절로 내려갔든)
+      WALL_GAP: 46,               // 방벽 슬래브의 보스 앞 거리 (px)
+      WALL_W: 16,                 // 슬래브 두께
+      WALL_H: 118,                // 슬래브 높이
+      WALL_ALPHA: 0.55,           // 슬래브 불투명도
+      WALL_POP: 'WALL',           // 리포스트가 방벽에 튕겼을 때 뜨는 글자
+      WALL_BREAK_POP: 'BREAK',    // 방벽이 깨졌을 때
+      COUNTER_POP: 'COUNTER ONLY' // counterOnly 게이트에 튕겼을 때 (스펙 §2.4)
     },
 
     /* ---- 텔 / 투사체 / 존 ------------------------------------------------ */
@@ -270,7 +311,11 @@
     ZONE: {
       STRIKE_TIME: 0.22,
       STRIP_H: 10,
-      COLUMN_ALPHA: 0.20
+      COLUMN_ALPHA: 0.20,
+      /* 지속형 구역(스펙 §4) — linger 가 있으면 그 시간 동안 남아 이 간격으로 다시 때린다.
+         간격은 피격 무적(PLAYER.HURT_IFRAMES 0.8)보다 커야 "서 있으면 계속 맞는" 것이 아니라
+         "나가라"는 신호가 된다. */
+      LINGER_TICK: 0.9
     },
 
     /* ---- 게임 필 (스펙 §4) ----------------------------------------------- */
@@ -395,7 +440,8 @@
       STEAL_GAP_MS: 60,
       /* Phase 2 심박 킥 BPM (보스별) */
       BPM: { vesper: 96, seraph: 104, graven: 84, mirror: 116,
-             lantern: 100, chorus: 120, bastion: 88, avarice: 124 }
+             lantern: 100, chorus: 120, bastion: 88, avarice: 124,
+             sentinel: 80, tempest: 108, hollow: 72, adamant: 64 } // 최종 보스 — 챕터 3에서 가장 느리고 무겁게(hollow 72 보다 낮음)
     },
 
     /* ---- 저장 ------------------------------------------------------------ */
@@ -459,6 +505,20 @@
       RESERVED_CODES: ['Enter', 'NumpadEnter', 'Escape']
     },
 
+    /* ---- 개발용 (스펙 §5.5) — 기본 꺼짐. 배포본에서 우연히 밟히면 안 된다 ---- */
+    DEV: {
+      /* 타이틀에서 이 물리 키 코드를 순서대로 누르면 토글. 액션이 아니라 코드를 본다 —
+         키 리바인드와 서로 간섭하지 않는다. 지금 어떤 액션에도 안 묶인 글자만 골랐다. */
+      CODE: ['KeyT', 'KeyH', 'KeyI', 'KeyE', 'KeyF'],
+      CODE_GAP: 2.0,          // 글자 사이가 이보다 벌어지면 버퍼를 비운다 (초)
+      HP_CUT: 0.25,           // F2 한 번에 깎는 보스 최대 HP 비율
+      BADGE: 'DEV',
+      /* 우상단 타이머(ui.js L.TIMER_Y 26 + PAR 줄 17) 바로 아래 — 타이머와 겹치지 않는 자리 */
+      BADGE_X: 938, BADGE_Y: 50,
+      /* F1 오버레이 (보스/HP/스태미너/페이즈/시드 5줄) — 좌상단, 한 줄씩 아래로 */
+      OVERLAY_X: 16, OVERLAY_Y: 60, OVERLAY_LINE_H: 18
+    },
+
     /* ---- 튜토리얼 (스펙 §3.1 — Vesper P1 한정) --------------------------- */
     TUTORIAL: {
       PARRY: 'K  —  PARRY THE GOLD FLASH',
@@ -471,7 +531,8 @@
     /* ---- 챕터 (스펙 §3 공통) — 진행은 BOSSES 순서, 경계만 여기서 정한다 ------- */
     CHAPTERS: [
       { id: 1, name: 'CHAPTER I',  subtitle: 'THE HAND', bosses: ['vesper', 'seraph', 'graven', 'mirror'] },
-      { id: 2, name: 'CHAPTER II', subtitle: 'THE DEBT', bosses: ['lantern', 'chorus', 'bastion', 'avarice'] }
+      { id: 2, name: 'CHAPTER II', subtitle: 'THE DEBT', bosses: ['lantern', 'chorus', 'bastion', 'avarice'] },
+      { id: 3, name: 'CHAPTER III', subtitle: 'THE WALL', bosses: ['sentinel', 'tempest', 'hollow', 'adamant'] }
     ],
 
     /* ---- 스토리 (스펙 §10) ---------------------------------------------- */
@@ -500,10 +561,11 @@
 
     /* ---- 엔딩 카드 (스펙 §10) ------------------------------------------- */
     ENDING: {
-      LINES: ['NOTHING IS GIVEN.', 'EVERYTHING IS TAKEN.', 'NOTHING IS KEPT.'],
-      LINE_Y: [54, 84, 114],
-      ROWS_Y: 152,
-      ROW_H: 22,
+      LINES: ['NOTHING IS GIVEN.', 'EVERYTHING IS TAKEN.', 'NOTHING IS KEPT.', 'NOTHING IS LEFT TO TAKE.'],
+      LINE_Y: [40, 64, 88, 118],
+      LINE_AT: [0, 0.5, 1.0, 2.4],  // 각 줄이 뜨는 시각(s) — 마지막 줄은 손패가 다 빈 2.2s(1.0 + 3×ENDING_SLOT_DROP)에서 0.2s 숨 고른 뒤
+      ROWS_Y: 150,
+      ROW_H: 19,                    // 12보스 행이 손패 위에 들어가야 한다
       SLOTS_Y: 438
     },
 
