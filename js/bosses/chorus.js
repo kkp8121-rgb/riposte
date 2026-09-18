@@ -1,8 +1,7 @@
 /* =============================================================================
  * RIPOSTE — js/bosses/chorus.js
- * CHORUS — 쌍검 (챕터 2). 스펙 §3.6
- * 근접 연타(volley): 한 공격이 count 번 타격하고 타격 사이는 interval 의 짧은 windup +
- * 새 플래시다 (boss.js updateAttack). 성공 시 단축 리커버리(§2.3)를 몸으로 익힌다.
+ * CHORUS — 쌍검 (챕터 2). 스펙 §3.6 (2026-09-18 재설계)
+ * 근접 연타(volley 재-windup) + 좌우 교차(move:'cross' — 플레이어를 지나쳐 반대편으로).
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -12,13 +11,13 @@
     name: 'CHORUS',
     title: 'THE TWIN BLADES',
     color: '#4d9dff',
-    silhouette: 'spear',
+    silhouette: 'twin',
     hp: 300,
-    par: 45,
+    par: 45,                    // 출발점 — Task 3 봇 실측으로 확정
     armor: false,
     spawnX: 680,
-    droneHz: 65.41,            // C2
-    weaponTip: { dx: 56, dy: 60 },
+    droneHz: 65.41,             // C2
+    weaponTip: { dx: 46, dy: 60 },
 
     prefer: { close: 115, far: 300, back: 210 },
     gap: { 1: 0.75, 2: 0.5 },
@@ -44,26 +43,26 @@
         volley: { count: 3, interval: 0.35 },
         steal: { id: 'TWIN', label: 'TWIN', kind: 'slash', damage: 13 }
       },
-      lance: {                                     // P2 전용, 패리 불가 돌진
-        id: 'lance', label: 'LANCE', tell: 'red', kind: 'charge',
-        windup: 0.65, active: 0.10, recover: 0.30,
-        charge: { speed: 900, damage: 1, wallStun: 0.7 },
+      scissor: {                                   // P2 전용 — 양쪽을 동시에 베는 가위, 대시로만 회피
+        id: 'scissor', label: 'SCISSOR', tell: 'red', kind: 'melee',
+        windup: 0.70, active: 0.12, recover: 0.70,
+        reach: 200, approach: 40, damage: 1, swing: 'arc',
         steal: null
       }
     },
 
     patterns: {
       1: [
-        { name: 'twin',        steps: [{ atk: 'twin' }] },
-        { name: 'bolt',        steps: [{ atk: 'bolt' }] },
-        { name: 'bolt-twin',   steps: [{ atk: 'bolt' }, { wait: 0.35 }, { atk: 'twin' }] },
-        { name: 'close-twin',  steps: [{ move: 'close' }, { atk: 'twin' }] }
+        { name: 'cross-twin',       steps: [{ move: 'cross' }, { atk: 'twin' }] },
+        { name: 'twin',             steps: [{ atk: 'twin' }] },
+        { name: 'bolt-cross-twin',  steps: [{ atk: 'bolt' }, { move: 'cross' }, { atk: 'twin' }] },
+        { name: 'weave',            steps: [{ move: 'cross' }, { atk: 'twin' }, { move: 'cross' }, { atk: 'twin' }] }
       ],
       2: [
-        { name: 'triad',       steps: [{ atk: 'triad' }] },
-        { name: 'lance',       steps: [{ atk: 'lance' }] },
-        { name: 'bolt-triad',  steps: [{ atk: 'bolt' }, { wait: 0.3 }, { atk: 'triad' }] },
-        { name: 'bolt-bolt-twin', steps: [{ atk: 'bolt' }, { wait: 0.3 }, { atk: 'bolt' }, { move: 'close' }, { atk: 'twin' }] }
+        { name: 'triad',            steps: [{ atk: 'triad' }] },
+        { name: 'cross-triad-scissor', steps: [{ move: 'cross' }, { atk: 'triad' }, { atk: 'scissor' }] },
+        { name: 'bolt-bolt-cross-triad', steps: [{ atk: 'bolt' }, { wait: 0.3 }, { atk: 'bolt' }, { move: 'cross' }, { atk: 'triad' }] },
+        { name: 'scissor',          steps: [{ atk: 'scissor' }] }
       ]
     }
   };

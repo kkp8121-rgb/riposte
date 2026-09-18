@@ -1,21 +1,21 @@
 /* =============================================================================
  * RIPOSTE — js/bosses/avarice.js
- * AVARICE — 약탈자 (챕터 2 보스). 스펙 §3.8
- * 실루엣 = 플레이어형. Mirror 세트 + 챕터 2 기술을 windup ×0.80 으로 되돌린다.
- * stealOnHit: 피격마다 손패 맨 앞을 빼앗아(game.js damagePlayer) loot 큐에 넣고,
- * {mirror:'loot'} 스텝이 그것을 순서대로 되돌려 쓴다. plunder 는 손패 전부를 빼앗는다.
+ * AVARICE — 약탈자 (챕터 2 보스). 스펙 §3.8 (2026-09-18 재설계)
+ * 자기 기술이 없다: 패턴이 직접 부르는 공격은 count(금)·plunder(적) 둘뿐이고,
+ * 나머지는 빼앗은 손패({mirror:'loot'})와 플레이어 손패({mirror:'all'})를 되돌려 쓴다.
+ * 되돌림용 공격표는 챕터 1·2 기술 정의를 그대로 담는다 — 차별화 검사에 overlapIntended 로 선언.
  * ========================================================================== */
 (function (global) {
   'use strict';
 
   var WINDUP_MULT = 0.80;
-  var BASE_WINDUP = { thrust: 0.60, slash: 0.50, arrow: 0.45, slam: 0.85, flicker: 0.55, bolt: 0.42, ward: 0.80 };
+  var BASE_WINDUP = { thrust: 0.60, slash: 0.50, arrow: 0.45, slam: 0.85, flicker: 0.55, glow: 0.50, ward: 0.80 };
   function w(k) { return +(BASE_WINDUP[k] * WINDUP_MULT).toFixed(4); }
 
-  /* 손패 기술 id → 이 보스의 공격 id (되돌림표). 챕터 2 기술도 되돌린다. */
+  /* 손패 기술 id → 이 보스의 되돌림 공격 id */
   var MIRROR_MAP = {
     THRUST: 'thrust', SLASH: 'slash', KICK: 'slash', ARROW: 'arrow', SHOCKWAVE: 'arrow', SLAM: 'slam',
-    FLICKER: 'flicker', SWEEP: 'slash', TWIN: 'slash', BOLT: 'bolt', WARD: 'ward', VOLLEY: 'bolt'
+    FLICKER: 'flicker', GLOW: 'glow', TWIN: 'slash', BOLT: 'arrow', VOLLEY: 'arrow', WARD: 'ward', COUNT: 'count'
   };
 
   var AVARICE = {
@@ -23,25 +23,39 @@
     name: 'AVARICE',
     title: 'THE TAKER',
     color: '#ff2fa6',
-    silhouette: 'mirror',
+    silhouette: 'taker',
+    overlapIntended: '되돌림용 공격표는 챕터 1·2 기술 정의를 그대로 담는다 (스펙 §3.8)',
     hp: 400,
-    par: 55,
+    par: 55,                    // 출발점 — Task 3 봇 실측으로 확정
     armor: false,
     stealOnHit: true,
     spawnX: 680,
     droneHz: 41.20,             // E1
-    weaponTip: { dx: 46, dy: 56 },
+    weaponTip: { dx: 40, dy: 60 },
 
     prefer: { close: 120, far: 300, back: 200 },
     gap: { 1: 0.8, 2: 0.5 },
 
-    feintHold: 0.45,
     mirrorGap: 0.35,
-    fallbackAttack: 'thrust',
+    fallbackAttack: 'count',    // loot·손패가 비면 — 플레이어가 첫 카드를 훔칠 유일한 금색
     windupMultNote: WINDUP_MULT,
     mirrorMap: MIRROR_MAP,
 
     attacks: {
+      /* ---- 직접 호출하는 둘 ------------------------------------------------ */
+      count: {                                     // "하나, 둘, 셋" — 느린 큰 휘두르기 (금)
+        id: 'count', label: 'COUNT', tell: 'gold', kind: 'melee',
+        windup: 0.90, active: 0.14, recover: 0.70,
+        reach: 190, approach: 50, damage: 1, swing: 'arc',
+        steal: { id: 'COUNT', label: 'COUNT', kind: 'slash', damage: 15 }
+      },
+      plunder: {                                   // 적 잡기 — 손패 전부 강탈, 대시로만 회피
+        id: 'plunder', label: 'PLUNDER', tell: 'red', kind: 'melee',
+        windup: 0.95, active: 0.16, recover: 0.85,
+        reach: 230, approach: 90, damage: 1, swing: 'thrust', plunder: true,
+        steal: null
+      },
+      /* ---- 되돌림용 (패턴이 직접 부르지 않는다) --------------------------- */
       thrust: {
         id: 'thrust', label: 'THRUST', tell: 'gold', kind: 'melee',
         windup: w('thrust'), active: 0.10, recover: 0.50,
@@ -72,40 +86,32 @@
         reach: 160, approach: 80, damage: 1, swing: 'thrust',
         steal: { id: 'FLICKER', label: 'FLICKER', kind: 'lunge', damage: 18 }
       },
-      bolt: {
-        id: 'bolt', label: 'BOLT', tell: 'gold', kind: 'projectile',
-        windup: w('bolt'), active: 0.06, recover: 0.42,
-        proj: { speed: 600, r: 7, y: 52, damage: 1, reflectDamage: 11, shape: 'bolt' },
-        steal: { id: 'BOLT', label: 'BOLT', kind: 'shot', damage: 11 }
+      glow: {
+        id: 'glow', label: 'GLOW', tell: 'gold', kind: 'projectile',
+        windup: w('glow'), active: 0.06, recover: 0.42,
+        proj: { speed: 240, r: 11, y: 50, damage: 1, reflectDamage: 12, shape: 'wave' },
+        steal: { id: 'GLOW', label: 'GLOW', kind: 'shot', damage: 12 }
       },
       ward: {
         id: 'ward', label: 'WARD', tell: 'gold', kind: 'melee',
         windup: w('ward'), active: 0.12, recover: 0.56,
         reach: 170, approach: 60, damage: 1, shockwaveFx: true, swing: 'slam',
-        steal: { id: 'WARD', label: 'WARD', kind: 'slam', damage: 26 }
-      },
-      plunder: {                                   // P2 — 적, 대시로만 회피, 손패 전부 강탈
-        id: 'plunder', label: 'PLUNDER', tell: 'red', kind: 'melee',
-        windup: 0.95, active: 0.16, recover: 0.85,
-        reach: 230, approach: 90, damage: 1, swing: 'thrust', plunder: true,
-        steal: null
+        steal: { id: 'WARD', label: 'WARD', kind: 'slam', damage: 30 }
       }
     },
 
-    /* ---- 패턴 (스펙 §3.8) ------------------------------------------------ */
     patterns: {
       1: [
-        { name: 'thrust',        steps: [{ atk: 'thrust' }] },
-        { name: 'loot',          steps: [{ mirror: 'loot' }] },
-        { name: 'feint-flicker', steps: [{ feint: 'flicker' }] },
-        { name: 'arrow-close-slash', steps: [{ atk: 'arrow' }, { move: 'close' }, { atk: 'slash' }] },
-        { name: 'ward',          steps: [{ atk: 'ward' }] }
+        { name: 'loot',        steps: [{ mirror: 'loot' }] },
+        { name: 'loot-loot',   steps: [{ mirror: 'loot' }, { mirror: 'loot' }] },
+        { name: 'close-loot',  steps: [{ move: 'close' }, { mirror: 'loot' }] },
+        { name: 'plunder',     steps: [{ atk: 'plunder' }] }
       ],
       2: [
-        { name: 'mirror-hand',   steps: [{ mirror: 'all' }] },
-        { name: 'plunder',       steps: [{ atk: 'plunder' }] },
-        { name: 'loot-thrust',   steps: [{ mirror: 'loot' }, { wait: 0.3 }, { atk: 'thrust' }] },
-        { name: 'bolt-bolt-slam', steps: [{ atk: 'bolt' }, { wait: 0.3 }, { atk: 'bolt' }, { wait: 0.35 }, { atk: 'slam' }] }
+        { name: 'mirror-hand', steps: [{ mirror: 'all' }] },
+        { name: 'loot-chain',  steps: [{ mirror: 'loot' }, { wait: 0.3 }, { mirror: 'loot' }, { wait: 0.3 }, { mirror: 'loot' }] },
+        { name: 'plunder-loot', steps: [{ atk: 'plunder' }, { mirror: 'loot' }] },
+        { name: 'count',       steps: [{ atk: 'count' }] }
       ]
     },
 
