@@ -304,7 +304,8 @@
         delay: windupTotal,
         damage: def.zone.damage === undefined ? 1 : def.zone.damage,
         tell: def.tell,
-        label: def.label || def.id
+        label: def.label || def.id,
+        linger: def.zone.linger || 0
       });
       a.zones.push(z);
       this.game.spawnZone(z);

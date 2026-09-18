@@ -556,7 +556,10 @@
     var x0 = z.x - z.w / 2;
     ctx.save();
     if (!z.struck) {
-      var prog = 1 - clamp(z.t / z.delay, 0, 1);
+      // 지속 구역(everStruck)이 재무장 대기 중일 때는 최초 낙하 delay 가 아니라
+      // LINGER_TICK 을 기준으로 게이지를 채운다 — 그래야 "다음 타격까지"가 맞게 보인다.
+      var cycle = z.everStruck ? C.ZONE.LINGER_TICK : z.delay;
+      var prog = 1 - clamp(z.t / cycle, 0, 1);
       // 바닥 경고 스트립
       ctx.globalAlpha = 0.30 + 0.35 * Math.abs(Math.sin(prog * 14));
       ctx.fillStyle = C.COLORS.RED;
