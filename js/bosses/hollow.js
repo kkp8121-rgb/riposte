@@ -21,7 +21,7 @@
     color: '#8a7fb0',
     silhouette: 'hollow',      // 무기 없이 키만 크고 몹시 가늘다 — 빈 것
     hp: 300,
-    par: 85,                    // 2026-09-19 실측: 숙련 41.9~46.8s(승 43.4s ×2 ≈ 85) · 완벽 34.3~48.1s > 85/3. 숙련 승률 1/3 — docs/qa/balance-2026-09-19.md §6
+    par: 75,                    // 2026-09-19 수정 1: 숙련 승 34.7~42.7s ×2 ≈ 75 · 완벽 25.6s > 75/3. 숙련 2/3 — docs/qa/balance-2026-09-19.md §5 수정 1
     armor: false,
     spawnX: 720,
     droneHz: 40,
@@ -50,7 +50,7 @@
         id: 'grasp', label: 'GRASP', tell: 'gold', kind: 'melee',
         windup: 0.62, active: 0.10, recover: 0.50,
         reach: 170, approach: 70, damage: 1, swing: 'thrust',
-        steal: { id: 'GRASP', label: 'GRASP', kind: 'lunge', damage: 18 }
+        steal: { id: 'GRASP', label: 'GRASP', kind: 'lunge', damage: 22 }   // 18 → 22 (09-19 수정 1, 패턴 재구성과 함께)
       },
       rend: {                                    // 느리고 넓은 호 — 패리 불가, 텔이 길다
         id: 'rend', label: 'REND', tell: 'red', kind: 'melee',
@@ -70,7 +70,7 @@
         /* 각 탄의 플래시 → 타격 간격은 windup 하나로 고정이다(Global Constraints) */
         proj: { speed: 340, r: 12, y: 44, damage: 1, reflectDamage: 12, shape: 'arrow' },
         volley: { count: 2, interval: 0.45, p2Interval: 0.38 },
-        steal: { id: 'EMBER', label: 'EMBER', kind: 'shot', damage: 12 }
+        steal: { id: 'EMBER', label: 'EMBER', kind: 'shot', damage: 14 }    // 12 → 14 (09-19 수정 1)
       }
     },
 
@@ -81,18 +81,20 @@
      * 🔴 snuff(돌진)는 거리가 있을 때(tag far, RANGE.OPEN 밖)만, 그것도 back 뒤에만 쓴다 —
      *    붙은 상태에서 돌진 예고가 뜨면 플레이어가 예고 중에 보스를 지나쳐 버리고, 돌진이
      *    등 뒤에서 따라와 대시가 끝난 자리를 맞힌다(봇 실측, 트레이서). tag any = 상관없음.
+     * 🔴 2026-09-19 수정 1: 붉은 공격만 있는 패턴(rend·back-snuff)을 없앴다 — 손패가 말라 숙련 봇의 퍼펙트가
+     *    40s 에 7~9회뿐이었다(승률 1/3). 지금은 10패턴 전부에 금 공격 ≥1, 금 17 : 붉 7. 어둠 축은 그대로다.
      * -------------------------------------------------------------------- */
     patterns: {
       1: [
         { name: 'grasp',            steps: [{ atk: 'grasp' }], tag: 'any' },
-        { name: 'rend',             steps: [{ atk: 'rend' }], tag: 'any' },
+        { name: 'rend-grasp',       steps: [{ atk: 'rend' }, { wait: 0.4 }, { atk: 'grasp' }], tag: 'any' },
         { name: 'back-ember',       steps: [{ move: 'back' }, { atk: 'ember' }], tag: 'any' },
-        { name: 'back-snuff',       steps: [{ move: 'back' }, { atk: 'snuff' }], tag: 'far' },
+        { name: 'back-ember-snuff', steps: [{ move: 'back' }, { atk: 'ember' }, { atk: 'snuff' }], tag: 'far' },
         { name: 'close-grasp-rend', steps: [{ move: 'close' }, { atk: 'grasp' }, { wait: 0.4 }, { atk: 'rend' }], tag: 'any' }
       ],
       2: [
-        { name: 'grasp-rend',             steps: [{ atk: 'grasp' }, { wait: 0.35 }, { atk: 'rend' }], tag: 'any' },
-        { name: 'back-snuff-grasp',       steps: [{ move: 'back' }, { atk: 'snuff' }, { atk: 'grasp' }], tag: 'far' },
+        { name: 'grasp-rend-grasp',       steps: [{ atk: 'grasp' }, { wait: 0.35 }, { atk: 'rend' }, { wait: 0.35 }, { atk: 'grasp' }], tag: 'any' },
+        { name: 'back-ember-snuff-grasp', steps: [{ move: 'back' }, { atk: 'ember' }, { atk: 'snuff' }, { atk: 'grasp' }], tag: 'far' },
         { name: 'back-ember-snuff',       steps: [{ move: 'back' }, { atk: 'ember' }, { atk: 'snuff' }], tag: 'far' },
         { name: 'close-rend-back-ember',  steps: [{ move: 'close' }, { atk: 'rend' }, { move: 'back' }, { atk: 'ember' }], tag: 'any' },
         { name: 'back-ember-close-grasp', steps: [{ move: 'back' }, { atk: 'ember' }, { wait: 0.3 }, { move: 'close' }, { atk: 'grasp' }], tag: 'any' }
