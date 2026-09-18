@@ -93,10 +93,14 @@ async function runBoss(browser, n) {
     await p.goto(pathToFileURL(join(ROOT, 'index.html')).href + '?mute=1', { waitUntil: 'load' });
     await until(p, () => !!window.__RIPOSTE, 5000);
     const n = await p.evaluate(() => window.BOSSES.length);
+    const inChapters = await p.evaluate(() => window.CONFIG.CHAPTERS.reduce((a, ch) => a + ch.bosses.length, 0));
     await p.close();
-    return n;
-  })();
-  check('8 bosses registered', count === 8, `(got ${count})`);
+    return { n, inChapters };
+  })().then((r) => {
+    // 등록 보스 수 = CHAPTERS 총합 (정합성) — 숫자를 박지 않는다. 엔딩 위치는 이 길이로 정해진다
+    check('BOSSES matches CHAPTERS total', r.n === r.inChapters, `(BOSSES ${r.n}, CHAPTERS ${r.inChapters})`);
+    return r.n;
+  });
 
   for (let n = 1; n <= count; n++) {
     const r = await runBoss(browser, n);

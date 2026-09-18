@@ -34,7 +34,9 @@ const textOf = (line) => (typeof line === 'string' ? line : line.text);
 const bosses = C.CHAPTERS.flatMap((ch) => ch.bosses);
 
 check('STORY table exists', !!STORY && typeof STORY === 'object');
-check('8 bosses in CHAPTERS', bosses.length === 8, `(${bosses.join(',')})`);
+/* CHAPTERS 총합 = index.html 에 등록된 보스 파일 수 (정합성) — 숫자를 박지 않는다 */
+const registered = [...readFileSync(join(ROOT, 'index.html'), 'utf8').matchAll(/js\/bosses\/[^"]+\.js/g)].length;
+check('CHAPTERS total matches registered boss files', bosses.length === registered, `(${bosses.length} vs ${registered}: ${bosses.join(',')})`);
 
 const allLines = [];   // { boss, text, kind }
 for (const key of bosses) {

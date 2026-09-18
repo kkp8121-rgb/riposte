@@ -30,7 +30,9 @@
     /* 챕터 3 (스펙 §2.2) — 던지는 자. 무기 없이 어깨가 넓고 머리가 작다 */
     storm:   { h: 88,  w: 26, head: 0.066, hood: false, weapon: 'none',   thick: 11 },
     /* 챕터 3 (스펙 §2.3) — 빈 것. 무기 없이 키만 크고 몹시 가늘다. 머리가 가장 작다 */
-    hollow:  { h: 98,  w: 12, head: 0.060, hood: false, weapon: 'none',   thick: 5 }
+    hollow:  { h: 98,  w: 12, head: 0.060, hood: false, weapon: 'none',   thick: 5 },
+    /* 챕터 3 (스펙 §2.4) — 최종 보스. 가장 크고 가장 두껍다. 대검 하나 */
+    adamant: { h: 116, w: 36, head: 0.082, hood: false, weapon: 'great',  thick: 15 }
   };
 
   /* 포즈별 무기팔 각도(rad). 0 = 정면(facing 방향), 음수 = 위. */
@@ -51,7 +53,7 @@
   /* 무기 길이 (실루엣 기준 비율) — 텔 버스트를 무기 "끝"에 정확히 찍기 위해 필요 */
   var WEAPON_LEN = {
     none: 0.10, rapier: 0.62, blade: 0.50, hammer: 0.52, bow: 0.26, spear: 0.66,
-    dagger: 0.28, twin: 0.30, shield: 0.26
+    dagger: 0.28, twin: 0.30, shield: 0.26, great: 0.58
   };
 
   var Render = {};
@@ -380,6 +382,12 @@
       case 'spear':
         ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(h * 0.66, 0); ctx.stroke();
+        break;
+      case 'great':                                    // ADAMANT — 넓은 대검 + 긴 크로스가드
+        ctx.lineWidth = 9;
+        ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(h * 0.58, 0); ctx.stroke();
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(4, -13); ctx.lineTo(4, 13); ctx.stroke();
         break;
       case 'dagger':                                   // LANTERN — 단검 + 등불
         ctx.lineWidth = 3;
@@ -833,6 +841,7 @@
     }
 
     if (b) drawBoss(ctx, b, bp, false);
+    if (b && b.wallUp()) drawWall(ctx, b);
 
     /* 어둠 (스펙 §2.3) — 배경·기둥·바닥·보스 몸통만 덮는다. 텔(무기 끝 글로우·궤적)·존·투사체·
        플레이어·파티클·HUD 는 전부 이 뒤에(= 어둠 위에) 그린다. 정보를 없애는 것이 아니라 채널을
@@ -922,6 +931,27 @@
       ctx.fillRect(b.x - b.chargeDir * 90, V.FLOOR_Y - C.BOSS.HEIGHT, 90, C.BOSS.HEIGHT);
       ctx.restore();
     }
+  }
+
+  /** 엔진 방벽 (스펙 §2.4) — 보스 앞에 선 슬래브. 남은 hits 만큼 가로 칸이 밝고, 깎인 칸은 갈라진다 */
+  function drawWall(ctx, b) {
+    var W = C.BOSS;
+    var x = b.x + b.facing * W.WALL_GAP - W.WALL_W * 0.5;
+    var top = V.FLOOR_Y - W.WALL_H;
+    var total = b.def.wall.hits;
+    var segH = W.WALL_H / total;
+    ctx.save();
+    ctx.globalAlpha = W.WALL_ALPHA;
+    ctx.shadowColor = b.color;
+    ctx.shadowBlur = 18;
+    for (var i = 0; i < total; i++) {
+      var y = top + i * segH;
+      var alive = i >= total - b.wallHits;      // 위에서부터 깎인다
+      ctx.fillStyle = alive ? b.color : C.COLORS.GREY;
+      ctx.globalAlpha = W.WALL_ALPHA * (alive ? 1 : 0.35);
+      ctx.fillRect(x, y + 2, W.WALL_W, segH - 4);
+    }
+    ctx.restore();
   }
 
   /** 보스의 텔 — 무기 끝 글로우·공격 궤적. 몸통과 분리해 어둠 레이어 위에 그린다 (스펙 §2.3) */

@@ -742,8 +742,8 @@
     /* 개발용 치트 — dev 모드에서만. 이 판은 저장하지 않는다 */
     if (this.dev) {
       if (Input.consumeCode('F1')) this.devOverlay = !this.devOverlay;
-      if (Input.consumeCode('F2') && b) { this.noSave = true; b.takeDamage(b.maxHp * C.DEV.HP_CUT); }
-      if (Input.consumeCode('F3') && b) { this.noSave = true; b.takeDamage(b.hp); }
+      if (Input.consumeCode('F2') && b) { this.noSave = true; b.takeDamage(b.maxHp * C.DEV.HP_CUT, { dev: true }); }
+      if (Input.consumeCode('F3') && b) { this.noSave = true; b.takeDamage(b.hp, { dev: true }); }
       if (Input.consumeCode('F4')) {
         this.noSave = true;
         var dir = Input.down.dash ? -1 : 1;      // Shift 를 누른 채면 이전 보스
@@ -831,7 +831,11 @@
 
   /** 보스가 무적(페이즈 전환 포효 포함)이라 타격이 통하지 않았음을 알린다 */
   Game.prototype.immunePop = function (b) {
-    FX.pop('IMMUNE', b.x, V.FLOOR_Y - C.BOSS.HEIGHT * 0.55, C.COLORS.GREY, { size: 15, rise: 26 });
+    /* 막힌 이유를 그대로 읽힌다 — 방벽(스펙 §2.4) · 카운터 전용 · 포효 무적 */
+    var label = 'IMMUNE';
+    if (b.wallUp()) label = C.BOSS.WALL_POP;
+    else if (b.def.counterOnly && b.phase === 2 && b.invuln <= 0) label = C.BOSS.COUNTER_POP;
+    FX.pop(label, b.x, V.FLOOR_Y - C.BOSS.HEIGHT * 0.55, C.COLORS.GREY, { size: 15, rise: 26 });
     RAudio.parryBlock();
   };
 
@@ -847,9 +851,9 @@
     if (rp.empowered) mult *= C.COMBAT.EMPOWER_MULT;
     if (counter) mult *= C.COMBAT.COUNTER_MULT;
     var dmg = Math.round(rp.skill.damage * mult);
-    var applied = b.takeDamage(dmg);
+    var applied = b.takeDamage(dmg, { counter: counter });
 
-    // 무적(포효 중)에 막혔다 — 손패를 태우지 않고 "IMMUNE" 만 띄운다
+    // 무적(포효 중)·방벽·counterOnly 에 막혔다 — 손패를 태우지 않고 이유만 띄운다
     if (applied <= 0) {
       this.refundHand(rp.skill);
       this.immunePop(b);
@@ -1087,11 +1091,31 @@
         }
         if (Math.abs(pr.x - b.x) <= C.BOSS.HALF_W + pr.r + 6) {
           pr.dead = true;
-          this.resolveProjectileHitBoss(pr);
+          /* 엔진 방벽(스펙 §2.4) — 서 있으면 반사탄은 벽을 깎고 보스 피해는 없다 */
+          if (b.wallUp()) this.onWallHit(b, pr, b.wallHit());
+          else this.resolveProjectileHitBoss(pr);
         }
       }
 
       if (pr.dead) this.projectiles.splice(i, 1);
+    }
+  };
+
+  /** 반사탄이 방벽에 맞았다 / 방벽이 깨졌다 (스펙 §2.4). broke=true 면 카운터 경직이 열렸다 */
+  Game.prototype.onWallHit = function (b, pr, broke) {
+    var wx = b.x + b.facing * C.BOSS.WALL_GAP;
+    var wy = V.FLOOR_Y - C.BOSS.WALL_H * 0.5;
+    if (broke) {
+      FX.addHitstop(C.HITSTOP.CHARGE_WALL);
+      FX.addShake(C.SHAKE.CHARGE_WALL);
+      FX.sparks(wx, wy, C.FX.HIT_SPARKS, b.color, { speed: 360, life: 0.6, size: 3 });
+      FX.ring(wx, wy, 8, 90, C.COLORS.COUNTER, 0.35, 3);
+      FX.pop(C.BOSS.WALL_BREAK_POP, b.x, V.FLOOR_Y - C.BOSS.HEIGHT - 16, C.COLORS.COUNTER, { size: 19 });
+      RAudio.counter();
+    } else {
+      FX.addShake(C.SHAKE.BLOCK);
+      FX.sparks(wx, pr.y, C.FX.BLOCK_SPARKS, b.color, { speed: 240, life: 0.4, size: 2.4 });
+      RAudio.parryBlock();
     }
   };
 
@@ -1102,7 +1126,7 @@
     var empowered = this.player.isEmpowered();
     var mult = counter ? C.COMBAT.COUNTER_MULT : 1;
     var dmg = Math.round(pr.damage * mult);
-    var applied = b.takeDamage(dmg);
+    var applied = b.takeDamage(dmg, { counter: counter });
 
     // 무적(포효)에 막힘 — 손패에서 쓴 탄이면 슬롯을 돌려준다
     if (applied <= 0) {

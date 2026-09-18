@@ -275,7 +275,19 @@
       BLINK_GHOSTS: 3,            // 순간이동 잔상 수
       CROSS_SPEED: 700,           // move:'cross' 플레이어를 지나쳐 반대편으로 달리는 속도
       SIDE_MIN_RATIO: 0.6,        // 반대편 목표가 prefer.close 의 이 비율보다 가까우면(벽) 이동 스텝을 건너뛴다
-      ZONE_OFFSET_DEFAULT: 140    // zone.anchor:'boss' 존의 보스 앞 거리 기본값
+      ZONE_OFFSET_DEFAULT: 140,   // zone.anchor:'boss' 존의 보스 앞 거리 기본값
+      /* 엔진 방벽 (챕터 3 스펙 §2.4 — ADAMANT). 보스 정의의 wall:{hits,up,breakStagger} 가 켠다.
+         방벽이 서 있는 동안 리포스트는 튕기고(피해 0·손패 환급) 반사탄만 hits 를 깎는다.
+         hits 가 0 이 되면 breakStagger 동안 카운터 경직(보상) → WALL_DOWN 뒤 다시 선다.
+         up 초 동안 깨지지 않으면 보상 없이 저절로 내려간다 — 기믹은 의무가 아니라 노리는 기회다. */
+      WALL_DOWN: 5.0,             // 방벽이 내려가 있는 시간 (깨졌든 저절로 내려갔든)
+      WALL_GAP: 46,               // 방벽 슬래브의 보스 앞 거리 (px)
+      WALL_W: 16,                 // 슬래브 두께
+      WALL_H: 118,                // 슬래브 높이
+      WALL_ALPHA: 0.55,           // 슬래브 불투명도
+      WALL_POP: 'WALL',           // 리포스트가 방벽에 튕겼을 때 뜨는 글자
+      WALL_BREAK_POP: 'BREAK',    // 방벽이 깨졌을 때
+      COUNTER_POP: 'COUNTER ONLY' // counterOnly 게이트에 튕겼을 때 (스펙 §2.4)
     },
 
     /* ---- 텔 / 투사체 / 존 ------------------------------------------------ */
@@ -519,7 +531,6 @@
     CHAPTERS: [
       { id: 1, name: 'CHAPTER I',  subtitle: 'THE HAND', bosses: ['vesper', 'seraph', 'graven', 'mirror'] },
       { id: 2, name: 'CHAPTER II', subtitle: 'THE DEBT', bosses: ['lantern', 'chorus', 'bastion', 'avarice'] },
-      /* tempest·hollow·adamant 는 아직 파일이 없다 — chapterOf 는 key 로 찾으므로 빈 자리는 무해하다 */
       { id: 3, name: 'CHAPTER III', subtitle: 'THE WALL', bosses: ['sentinel', 'tempest', 'hollow', 'adamant'] }
     ],
 
