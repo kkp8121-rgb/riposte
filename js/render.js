@@ -28,7 +28,9 @@
     /* 챕터 3 (스펙 §2.1) — 움직이지 않는 파수꾼. 키가 크고 창이 길다 */
     spear:   { h: 104, w: 18, head: 0.075, hood: false, weapon: 'spear',  thick: 9 },
     /* 챕터 3 (스펙 §2.2) — 던지는 자. 무기 없이 어깨가 넓고 머리가 작다 */
-    storm:   { h: 88,  w: 26, head: 0.066, hood: false, weapon: 'none',   thick: 11 }
+    storm:   { h: 88,  w: 26, head: 0.066, hood: false, weapon: 'none',   thick: 11 },
+    /* 챕터 3 (스펙 §2.3) — 빈 것. 무기 없이 키만 크고 몹시 가늘다. 머리가 가장 작다 */
+    hollow:  { h: 98,  w: 12, head: 0.060, hood: false, weapon: 'none',   thick: 5 }
   };
 
   /* 포즈별 무기팔 각도(rad). 0 = 정면(facing 방향), 음수 = 위. */
@@ -799,8 +801,10 @@
     // 아레나는 보스 정의가 고른다 (C.ARENA 테이블)
     Render.drawArena(ctx, camX, b && b.def ? b.def.arena : null);
 
-    // 존 (바닥 경고)
-    for (var i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
+    /* 어둠 (스펙 §2.3) — 아레나에 darkness 가 있으면 존은 어둠 위에 그린다(붉은 텔이다) */
+    var dark = b && b.def && C.ARENA[b.def.arena] && C.ARENA[b.def.arena].darkness;
+    var i;
+    if (!dark) for (i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
 
     var pp = playerPose(p);
     var bp = b ? bossPose(b) : null;
@@ -829,7 +833,20 @@
     }
 
     if (b) drawBoss(ctx, b, bp, false);
+
+    /* 어둠 (스펙 §2.3) — 배경·기둥·바닥·보스 몸통만 덮는다. 텔(무기 끝 글로우·궤적)·존·투사체·
+       플레이어·파티클·HUD 는 전부 이 뒤에(= 어둠 위에) 그린다. 정보를 없애는 것이 아니라 채널을
+       텔 하나로 줄이는 것이다. ?nofx=1 과 무관 — 판정의 일부다. */
+    if (dark) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(2,3,7,' + (b.phase === 2 ? dark.p2 : dark.p1) + ')';
+      ctx.fillRect(0, 0, V.W, V.H);
+      ctx.restore();
+      for (i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
+    }
+
     drawPlayer(ctx, p, pp, false);
+    if (b) drawBossTells(ctx, b);
 
     for (i = 0; i < game.projectiles.length; i++) drawProjectile(ctx, game.projectiles[i]);
 
@@ -897,8 +914,20 @@
       flash: b.hurtFlash > 0 ? 1 : 0
     });
 
+    // charge 중 잔상 (몸통과 함께 어두워진다)
+    if (b.state === 'charging' && !isReflection) {
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(b.x - b.chargeDir * 90, V.FLOOR_Y - C.BOSS.HEIGHT, 90, C.BOSS.HEIGHT);
+      ctx.restore();
+    }
+  }
+
+  /** 보스의 텔 — 무기 끝 글로우·공격 궤적. 몸통과 분리해 어둠 레이어 위에 그린다 (스펙 §2.3) */
+  function drawBossTells(ctx, b) {
     // 텔 플래시가 살아있는 동안 무기 끝 글로우
-    if (b.flashT > 0 && !isReflection) {
+    if (b.flashT > 0) {
       var tip = b.weaponTip();
       var k = b.flashT / C.BOSS.FLASH_TIME;
       ctx.save();
@@ -913,8 +942,7 @@
     }
 
     // 공격 active 중 무기 호 궤적
-    if (b.attack && b.attack.stage === 'active' && !isReflection &&
-        b.attack.def.kind === 'melee') {
+    if (b.attack && b.attack.stage === 'active' && b.attack.def.kind === 'melee') {
       var a = b.attack;
       var kk = 1 - a.t / Math.max(0.01, a.def.active);
       var bh = BUILD[b.silhouette] ? BUILD[b.silhouette].h : 84;
@@ -922,15 +950,6 @@
       drawSwing(ctx, b.x, b.facing, bh,
         a.tell === 'red' ? C.COLORS.RED : C.COLORS.GOLD,
         sk, a.def.reach, kk, 0.75);
-    }
-
-    // charge 중 잔상
-    if (b.state === 'charging' && !isReflection) {
-      ctx.save();
-      ctx.globalAlpha = 0.25;
-      ctx.fillStyle = b.color;
-      ctx.fillRect(b.x - b.chargeDir * 90, V.FLOOR_Y - C.BOSS.HEIGHT, 90, C.BOSS.HEIGHT);
-      ctx.restore();
     }
   }
 

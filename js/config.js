@@ -71,6 +71,19 @@
         farStep: 62, farJitter: 8, farW: [46, 66], farH: [230, 320], farPar: 0.07,
         nearStep: 112, nearJitter: 10, nearW: [70, 108], nearH: [310, 420], nearPar: 0.18,
         stars: 22, starAlpha: [0.04, 0.16]
+      },
+      /* void — HOLLOW 전용 (스펙 §2.3). wall 과 같은 무대에 어둠 계수만 더한다.
+         darkness 는 배경·기둥·바닥·보스 몸통을 덮는 검정의 불투명도(Phase 1 / Phase 2).
+         🔴 텔·투사체·존·플레이어·HUD 는 이 위에 그린다 — 렌더 순서가 규칙이고 계수는 세기일 뿐이다.
+         ?nofx=1 로 꺼지지 않는다(판정의 일부). */
+      void: {
+        bg: ['#05080d', '#080c13', '#0c1119'], bgMid: 0.68,
+        floor: '#161d26', line: '#222c38', reflect: 'rgba(143,227,200,0.05)',
+        farColor: '#0f151c', farAlpha: 0.95, nearColor: '#141c24', nearAlpha: 1,
+        farStep: 62, farJitter: 8, farW: [46, 66], farH: [230, 320], farPar: 0.07,
+        nearStep: 112, nearJitter: 10, nearW: [70, 108], nearH: [310, 420], nearPar: 0.18,
+        stars: 22, starAlpha: [0.04, 0.16],
+        darkness: { p1: 0.72, p2: 0.85 }
       }
     },
 
@@ -416,7 +429,7 @@
       /* Phase 2 심박 킥 BPM (보스별) */
       BPM: { vesper: 96, seraph: 104, graven: 84, mirror: 116,
              lantern: 100, chorus: 120, bastion: 88, avarice: 124,
-             sentinel: 80, tempest: 108 }
+             sentinel: 80, tempest: 108, hollow: 72 }
     },
 
     /* ---- 저장 ------------------------------------------------------------ */
