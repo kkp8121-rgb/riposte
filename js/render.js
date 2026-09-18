@@ -788,8 +788,8 @@
     for (i = 0; i < FX.ghosts.length; i++) {
       var g = FX.ghosts[i];
       drawFighter(ctx, {
-        x: g.x, facing: g.facing, color: g.color, build: 'player',
-        t: 0, pose: 'dash', poseP: 0.5, vx: 0, moving: false,
+        x: g.x, facing: g.facing, color: g.color, build: g.build || 'player',
+        t: 0, pose: g.pose || 'dash', poseP: 0.5, vx: 0, moving: false,
         alpha: (g.life / g.life0) * 0.32
       });
     }

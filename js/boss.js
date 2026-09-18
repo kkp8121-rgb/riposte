@@ -185,7 +185,7 @@
     if (target === null) { this.nextStep(); return; }
     var fromX = this.x;
     for (var i = 0; i < B.BLINK_GHOSTS; i++) {
-      FX.ghost(fromX + (target - fromX) * (i / B.BLINK_GHOSTS), V.FLOOR_Y, this.facing, this.color, 'dash');
+      FX.ghost(fromX + (target - fromX) * (i / B.BLINK_GHOSTS), V.FLOOR_Y, this.facing, this.color, 'dash', this.silhouette);
     }
     this.x = target;
     this.vx = 0;

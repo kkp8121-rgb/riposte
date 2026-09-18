@@ -135,10 +135,10 @@
   };
 
   /** 대시 잔상 */
-  FX.ghost = function (x, y, facing, color, pose) {
+  FX.ghost = function (x, y, facing, color, pose, build) {
     if (!FX.enabled) return;
     push(FX.ghosts, {
-      x: x, y: y, facing: facing, color: color, pose: pose,
+      x: x, y: y, facing: facing, color: color, pose: pose, build: build || 'player',
       life: C.DASH.GHOST_LIFE, life0: C.DASH.GHOST_LIFE
     }, 24);
   };
