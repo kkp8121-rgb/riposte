@@ -562,7 +562,7 @@
     ENDING: {
       LINES: ['NOTHING IS GIVEN.', 'EVERYTHING IS TAKEN.', 'NOTHING IS KEPT.', 'NOTHING IS LEFT TO TAKE.'],
       LINE_Y: [40, 64, 88, 118],
-      LINE_AT: [0, 0.5, 1.0, 2.4],  // 각 줄이 뜨는 시각(s) — 마지막 줄은 손패가 다 빈 뒤(1.0 + 3×ENDING_SLOT_DROP)
+      LINE_AT: [0, 0.5, 1.0, 2.4],  // 각 줄이 뜨는 시각(s) — 마지막 줄은 손패가 다 빈 2.2s(1.0 + 3×ENDING_SLOT_DROP)에서 0.2s 숨 고른 뒤
       ROWS_Y: 150,
       ROW_H: 19,                    // 12보스 행이 손패 위에 들어가야 한다
       SLOTS_Y: 438
