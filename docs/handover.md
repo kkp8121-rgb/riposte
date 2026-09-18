@@ -1,7 +1,10 @@
 # RIPOSTE — 인수인계 (handover)
 
 - 갱신: 2026-09-18
-- 상태: **상용 출시(Steam 1차) 목표로 Phase 1 진행 중** — 스태미너(연타 결함 수정)·접근성 2건·게임패드·타이틀 메뉴/옵션/보스 선택까지 완료·푸시. 남은 것은 아레나 3종·보스별 음악 변주·하드 모드. 계획서 `docs/superpowers/plans/2026-09-18-riposte-phase1-play.md`, 근거 `docs/research/2026-09-18-reference-games.md`.
+- 상태: **상용 출시(Steam 1차) 목표 — Phase 1 플레이 측면 완료·푸시** (`1dabcbf`, Pages 배포 확인 `PAGES OK`).
+  - 완료: 스태미너(연타 결함 수정) · 적 텔 X자 분리 + `?flash=0` · 게임패드 · 타이틀 메뉴/옵션/보스 선택/접근성 슬라이더 · 아레나 3종 + 보스별 드론 변주 + RIPOSTE+ 하드 모드.
+  - 계획서 `docs/superpowers/plans/2026-09-18-riposte-phase1-play.md`(그룹별 커밋 표), 근거 `docs/research/2026-09-18-reference-games.md`.
+  - **다음은 전부 사용자 결정·외부 자원 대기**: 타겟 스토어·가격대, 무료 웹판 정책, 영어 스토리 자막(번역), Electron 래퍼 + Steamworks(계정·앱 ID·$100), Steam 페이지·캡슐·트레일러, 사람 플레이테스트 완주 시간(가격 확정의 전제). 정체성 문구("게임잼 출품작" — CLAUDE.md 3행·스펙 §0·README Credits)는 위가 정해지면 일괄 갱신.
 - 이전 상태: 챕터 2 보스 4종 차별화 재설계 완료(커밋 8ad2f17, 밸런스 확정) + 트라이 수 표시 완료(커밋 30f18c8). GitHub `kkp8121-rgb/riposte` (Public) → Pages `https://kkp8121-rgb.github.io/riposte/`
 - 설계 SSoT: `docs/superpowers/specs/2026-09-09-riposte-design.md` · 스토리 대사 SSoT: `docs/superpowers/specs/2026-09-17-riposte-story-bible.md` · 상수 SSoT: `js/config.js` + `js/bosses/*.js`
 

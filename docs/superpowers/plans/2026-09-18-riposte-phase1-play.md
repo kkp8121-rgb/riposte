@@ -36,11 +36,13 @@
 
 | 그룹 | 내용 | 소유 파일 | 상태 |
 |---|---|---|---|
-| **0** | 스태미너 (엘든링식: 행동 소모·서서히 회복·퍼펙트 환급) | `entities.js` `game.js` `ui.js` `audio.js` `config.js` | 진행 중 |
-| **1** | 적 텔 모양 차별화 + `?flash=0` 옵트아웃 | `fx.js` `render.js` `config.js` `main.js` | 진행 중(코드) |
-| **2** | 게임패드 입력 | `input.js` `main.js` | 대기 |
-| **3** | 옵션 메뉴 + 접근성 슬라이더 + 키 리바인드 + 보스 선택 | `ui.js` `game.js` `main.js` `config.js` | 대기 |
-| **4** | 아레나 3종 + 보스별 음악 변주 + 하드 모드 | `render.js` `audio.js` `bosses/*.js` `config.js` | 대기 |
+| **0** | 스태미너 (엘든링식: 행동 소모·서서히 회복·판정별 환급) | `entities.js` `game.js` `ui.js` `audio.js` `config.js` | ✅ 완료 `7322911` |
+| **1** | 적 텔 모양 차별화 + `?flash=0` 옵트아웃 | `fx.js` `render.js` `config.js` `main.js` | ✅ 완료 `7322911` |
+| **2** | 게임패드 입력 | `input.js` `main.js` `config.js` | ✅ 완료 `b02dba8` |
+| **3** | 옵션 메뉴 + 접근성 슬라이더 + 키 리바인드 + 보스 선택 | `ui.js` `game.js` `main.js` `config.js` | ✅ 완료 `82b4605` |
+| **4** | 아레나 3종 + 보스별 음악 변주 + 하드 모드 | `render.js` `audio.js` `bosses/*.js` `config.js` | ✅ 완료 `1dabcbf` |
+
+> **Phase 1 플레이 측면 완료 (2026-09-18).** 전 그룹이 게이트를 통과해 푸시됐고 Pages 배포 확인(`tools/check-pages.mjs` → PAGES OK). 남은 Phase 1 항목은 전부 사용자 결정·외부 자원이 필요해 아래 「범위 밖」으로 넘어간다.
 
 ### 그룹 0 — 스태미너 (버그 수정)
 - **왜**: 패리 연타로 보스가 깨지는 결함. 실측 — K+J 연타 24판 중 9승(SERAPH 3/3, BASTION 3/3). 근본 원인은 판정 창 0.34s < 재입력 잠금 0.40s라 헛침의 실질 무방비가 0.06s뿐이고, 블록도 "성공"으로 잠금이 0.10s로 줄어 연타가 끊기지 않는 것.
