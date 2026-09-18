@@ -29,6 +29,12 @@
       SEED: 20260909,          // 배치 생성 시드 — 고정이라 매 실행 같은 그림이다
       STAR_Y: [10, 20],        // 별 y 범위 (아래값은 HORIZON_Y 에서 뺀다)
       STAR_SIZE: [0.6, 1.6],
+      /* 지속 구역(zone.linger)이 깔려도 플레이어가 갇히지 않기 위한 안전 지대 폭 하한.
+         근거: 대시 한 번이 190px(C.DASH.DISTANCE)이므로, 남는 맨바닥이 그보다 좁으면
+         대시로 빠져나갈 수 없어 구역에 끼어 죽는다. 190 에 여유 10 을 더해 200 으로 둔다.
+         아레나 폭은 840px(MIN_X 60 ~ MAX_X 900)이므로 동시에 살아 있는 구역 폭의 합은
+         840 - 200 = 640px 를 넘지 않아야 한다. */
+      SAFE_MIN_W: 200,
       /* hall — 현행 값 그대로 (기존 스크린샷이 깨지지 않게) */
       hall: {
         bg: ['#070910', '#0b0d14', '#0e1220'], bgMid: 0.62,
@@ -55,6 +61,16 @@
         farStep: 84, farJitter: 12, farW: [42, 70], farH: [200, 300], farPar: 0.08,
         nearStep: 150, nearJitter: 16, nearW: [62, 104], nearH: [280, 400], nearPar: 0.20,
         stars: 34, starAlpha: [0.05, 0.20]
+      },
+      /* wall — 챕터 3 "THE WALL". gate 를 본뜨되 더 차갑고(보라 → 청회색) 기둥이 벽처럼 촘촘하다.
+         배경 밝기는 gate 이하로 유지한다 — 금(#ffd166)/적(#ff3b3b) 텔 대비가 살아야 한다. */
+      wall: {
+        bg: ['#05080d', '#080c13', '#0c1119'], bgMid: 0.68,
+        floor: '#161d26', line: '#222c38', reflect: 'rgba(143,227,200,0.05)',
+        farColor: '#0f151c', farAlpha: 0.95, nearColor: '#141c24', nearAlpha: 1,
+        farStep: 62, farJitter: 8, farW: [46, 66], farH: [230, 320], farPar: 0.07,
+        nearStep: 112, nearJitter: 10, nearW: [70, 108], nearH: [310, 420], nearPar: 0.18,
+        stars: 22, starAlpha: [0.04, 0.16]
       }
     },
 
@@ -399,7 +415,8 @@
       STEAL_GAP_MS: 60,
       /* Phase 2 심박 킥 BPM (보스별) */
       BPM: { vesper: 96, seraph: 104, graven: 84, mirror: 116,
-             lantern: 100, chorus: 120, bastion: 88, avarice: 124 }
+             lantern: 100, chorus: 120, bastion: 88, avarice: 124,
+             sentinel: 80 }
     },
 
     /* ---- 저장 ------------------------------------------------------------ */
@@ -488,7 +505,9 @@
     /* ---- 챕터 (스펙 §3 공통) — 진행은 BOSSES 순서, 경계만 여기서 정한다 ------- */
     CHAPTERS: [
       { id: 1, name: 'CHAPTER I',  subtitle: 'THE HAND', bosses: ['vesper', 'seraph', 'graven', 'mirror'] },
-      { id: 2, name: 'CHAPTER II', subtitle: 'THE DEBT', bosses: ['lantern', 'chorus', 'bastion', 'avarice'] }
+      { id: 2, name: 'CHAPTER II', subtitle: 'THE DEBT', bosses: ['lantern', 'chorus', 'bastion', 'avarice'] },
+      /* tempest·hollow·adamant 는 아직 파일이 없다 — chapterOf 는 key 로 찾으므로 빈 자리는 무해하다 */
+      { id: 3, name: 'CHAPTER III', subtitle: 'THE WALL', bosses: ['sentinel', 'tempest', 'hollow', 'adamant'] }
     ],
 
     /* ---- 스토리 (스펙 §10) ---------------------------------------------- */

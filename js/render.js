@@ -24,7 +24,9 @@
     lantern: { h: 82,  w: 13, head: 0.080, hood: true,  weapon: 'dagger', thick: 6 },
     twin:    { h: 84,  w: 12, head: 0.078, hood: false, weapon: 'twin',   thick: 5 },
     shield:  { h: 96,  w: 30, head: 0.088, hood: false, weapon: 'shield', thick: 13 },
-    taker:   { h: 90,  w: 17, head: 0.084, hood: true,  weapon: 'none',   thick: 8 }
+    taker:   { h: 90,  w: 17, head: 0.084, hood: true,  weapon: 'none',   thick: 8 },
+    /* 챕터 3 (스펙 §2.1) — 움직이지 않는 파수꾼. 키가 크고 창이 길다 */
+    spear:   { h: 104, w: 18, head: 0.075, hood: false, weapon: 'spear',  thick: 9 }
   };
 
   /* 포즈별 무기팔 각도(rad). 0 = 정면(facing 방향), 음수 = 위. */
