@@ -770,7 +770,7 @@
 
   /* ---- 대화 장면 (스펙 §10) -----------------------------------------------
    * 아레나 위에 플레이어(좌)와 보스(우) 실루엣을 STORY.SCALE 배로 세운다.
-   * 보스 알파는 game.story.bossAlpha (AVARICE 정답 반응에서 0 으로 내려간다).
+   * 보스 알파는 game.story.bossAlpha (ADAMANT after 마지막 줄에서 0 으로 내려간다).
    * ---------------------------------------------------------------------- */
   Render.drawStoryScene = function (ctx, game) {
     var b = game.boss;

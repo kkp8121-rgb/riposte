@@ -754,7 +754,7 @@
       { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 
-  /** 엔딩 — 태그라인 3박 + 8보스 결과 + 종합 랭크 + 손패가 한 칸씩 비어 간다 (스펙 §10) */
+  /** 엔딩 — 태그라인 4박 + 12보스 결과 + 종합 랭크 + 손패가 한 칸씩 비어 간다 (스펙 §10) */
   UI.drawEnding = function (ctx, game) {
     dim(ctx, 0.72);
     var t = game.sceneT;
@@ -765,7 +765,7 @@
       var last = li === E.LINES.length - 1;
       text(ctx, E.LINES[li], V.W / 2, E.LINE_Y[li],
         { size: last ? 26 : 20, weight: '800', color: last ? C.COLORS.GOLD : C.COLORS.WHITE, spacing: 6,
-          glow: last ? C.COLORS.GOLD : false, blur: 18, alpha: clamp((t - li * 0.5) / 0.4, 0, 1) });
+          glow: last ? C.COLORS.GOLD : false, blur: 18, alpha: clamp((t - E.LINE_AT[li]) / 0.4, 0, 1) });
     }
 
     var y = E.ROWS_Y;

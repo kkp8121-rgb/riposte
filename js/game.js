@@ -610,7 +610,7 @@
     for (var i = 0; i < s[beat].length; i++) {
       var raw = s[beat][i];
       var t = (typeof raw === 'string') ? raw : raw.text;
-      lines.push({ text: t, hideSpeaker: !!(raw && raw.hideSpeaker), silent: t === '……' });
+      lines.push({ text: t, hideSpeaker: !!(raw && raw.hideSpeaker), silent: t === '……', dissolve: !!(raw && raw.dissolve) });
     }
     this.story = {
       beat: beat, lines: lines, index: 0, shown: 0,
@@ -668,10 +668,16 @@
     var line = st.lines[st.index];
     var len = line.text.length;
     st.shown = line.silent ? len : Math.min(len, st.shown + S.CPS * dt);
+    // 소멸 줄(ADAMANT after 마지막 줄) — 절반 찍힌 뒤 실루엣이 사라진다. reply 의 dissolve 와 같은 규칙
+    if (line.dissolve && st.shown >= len * 0.5) {
+      st.dissolveT += dt;
+      st.bossAlpha = 1 - clamp(st.dissolveT / S.DISSOLVE, 0, 1);
+    }
     if (Input.consume('parry') || Input.consume('riposte') || Input.consume('dash')) st.shown = len;
     if (Input.consume('confirm')) {
       RAudio.ui(true);
       if (st.shown < len) { st.shown = len; return; }
+      if (line.dissolve && st.bossAlpha > 0) { st.bossAlpha = 0; return; }
       st.index++;
       st.shown = 0;
       if (st.index >= st.lines.length) {
