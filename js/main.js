@@ -94,6 +94,7 @@
   /* ---- 루프 -------------------------------------------------------------- */
   function frame(now) {
     global.requestAnimationFrame(frame);
+    Input.pollGamepad();
     if (!lastT) lastT = now;
     var dt = (now - lastT) / 1000;
     lastT = now;

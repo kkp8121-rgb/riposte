@@ -4,7 +4,7 @@
 
 **▶ Play in your browser: https://kkp8121-rgb.github.io/riposte/**
 
-A keyboard-only, side-view 1:1 boss-rush parry duel. You start with **zero attacks**. Every
+A side-view 1:1 boss-rush parry duel for keyboard or gamepad. You start with **zero attacks**. Every
 weapon in your hands was taken out of someone else's — a perfect parry doesn't just deflect
 a strike, it *steals* it. Eight bosses across two chapters: a mirror waits at the end of
 chapter one to give everything back, and a taker waits at the end of chapter two to take it
@@ -20,16 +20,19 @@ all first.
 
 ## Controls
 
-| Key | Action |
-|---|---|
-| `←` `→` / `A` `D` | Move |
-| **`K`** / `Z` | **Parry** — answer the **gold** flash |
-| **`J`** / `X` | **Riposte** — spend a stolen attack |
-| **`Space`** / `L` / `C` / `Shift` | **Dash** — i-frames; the only answer to **red** |
-| `Enter` | Confirm / start / next |
-| `R` | Retry current boss |
-| `M` | Mute |
-| `Esc` | Back to title |
+| Key | Gamepad | Action |
+|---|---|---|
+| `←` `→` / `A` `D` | Left stick / D-pad | Move |
+| **`K`** / `Z` | **`X` / `□`** | **Parry** — answer the **gold** flash |
+| **`J`** / `X` | **`Y` / `△`** | **Riposte** — spend a stolen attack |
+| **`Space`** / `L` / `C` / `Shift` | **`B` / `○`, `RB`, `RT`** | **Dash** — i-frames; the only answer to **red** |
+| `Enter` | `A` / `×` | Confirm / start / next |
+| `R` | `Select` | Retry current boss |
+| `M` | — | Mute |
+| `Esc` | `Start` | Back to title |
+
+A gamepad is picked up as soon as you press a button on it, and keyboard keeps working at the
+same time — nothing is polled until a pad actually connects.
 
 Two colors, two verbs. **Gold = parry. Red = dash.** That's the whole language — and the two
 tells differ in *shape* as well as colour (gold bursts in eight rays, red in a thick X), so the
@@ -141,6 +144,7 @@ node tests/state.mjs        # boss definition tables stay byte-identical across 
 node tests/audio-smoke.mjs  # one keypress -> AudioContext running; every sound path callable
 node tests/story.mjs        # dialogue table rules: line/length limits, choice shape
 node tests/mash.mjs --all --riposte --expect-lose   # a bot that only mashes must lose every fight
+node tests/pad.mjs          # gamepad mapping via a mocked pad: buttons, stick, no stuck keys
 node tools/boss-overlap.mjs --check  # boss differentiation gate: no undeclared pattern/attack overlap
 node tools/shots.mjs        # re-capture the README screenshots into docs/media/
 ```

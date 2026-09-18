@@ -391,6 +391,22 @@
       ROWS_Y: 152,
       ROW_H: 22,
       SLOTS_Y: 438
+    },
+
+    /* ---- 게임패드 (Phase1 그룹2 — 동사는 늘리지 않는다, KEYMAP 과 같은 액션 이름만) ---- */
+    PAD: {
+      DEADZONE: 0.35,        // 좌스틱 X축 데드존
+      AXIS_X: 0,              // Standard Gamepad 좌스틱 X축 인덱스
+      DPAD_LEFT: 14,           // Standard Gamepad D-Pad 좌
+      DPAD_RIGHT: 15,          // Standard Gamepad D-Pad 우
+      BUTTONS: {               // 액션 -> 버튼 인덱스 목록 (KEYMAP 과 동일한 액션 이름만 사용)
+        confirm: [0],           // A / ×
+        dash:    [1, 5, 7],     // B / ○ + RB·RT (소울라이크 관행 — 회피 = 오른쪽 숄더 계열)
+        parry:   [2],           // X / □
+        riposte: [3],           // Y / △
+        restart: [8],           // Select / Share
+        back:    [9]            // Start
+      }
     }
   };
 
