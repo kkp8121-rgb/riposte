@@ -18,7 +18,8 @@ page.on('console', m => { if (m.type() === 'error') problems.push(`[console.erro
 page.on('response', r => { if (r.status() >= 400) problems.push(`[http ${r.status()}] ${r.url()}`); });
 page.on('requestfailed', r => problems.push(`[requestfailed] ${r.url()} ${r.failure()?.errorText}`));
 
-const resp = await page.goto(URL_BASE + '?mute=1&seed=3', { waitUntil: 'load', timeout: 60000 });
+// story=0: 2026-09-17 이후 빌드는 TITLE→STORY→FIGHT 라 대화를 건너뛰어야 Enter 한 번에 FIGHT 로 간다
+const resp = await page.goto(URL_BASE + '?mute=1&seed=3&story=0', { waitUntil: 'load', timeout: 60000 });
 console.log('HTTP', resp?.status(), resp?.url());
 await page.waitForTimeout(1500);
 await page.screenshot({ path: path.join(OUT, 'pages-title.png') });
@@ -33,6 +34,14 @@ if (!st || st.scene !== 'FIGHT') problems.push(`expected FIGHT scene, got ${st?.
 await page.screenshot({ path: path.join(OUT, 'pages-fight.png') });
 const scripts = await page.evaluate(() => [...document.scripts].map(s => s.src).filter(Boolean));
 console.log('scripts loaded:', scripts.length);
+// 신선도 검사 — 배포본의 보스 수가 로컬 CHAPTERS 총합과 같아야 한다.
+// 2026-09-19: Pages 가 9/16 빌드를 계속 서비스하는데 이 도구는 "사이트가 뜬다"만 봐서 하루 종일
+// 못 잡았다. 보스 수가 다르면 낡은 빌드다.
+const liveBosses = await page.evaluate(() => window.BOSSES ? window.BOSSES.length : -1);
+const localBosses = (await import('node:fs')).readFileSync(path.join(HERE, '..', 'index.html'), 'utf8')
+  .match(/src="js\/bosses\/[^"]+"/g)?.length ?? -1;
+console.log('bosses live/local:', liveBosses, '/', localBosses);
+if (liveBosses !== localBosses) problems.push(`stale deploy: live has ${liveBosses} bosses, local has ${localBosses}`);
 await browser.close();
 if (problems.length) { console.log('PROBLEMS:\n' + problems.join('\n')); process.exit(1); }
 console.log('PAGES OK');

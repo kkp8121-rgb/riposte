@@ -4,7 +4,8 @@
 - 상태: **챕터 3 완료(12스테이지) — 브랜치 `feat/chapter3`, Task 9(전 게이트·문서) 통과 → `main` 머지·Pages 배포 대기.**
   - 완료: 보스 9~12(SENTINEL·TEMPEST·HOLLOW·ADAMANT) + 엔진 훅(`Zone.linger`·`darkness`·`wall`·`counterOnly`) + 아레나 `wall`·`void` + 엔딩 12스테이지 뒤로 이동(8 뒤는 두 번째 INTERLUDE) + 엔딩 태그라인 4박 + dev 모드(타이틀 `THIEF` 커맨드·`?dev=1`·F1~F4) + 대사 8장면.
   - 설계 `docs/superpowers/specs/2026-09-19-riposte-chapter3-design.md` · 계획 `docs/superpowers/plans/2026-09-19-riposte-chapter3.md` · 실측 `docs/qa/balance-2026-09-19.md` · 확정 수치 스펙 §3.9~3.12 · 태스크 원장(판정 21건·검수 결과) `docs/qa/chapter3-sdd-ledger-2026-09-19.md`.
-  - 🔴 머지 후 `node tools/check-pages.mjs` 재실행 필수 — 이 도구는 main 배포본을 본다(브랜치에서는 챕터 2 상태를 본다).
+  - ✅ main 머지·푸시 완료(`8ef09be`), Pages 배포 확인 `PAGES OK · bosses live/local: 12 / 12`.
+  - 🔴 **배포 사고 발견·수정(2026-09-19)**: Pages 설정이 `build_type=workflow` 인데 `.github/workflows/` 가 없어 **9월 16일 빌드(`851cf60`)가 그대로 서비스되고 있었다.** 9/18~19 에 main 에 푸시한 40커밋(스태미너·패드·옵션·아레나·챕터 3)이 전부 미배포였다. `tools/check-pages.mjs` 는 "사이트가 뜨고 Enter 로 FIGHT 진입"만 봐서 하루 종일 PASS 를 냈다(9/16 빌드도 8보스·대화 없음이라 조건 충족). 조치: `.github/workflows/pages.yml`(actions/deploy-pages) 추가 → 배포 재개. 도구에 **신선도 검사**(배포본 `BOSSES.length` = 로컬 `index.html` 보스 스크립트 수) 추가 — 다르면 `stale deploy` 로 FAIL.
 - 이전 상태(2026-09-18): **상용 출시(Steam 1차) 목표 — Phase 1 플레이 측면 완료·푸시** (`1dabcbf`, Pages 배포 확인 `PAGES OK`).
   - 완료: 스태미너(연타 결함 수정) · 적 텔 X자 분리 + `?flash=0` · 게임패드 · 타이틀 메뉴/옵션/보스 선택/접근성 슬라이더 · 아레나 3종 + 보스별 드론 변주 + RIPOSTE+ 하드 모드.
   - 계획서 `docs/superpowers/plans/2026-09-18-riposte-phase1-play.md`(그룹별 커밋 표), 근거 `docs/research/2026-09-18-reference-games.md`.
