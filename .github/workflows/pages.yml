@@ -1,0 +1,29 @@
+# GitHub Pages 배포 — main 에 푸시될 때마다 저장소 루트를 그대로 올린다.
+# 빌드 단계가 없다(바닐라 JS, classic <script>). 2026-09-19: Pages 소스가 "GitHub Actions" 로
+# 설정돼 있는데 워크플로 파일이 없어 9월 16일 빌드가 계속 서비스되던 것을 발견해 추가했다.
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
