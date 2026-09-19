@@ -3,7 +3,7 @@
 - 갱신: 2026-09-19
 - 상태: **챕터 3 완료(12스테이지) — 브랜치 `feat/chapter3`, Task 9(전 게이트·문서) 통과 → `main` 머지·Pages 배포 대기.**
   - 완료: 보스 9~12(SENTINEL·TEMPEST·HOLLOW·ADAMANT) + 엔진 훅(`Zone.linger`·`darkness`·`wall`·`counterOnly`) + 아레나 `wall`·`void` + 엔딩 12스테이지 뒤로 이동(8 뒤는 두 번째 INTERLUDE) + 엔딩 태그라인 4박 + dev 모드(타이틀 `THIEF` 커맨드·`?dev=1`·F1~F4) + 대사 8장면.
-  - 설계 `docs/superpowers/specs/2026-09-19-riposte-chapter3-design.md` · 계획 `docs/superpowers/plans/2026-09-19-riposte-chapter3.md` · 실측 `docs/qa/balance-2026-09-19.md` · 확정 수치 스펙 §3.9~3.12 · 태스크 기록 `.superpowers/sdd/2026-09-19-riposte-chapter3/`.
+  - 설계 `docs/superpowers/specs/2026-09-19-riposte-chapter3-design.md` · 계획 `docs/superpowers/plans/2026-09-19-riposte-chapter3.md` · 실측 `docs/qa/balance-2026-09-19.md` · 확정 수치 스펙 §3.9~3.12 · 태스크 원장(판정 21건·검수 결과) `docs/qa/chapter3-sdd-ledger-2026-09-19.md`.
   - 🔴 머지 후 `node tools/check-pages.mjs` 재실행 필수 — 이 도구는 main 배포본을 본다(브랜치에서는 챕터 2 상태를 본다).
 - 이전 상태(2026-09-18): **상용 출시(Steam 1차) 목표 — Phase 1 플레이 측면 완료·푸시** (`1dabcbf`, Pages 배포 확인 `PAGES OK`).
   - 완료: 스태미너(연타 결함 수정) · 적 텔 X자 분리 + `?flash=0` · 게임패드 · 타이틀 메뉴/옵션/보스 선택/접근성 슬라이더 · 아레나 3종 + 보스별 드론 변주 + RIPOSTE+ 하드 모드.
