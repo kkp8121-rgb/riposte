@@ -459,7 +459,7 @@
     // 연사(triple) — 보스 테이블의 volley 표를 그대로 쓴다
     if (def.volley) {
       var iv = this.volleyInterval(def);
-      for (var i = 1; i < def.volley.count; i++) g.scheduleProjectile(iv * i, make, true);
+      for (var i = 1; i < def.volley.count; i++) g.scheduleProjectile(iv * i, make, true, this.attack);
     }
     RAudio.swing();
   };
@@ -611,6 +611,7 @@
       for (var j = 0; j < a.spawns.length; j++) if (a.spawns[j].pending) a.spawns[j].dead = true;   // 아직 살아나지 않은 빔·기둥
       a.spawns.length = 0;
     }
+    this.game.cancelScheduled(a);                  // 연사 후속탄·협공 뒤 탄 — 끊긴 공격이 예약한 발사 (Task 15.1)
   };
 
   /** 경직. counter=true 면 경직 동안 모든 리포스트가 카운터 판정. */

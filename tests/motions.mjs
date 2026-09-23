@@ -570,6 +570,49 @@ check('메아리 — 잔상 사거리 밖이면 무사', remote.echoMiss);
 check('메아리 — 원 공격이 끊기면 없다', remote.echoCancel);
 check('메아리 — 연타 공격도 잔상은 하나', remote.echoVolleyOnce);
 
+/* ---- 끊긴 공격의 예약 발사 취소 (Task 15.1) ------------------------------- */
+const cancelShots = await page.evaluate(() => {
+  const g = window.__RIPOSTE.game, T = window.__T;
+  const out = {};
+  const TRI = { id: 'tri', label: 'TRI', tell: 'gold', kind: 'projectile', windup: 0.4, active: 0.06, recover: 0.6,
+                proj: { speed: 300, r: 8, y: 50, damage: 1, reflectDamage: 10, shape: 'arrow' },
+                volley: { count: 3, interval: 0.2 }, steal: null };
+  const countShots = (interrupt) => {
+    T.setup({ tri: TRI }, 200, 700);
+    g.player.iframes = 99;
+    let spawned = 0;
+    const orig = g.spawnProjectile;
+    g.spawnProjectile = function (p) { if (p.owner === 'boss') spawned++; return orig.call(this, p); };
+    T.attack('tri');
+    T.run(0.45);                                   // 첫 발만 나간 뒤
+    if (interrupt) interrupt();
+    T.run(1.0);
+    g.spawnProjectile = orig;
+    return spawned;
+  };
+  out.none = countShots(null);
+  out.stagger = countShots(() => g.boss.stagger(1.0, false));
+  out.phase2 = countShots(() => g.boss.enterPhase2());
+
+  const SQUALL = { id: 'squall', label: 'SQUALL', tell: 'gold', kind: 'pincer', windup: 0.6, active: 0.06, recover: 0.6,
+                   proj: { speed: 420, r: 12, y: 50, damage: 1, reflectDamage: 14, shape: 'arrow' },
+                   pincer: { backDist: 260, backSpeed: 360, backTell: 'red', gap: 0.45, y: 30, r: 11, shape: 'bolt' },
+                   steal: null };
+  T.setup({ squall: SQUALL }, 420, 760);
+  g.player.iframes = 99;
+  T.attack('squall');
+  T.run(0.7);                                      // 앞 탄 발사 직후, 뒤 탄은 아직 예약 중
+  g.boss.stagger(1.0, false);
+  let rear = false;
+  T.run(2.0, (gg) => { if (gg.projectiles.some((p) => p.fromBehind)) rear = true; });
+  out.pincerCancel = !rear;
+  return out;
+});
+check('예약 발사 — 끊기지 않으면 연사 3발 그대로', cancelShots.none === 3, `(${cancelShots.none})`);
+check('예약 발사 — 경직되면 남은 연사는 나가지 않는다', cancelShots.stagger === 1, `(${cancelShots.stagger})`);
+check('예약 발사 — 2페이즈 포효로 끊겨도 나가지 않는다', cancelShots.phase2 === 1, `(${cancelShots.phase2})`);
+check('예약 발사 — 경직되면 협공 뒤 탄도 나가지 않는다', cancelShots.pincerCancel);
+
 /* ---- 새 동작 검사는 이 줄 위에 추가한다 ------------------------------------ */
 
 check('pageerror 0', errors.length === 0, errors.slice(0, 3).join(' | '));

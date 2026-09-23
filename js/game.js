@@ -1080,8 +1080,17 @@
 
   Game.prototype.spawnProjectile = function (p) { this.projectiles.push(p); };
   Game.prototype.spawnZone = function (z) { this.zones.push(z); };
-  Game.prototype.scheduleProjectile = function (delay, make, cue) {
-    this.pendingShots.push({ t: delay, make: make, cue: !!cue });
+  /** src = 예약한 공격 인스턴스(선택). 그 공격이 끊기면 cancelScheduled(src) 로 같이 취소된다 */
+  Game.prototype.scheduleProjectile = function (delay, make, cue, src) {
+    this.pendingShots.push({ t: delay, make: make, cue: !!cue, src: src || null });
+  };
+
+  /** 끊긴 공격이 예약해 둔 발사를 지운다 — "보스를 끊었는데 탄이 그대로 나온다" 를 막는다 (Task 15.1) */
+  Game.prototype.cancelScheduled = function (src) {
+    if (!src) return;
+    for (var i = this.pendingShots.length - 1; i >= 0; i--) {
+      if (this.pendingShots[i].src === src) this.pendingShots.splice(i, 1);
+    }
   };
 
   Game.prototype.spawnBeam = function (e) { this.beams.push(e); };

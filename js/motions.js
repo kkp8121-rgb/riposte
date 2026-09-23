@@ -146,7 +146,7 @@
       var spawnX = boss.x + dir * (B.HALF_W + 10);
       var eta = Math.max(0, Math.abs(p.x - spawnX) - catchD) / def.proj.speed + lastFront;
       var backTravel = Math.max(0, pc.backDist - catchD) / pc.backSpeed;
-      g.scheduleProjectile(Math.max(0, eta + pc.gap - backTravel), function () { return backShot(boss, def, g); }, false);
+      g.scheduleProjectile(Math.max(0, eta + pc.gap - backTravel), function () { return backShot(boss, def, g); }, false, a);
     }
   };
 
