@@ -1,8 +1,8 @@
 /* =============================================================================
  * RIPOSTE — js/bosses/bastion.js
- * BASTION — 수문장 (챕터 2, 아머 + 되받아치기 + 문). 스펙 §3.7 (2026-09-18 재설계)
- * gate 는 보스 앞에 고정되는 적색 존(zone.anchor:'boss') — 문이 닫히면 원거리만 통한다.
- * 되받아치기(boss.js tryDeflect)가 전투의 축. 돌진은 GRAVEN 과 겹쳐 없앴다.
+ * BASTION — 수문장 (챕터 2, 아머 + 되받아치기 + 문). 스펙 §3.7 · 2026-09-23 재설계 §2.4
+ * gate 는 플레이어 등 뒤에 서는 기둥 — 물러설 곳이 막혀 아머 보스를 정면으로 받아낸다.
+ * cage(P2)는 등 뒤 + 사이에 둘 — 투사체만 오가는 방에서 되받아치기 랠리.
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -34,17 +34,17 @@
         proj: { speed: 380, r: 13, y: 18, damage: 1, reflectDamage: 20, shape: 'wave' },
         steal: { id: 'VOLLEY', label: 'VOLLEY', kind: 'shot', damage: 20 }
       },
-      gate: {                                      // 문 — 보스 앞 고정 존, 대시로만 통과
-        id: 'gate', label: 'GATE', tell: 'red', kind: 'zone',
-        windup: 1.00, active: 0.10, recover: 0.60,
-        zone: { w: 220, damage: 1, anchor: 'boss', offset: 140 },
+      gate: {                                      // 기둥 — 등 뒤 150px, 4초 (§3.6)
+        id: 'gate', label: 'GATE', tell: 'red', kind: 'pillar',
+        windup: 0.90, active: 0.10, recover: 0.50,
+        pillar: { w: 34, up: 4.0, dist: 150, count: 1, damage: 1 },
         steal: null
       },
-      ward: {
-        id: 'ward', label: 'WARD', tell: 'gold', kind: 'melee',
-        windup: 0.80, active: 0.12, recover: 0.60,
-        reach: 170, approach: 60, damage: 1, shockwaveFx: true, swing: 'slam',
-        steal: { id: 'WARD', label: 'WARD', kind: 'slam', damage: 30 }
+      cage: {                                      // P2 — 등 뒤 + 플레이어·보스 사이. 칸이 좁으면 서지 않는다
+        id: 'cage', label: 'CAGE', tell: 'red', kind: 'pillar',
+        windup: 0.95, active: 0.10, recover: 0.55,
+        pillar: { w: 34, up: 3.5, dist: 150, count: 2, damage: 1 },
+        steal: null
       }
     },
 
@@ -53,12 +53,12 @@
         { name: 'salvo',           steps: [{ atk: 'salvo' }] },
         { name: 'gate-salvo',      steps: [{ atk: 'gate' }, { atk: 'salvo' }] },
         { name: 'far-salvo-salvo', steps: [{ move: 'far' }, { atk: 'salvo' }, { wait: 0.45 }, { atk: 'salvo' }] },
-        { name: 'ward',            steps: [{ atk: 'ward' }] }
+        { name: 'gate-wait-salvo', steps: [{ atk: 'gate' }, { wait: 0.5 }, { atk: 'salvo' }] }
       ],
       2: [
-        { name: 'gate-rally',      steps: [{ atk: 'gate' }, { atk: 'salvo' }, { wait: 0.4 }, { atk: 'salvo' }] },
-        { name: 'far-gate',        steps: [{ move: 'far' }, { atk: 'gate' }] },
-        { name: 'ward-gate',       steps: [{ atk: 'ward' }, { atk: 'gate' }] },
+        { name: 'cage-rally',      steps: [{ atk: 'cage' }, { atk: 'salvo' }, { wait: 0.4 }, { atk: 'salvo' }] },
+        { name: 'gate-salvo-salvo', steps: [{ atk: 'gate' }, { atk: 'salvo' }, { atk: 'salvo' }] },
+        { name: 'far-gate-salvo',  steps: [{ move: 'far' }, { atk: 'gate' }, { atk: 'salvo' }] },
         { name: 'salvo-far-salvo', steps: [{ atk: 'salvo' }, { move: 'far' }, { atk: 'salvo' }] }
       ]
     }
