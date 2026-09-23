@@ -661,6 +661,34 @@ const koPillar = await page.evaluate(() => {
 });
 check('기둥 — KO 중에는 조용히 선다', koPillar.hits === 0 && koPillar.x === 250, JSON.stringify(koPillar));
 
+/* ---- 협공 — 벽을 등져도 뒤 탄 시차는 일정 (fun-QA 사이드파인딩 1) ---------------
+ * backShot 은 뒤 탄 자리를 아레나 안쪽으로 clamp 한다 — 플레이어가 등 뒤 벽에 가까우면
+ * 실제 생성 거리가 pincer.backDist 보다 짧아진다. 속도를 고정한 채 두면 짧은 거리를
+ * 그대로 빨리 주파해 일찍 도착한다(앞→뒤 시차 gap 이 줄어든다). 이동 "시간"을 고정해야 한다. */
+const pincerWall = await page.evaluate(() => {
+  const g = window.__RIPOSTE.game, T = window.__T, C = window.CONFIG;
+  const SQUALL = { id: 'squall', label: 'SQUALL', tell: 'gold', kind: 'pincer', windup: 0.6, active: 0.06, recover: 0.6,
+                   proj: { speed: 420, r: 12, y: 50, damage: 1, reflectDamage: 14, shape: 'arrow' },
+                   pincer: { backDist: 260, backSpeed: 360, backTell: 'red', gap: 0.45, y: 30, r: 11, shape: 'bolt' },
+                   steal: { id: 'SQUALL', label: 'SQUALL', kind: 'shot', damage: 14 } };
+  // 플레이어가 왼쪽 벽을 등짐 — 등 뒤 여유 ~200 (PINCER_MIN_ROOM 160 + PAD 20 과 backDist 260 사이)
+  T.setup({ squall: SQUALL }, C.VIEW.MIN_X + 200, 760);
+  g.player.iframes = 99;
+  T.attack('squall');
+  let front = null, rear = null;
+  T.run(3.0, (gg) => {
+    const p = gg.player;
+    for (const pr of gg.projectiles) {
+      if (pr.owner !== 'boss') continue;
+      const d = Math.abs(pr.x - p.x);
+      if (pr.tell === 'gold' && !pr.fromBehind && front === null && d <= C.PARRY.PROJECTILE_CATCH) front = gg.time;
+      if (pr.fromBehind && rear === null && d <= C.PARRY.PROJECTILE_CATCH) rear = gg.time;
+    }
+  });
+  return front !== null && rear !== null ? +(rear - front).toFixed(3) : null;
+});
+check('협공 — 벽을 등져도 뒤 탄 시차는 일정', pincerWall !== null && Math.abs(pincerWall - 0.45) < 0.03, `(gap ${pincerWall})`);
+
 /* ---- 새 동작 검사는 이 줄 위에 추가한다 ------------------------------------ */
 
 check('pageerror 0', errors.length === 0, errors.slice(0, 3).join(' | '));

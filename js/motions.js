@@ -128,8 +128,14 @@
     var red = pc.backTell === 'red';
     FX.tellBurst(x, y, red ? C.COLORS.RED : C.COLORS.GOLD, red ? 'red' : 'gold');
     if (red) RAudio.tellRed(); else RAudio.tellGold();
+    // 벽을 등지면 생기는 자리가 backDist 보다 가깝다 — 속도를 그대로 두면 짧아진 거리를 그대로 빨리
+    // 주파해 일찍 도착한다(앞→뒤 gap 이 준다). 이동 "시간"을 backDist 기준과 같게 고정한다(부메랑 귀환과 같은 방식).
+    var catchD = C.PARRY.PROJECTILE_CATCH;
+    var nominalT = Math.max(0, pc.backDist - catchD) / pc.backSpeed;
+    var d = Math.abs(x - p.x);
+    var speed = nominalT > 0 ? Math.max(1, d - catchD) / nominalT : pc.backSpeed;
     return new Projectile({
-      x: x, y: y, vx: -side * pc.backSpeed, r: pc.r, tell: pc.backTell,
+      x: x, y: y, vx: -side * speed, r: pc.r, tell: pc.backTell,
       damage: pc.damage === undefined ? 1 : pc.damage, reflectDamage: pc.reflectDamage || 0, shape: pc.shape || 'bolt',
       skill: red ? null : (def.steal || null), label: def.label || def.id,
       owner: 'boss', fromBehind: true
