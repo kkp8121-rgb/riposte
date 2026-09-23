@@ -27,6 +27,11 @@
     return o;
   }
 
+  /** 새 공격 동작 표(js/motions.js). 기존 kind(melee·projectile·zone·charge)는 null — 기존 경로를 그대로 탄다 */
+  function motionOf(def) { return (def && global.MOTIONS && global.MOTIONS[def.kind]) || null; }
+  /** 근접 판정(접근·lunge·testMelee·궤적)을 쓰는 공격인가 — melee + 근접류 새 동작 */
+  function isMelee(def) { var M = motionOf(def); return def.kind === 'melee' || !!(M && M.melee); }
+
   /* =========================================================================
    * Boss
    * ====================================================================== */
@@ -247,8 +252,12 @@
       if (Math.abs(wall - this.x) < B.MIN_CHARGE_RUN) { this.nextStep(); return; }
     }
 
+    // 새 동작이 지금 설 수 없다고 하면(기둥 칸 폭·빔/협공 뒷공간 부족) 그 스텝을 건너뛴다 — 돌진 MIN_CHARGE_RUN 과 같은 규칙
+    var M = motionOf(def);
+    if (M && M.canBegin && !M.canBegin(this, def, this.game)) { this.nextStep(); return; }
+
     // 근접 공격이면 사거리 안으로 먼저 붙는다 (패턴이 헛치지 않도록)
-    if (def.kind === 'melee' && !opt._approached) {
+    if (isMelee(def) && !(M && M.noApproach) && !opt._approached) {
       var need = def.reach * B.APPROACH_RATIO + (def.approach || 0) * 0.5;
       if (this.dist() > need) {
         this.state = 'approach';
@@ -272,6 +281,7 @@
       second = windup;
     }
     var windupTotal = windup + hold + second;
+    if (M && M.extraWindup) windupTotal += M.extraWindup(def);   // 악보의 콜 — 배수가 걸리지 않는 시간
 
     var a = {
       id: id,
@@ -288,6 +298,7 @@
       lungeDone: 0,
       hasHit: false,
       zones: [],                    // 이 공격이 깐 존 — 취소되면 같이 사라져야 한다
+      spawns: [],                   // 새 동작이 깐 빔·기둥 — pending 이면 취소될 때 같이 사라진다
       hitsDone: 0,                  // 근접 연타(volley) — 끝난 타격 수
       damage: def.damage === undefined ? 1 : def.damage
     };
@@ -316,6 +327,7 @@
     }
 
     this.flash(def.tell);
+    if (M && M.begin) M.begin(this, a, this.game);
     if (this.def.onAttackStart) this.def.onAttackStart(this, a, this.game);
   };
 
@@ -346,6 +358,7 @@
     var a = this.attack;
     if (!a) { this.state = 'idle'; return; }
     var def = a.def;
+    var M = motionOf(def);
 
     if (a.stage === 'windup') {
       a.t -= dt;
@@ -356,8 +369,10 @@
         this.flash(def.tell);
       }
 
+      if (M && M.tick) M.tick(this, a, dt, this.game);
+
       // 근접 lunge — windup 마지막 구간에서 approach px 만큼 파고든다
-      if (def.kind === 'melee' && def.approach) {
+      if (isMelee(def) && def.approach) {
         var lungeSpan = Math.min(0.18, a.windupTotal * 0.35);
         if (a.t < lungeSpan) {
           var want = def.approach * (1 - Math.max(0, a.t) / lungeSpan);
@@ -379,10 +394,11 @@
     }
 
     if (a.stage === 'active') {
-      if (def.kind === 'melee' && !a.hasHit) this.testMelee(a);
+      if (isMelee(def) && !a.hasHit) this.testMelee(a);
       a.t -= dt;
       if (a.t <= 0) {
         a.hitsDone++;
+        if (M && M.activeEnd && M.activeEnd(this, a, this.game)) return;   // 악보 — 다음 타격을 자기가 정한다
         // 근접 연타(스펙 §3.6): recover 대신 짧은 windup 으로 되돌아가 새 플래시를 찍는다.
         // 각 타격이 예고되므로 전부 패리·훔침 가능하다 (텔 문법 §2.2 유지).
         if (def.kind === 'melee' && def.volley && a.hitsDone < def.volley.count) {
@@ -411,39 +427,57 @@
     }
   };
 
+  /** 이 공격의 투사체 하나 (정의의 proj 표). extra 의 필드를 덮어쓴다 — 부메랑·협공이 쓴다 */
+  Boss.prototype.newShot = function (def, dir, extra) {
+    var pj = def.proj;
+    var o = {
+      x: this.x + dir * (B.HALF_W + 10),
+      y: V.FLOOR_Y - (pj.y === undefined ? 48 : pj.y),
+      vx: dir * pj.speed,
+      r: pj.r || 8,
+      tell: def.tell,
+      damage: pj.damage === undefined ? 1 : pj.damage,
+      reflectDamage: pj.reflectDamage || 0,
+      shape: pj.shape || 'arrow',
+      skill: def.steal || null,
+      label: def.label || def.id,
+      owner: 'boss'
+    };
+    if (extra) for (var k in extra) if (extra.hasOwnProperty(k)) o[k] = extra[k];
+    return new Projectile(o);
+  };
+
+  /** 연사 간격 — 페이즈 2 값이 있으면 그것 */
+  Boss.prototype.volleyInterval = function (def) {
+    return (this.phase === 2 && def.volley.p2Interval !== undefined) ? def.volley.p2Interval : def.volley.interval;
+  };
+
+  /** 첫 발 + 연사(volley) 예약. make() 가 매 발 새 투사체를 만든다 */
+  Boss.prototype.fire = function (def, make) {
+    var g = this.game;
+    g.spawnProjectile(make());
+    // 연사(triple) — 보스 테이블의 volley 표를 그대로 쓴다
+    if (def.volley) {
+      var iv = this.volleyInterval(def);
+      for (var i = 1; i < def.volley.count; i++) g.scheduleProjectile(iv * i, make, true);
+    }
+    RAudio.swing();
+  };
+
   Boss.prototype.onActiveStart = function (a) {
     var def = a.def;
     var g = this.game;
 
+    var M = motionOf(def);
+    if (M) {
+      if (M.active) M.active(this, a, g);
+      if (M.melee) this.testMelee(a);
+      return;
+    }
+
     if (def.kind === 'projectile') {
-      var pj = def.proj;
-      var dir = this.dirToPlayer();
-      var self = this;
-      var make = function () {
-        return new Projectile({
-          x: self.x + dir * (B.HALF_W + 10),
-          y: V.FLOOR_Y - (pj.y === undefined ? 48 : pj.y),
-          vx: dir * pj.speed,
-          r: pj.r || 8,
-          tell: def.tell,
-          damage: pj.damage === undefined ? 1 : pj.damage,
-          reflectDamage: pj.reflectDamage || 0,
-          shape: pj.shape || 'arrow',
-          skill: def.steal || null,
-          label: def.label || def.id,
-          owner: 'boss'
-        });
-      };
-      g.spawnProjectile(make());
-      // 연사(triple) — 보스 테이블의 volley 표를 그대로 쓴다
-      if (def.volley) {
-        var iv = (this.phase === 2 && def.volley.p2Interval !== undefined)
-          ? def.volley.p2Interval : def.volley.interval;
-        for (var i = 1; i < def.volley.count; i++) {
-          g.scheduleProjectile(iv * i, make, true);
-        }
-      }
-      RAudio.swing();
+      var self = this, dir = this.dirToPlayer();
+      this.fire(def, function () { return self.newShot(def, dir); });
       return;
     }
 
@@ -572,6 +606,10 @@
       if (z && !z.struck) z.dead = true;   // 아직 떨어지지 않았으면 소멸
     }
     a.zones.length = 0;
+    if (a.spawns) {
+      for (var j = 0; j < a.spawns.length; j++) if (a.spawns[j].pending) a.spawns[j].dead = true;   // 아직 살아나지 않은 빔·기둥
+      a.spawns.length = 0;
+    }
   };
 
   /** 경직. counter=true 면 경직 동안 모든 리포스트가 카운터 판정. */
@@ -810,7 +848,11 @@
       };
     }
 
-    return { id: a.id, kind: a.def.kind, tell: a.tell, stage: a.stage, tRemain: tRemain, hitAt: a.hitAt };
+    var st = { id: a.id, kind: a.def.kind, tell: a.tell, stage: a.stage, tRemain: tRemain, hitAt: a.hitAt };
+    var M = motionOf(a.def);
+    if (M && M.remote) st.remote = true;          // windup 끝에 몸으로 때리지 않는다 — 위협은 월드 배열에 있다 (스펙 2026-09-23 §3.1)
+    if (a.def.kind === 'stance' && a.stage === 'windup') st.stance = true;
+    return st;
   };
 
   global.Boss = Boss;

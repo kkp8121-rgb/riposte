@@ -97,6 +97,11 @@
     this.projectiles = [];
     this.zones = [];
     this.pendingShots = [];
+    /* 새 동작의 월드 엔티티 (스펙 2026-09-23 §3.1) — 빔·기둥·표식·메아리 잔상 */
+    this.beams = [];
+    this.pillars = [];
+    this.marks = [];
+    this.echoes = [];
 
     this.scene = 'TITLE';
     this.sceneT = 0;
@@ -184,6 +189,10 @@
     this.projectiles.length = 0;
     this.zones.length = 0;
     this.pendingShots.length = 0;
+    this.beams.length = 0;
+    this.pillars.length = 0;
+    this.marks.length = 0;
+    this.echoes.length = 0;
   };
 
   /** opts.noSave = true 면 저장하지 않고, opts.noStory = true 면 대화도 틀지 않는다 (?boss=N) */
@@ -810,6 +819,7 @@
 
     this.updateProjectiles(dt);
     this.updateZones(dt);
+    this.updateMotionWorld(dt);
   };
 
   /* ---- 리포스트 ----------------------------------------------------------- */
@@ -1060,6 +1070,40 @@
     this.pendingShots.push({ t: delay, make: make, cue: !!cue });
   };
 
+  Game.prototype.spawnBeam = function (e) { this.beams.push(e); };
+  Game.prototype.spawnPillar = function (e) { this.pillars.push(e); };
+  Game.prototype.spawnMark = function (e) { this.marks.push(e); };
+  Game.prototype.spawnEcho = function (e) { this.echoes.push(e); };
+
+  /** 새 동작의 월드 엔티티 — 각자 update 하고 죽으면 뺀다 */
+  Game.prototype.updateMotionWorld = function (dt) {
+    var lists = [this.beams, this.pillars, this.marks, this.echoes];
+    for (var k = 0; k < lists.length; k++) {
+      var L = lists[k];
+      for (var i = L.length - 1; i >= 0; i--) {
+        L[i].update(dt, this);
+        if (L[i].dead) L.splice(i, 1);
+      }
+    }
+  };
+
+  /**
+   * 원격 타격 — 보스 몸이 아닌 곳(표식 폭발·메아리 잔상)에서 온다 (스펙 2026-09-23 §3.1).
+   * 퍼펙트 = 훔침, 보스 경직은 없다(멀리서 보스를 끊는 보상은 주지 않는다). 블록·무적·피해는 근접과 같다.
+   * @param {{tell:string, def:object, damage:number, fromX:number, label:string, kind:string}} src
+   */
+  Game.prototype.resolveRemoteHit = function (src) {
+    var p = this.player;
+    if (this.ko) return;
+    if (src.tell === 'gold') {
+      var win = p.parryWindow();
+      if (win === 'perfect') { this.onPerfectParry(src.def, null); return; }
+      if (win === 'block') { this.onBlock(src.def, { x: src.fromX }); return; }
+    }
+    if (p.isInvulnerable()) return;
+    this.damagePlayer(src.damage, src.fromX, 0, { label: src.label, tell: src.tell, kind: src.kind });
+  };
+
   Game.prototype.updateProjectiles = function (dt) {
     var p = this.player, b = this.boss;
     for (var i = this.projectiles.length - 1; i >= 0; i--) {
@@ -1300,6 +1344,27 @@
       zones.push({ x: z.x, w: z.w, tRemain: Math.max(0, z.t) });
     }
 
+    /* 새 동작 (스펙 2026-09-23 §3.1) — 봇·테스트가 읽는다 */
+    var beams = [], pillars = [], marks = [], echoes = [];
+    for (i = 0; i < this.beams.length; i++) {
+      var bm = this.beams[i];
+      beams.push({ x: bm.x, w: bm.w, vx: bm.vx, pending: bm.pending });
+    }
+    for (i = 0; i < this.pillars.length; i++) {
+      var pl = this.pillars[i];
+      pillars.push({ x: pl.x, w: pl.w, tRise: pl.pending ? Math.max(0, pl.t) : 0, up: pl.pending ? pl.up : Math.max(0, pl.up) });
+    }
+    for (i = 0; i < this.marks.length; i++) {
+      var mk = this.marks[i];
+      marks.push({ x: mk.x, tRemain: Math.max(0, mk.t), tell: mk.tell });
+    }
+    for (i = 0; i < this.echoes.length; i++) {
+      var ec = this.echoes[i];
+      if (ec.stage === 'hit') continue;
+      echoes.push({ x: ec.x, reach: ec.reach, tell: ec.tell,
+                    hitAt: this.time + (ec.stage === 'wait' ? ec.wait + ec.windup : ec.t) });
+    }
+
     var loot = [];
     if (b && b.loot) for (i = 0; i < b.loot.length; i++) loot.push(b.loot[i].id);
     var ch = this.chapterOf(this.bossIndex);
@@ -1334,7 +1399,11 @@
       tries: b ? (this.run.tries[b.key] || 0) : 0,
       currentAttack: b ? b.attackState() : null,
       projectiles: projs,
-      zones: zones
+      zones: zones,
+      beams: beams,
+      pillars: pillars,
+      marks: marks,
+      echoes: echoes
     };
   };
 
