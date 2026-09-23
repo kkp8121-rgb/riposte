@@ -644,6 +644,23 @@ check('되받기 — 멀리서 쏜 탄은 되받는다(반응 시간 ≥ 하한)
 check('되받기 — 코앞에서 쏜 탄은 되받지 않는다(보스가 맞는다)',
   !deflect.near.deflected && deflect.near.bossHp < 999, JSON.stringify(deflect.near));
 
+/* ---- 기둥 — KO 중에는 조용히 선다 (검토 잔여 정리) -------------------------
+ * onPillarRise 를 직접 호출해 그 함수 자체의 효과만 본다 — stepWorld 를 더 돌리면
+ * blockByPillars(매 tick, side 만 있으면 항상 적용되는 정상적인 벽 충돌)가 같은 자리로
+ * 밀어붙여 구분이 안 된다. 여기서는 그 한 호출 안에서 밀림·피격이 없는지만 확인한다. */
+const koPillar = await page.evaluate(() => {
+  const g = window.__RIPOSTE.game, T = window.__T;
+  T.setup({}, 250, 600);
+  const pillar = new window.Pillar({ x: 250, w: 34, delay: 0, up: 4.0, damage: 1, label: 'GATE' });
+  const oldKo = g.ko, oldKoT = g.koT;
+  g.ko = 'victory'; g.koT = 999;
+  g.onPillarRise(pillar);
+  const out = { hits: g.hits, x: g.player.x, side: pillar.side };
+  g.ko = oldKo; g.koT = oldKoT;
+  return out;
+});
+check('기둥 — KO 중에는 조용히 선다', koPillar.hits === 0 && koPillar.x === 250, JSON.stringify(koPillar));
+
 /* ---- 새 동작 검사는 이 줄 위에 추가한다 ------------------------------------ */
 
 check('pageerror 0', errors.length === 0, errors.slice(0, 3).join(' | '));

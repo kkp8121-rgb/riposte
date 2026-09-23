@@ -818,6 +818,8 @@
     var speed = Math.min(B.DEFLECT_SPEED_MAX, Math.abs(pr.vx) * B.DEFLECT_SPEED_MULT);
     var room = Math.abs(pr.x - this.game.player.x) - C.PARRY.PROJECTILE_CATCH;
     if (room / speed < B.DEFLECT_MIN_REACT) return false;
+    // 이 가드는 랠리 중 되돌아온 보스 투사체(pr.rally > 0)를 다시 되받아칠 때도 매번 재적용된다 —
+    // 막을 때마다 되받기 자체를 취소시킬 뿐이라 어느 랠리 단계에서도 플레이어에게만 유리하게 작용한다.
 
     var rally = pr.rally || 0;
     var chance = (rally + 1 >= B.DEFLECT_MAX_RALLY) ? 0
