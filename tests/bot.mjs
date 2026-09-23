@@ -166,7 +166,11 @@ export function installBot(TUNE) {
         threats.push({ t: (gap - TUNE.PARRY_CATCH) / speed, kind: 'parry', src: 'proj', gap: gap });
       } else {
         if (gap > TUNE.PROJ_DASH_DIST + 80) continue;
-        threats.push({ t: (gap - TUNE.PROJ_HIT) / speed, kind: 'dash', src: 'proj', gap: gap });
+        // 부메랑 외출탄(귀환 전)은 대시로 뚫고 지나가야 한다 — 반대로 물러나면 걸어서 못 따라잡는다.
+        // 빔 위협과 같은 방향 매핑 — 탄이 오는 쪽(vx 부호의 반대편) 방향키를 쥔다
+        const boomOut = p.boomerang && !p.returning;
+        threats.push({ t: (gap - TUNE.PROJ_HIT) / speed, kind: 'dash', src: 'proj', gap: gap,
+                       dir: boomOut ? (p.vx > 0 ? 'ArrowLeft' : 'ArrowRight') : undefined });
       }
     }
     /* 새 동작 (스펙 2026-09-23 §4) — 배열이 비어 있으면 위의 기존 위협만 남는다 */

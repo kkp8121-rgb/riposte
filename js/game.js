@@ -1468,7 +1468,8 @@
     for (i = 0; i < this.projectiles.length; i++) {
       var pr = this.projectiles[i];
       if (pr.owner !== 'boss') continue;
-      projs.push({ x: pr.x, vx: pr.vx, tell: pr.tell });
+      // 부메랑 외출탄은 봇이 관통 대시해야 한다
+      projs.push({ x: pr.x, vx: pr.vx, tell: pr.tell, boomerang: !!pr.boomerang, returning: !!pr.returning });
     }
 
     var zones = [];
