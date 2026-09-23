@@ -1,0 +1,1714 @@
+{
+  "profile": "skilled",
+  "seeds": [
+    7,
+    11,
+    23
+  ],
+  "bosses": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "minWindup": 0.34,
+  "generatedAt": "2026-09-23T15:40:48.171Z",
+  "runs": [
+    {
+      "ok": true,
+      "boss": 1,
+      "bossName": "VESPER",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 30,
+      "time": 10.34166666666672,
+      "hits": 1,
+      "perfects": 5,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.18211120064464428,
+        "labelCounts": {
+          "THRUST": 1
+        },
+        "topLabel": "THRUST",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.580177276390005,
+        "patternSeq": [
+          "thrust",
+          "double-thrust",
+          "close-slash",
+          "slash-thrust"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 1,
+      "bossName": "VESPER",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 30,
+      "time": 10.741666666666697,
+      "hits": 1,
+      "perfects": 6,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.1768813033359276,
+        "labelCounts": {
+          "SLASH": 1
+        },
+        "topLabel": "SLASH",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.6516679596586482,
+        "patternSeq": [
+          "close-slash",
+          "double-thrust",
+          "slash-thrust",
+          "thrust-slash"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 1,
+      "bossName": "VESPER",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 30,
+      "time": 14.874999999999796,
+      "hits": 2,
+      "perfects": 6,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.262184873949575,
+        "labelCounts": {
+          "THRUST": 1,
+          "SLASH": 1
+        },
+        "topLabel": "THRUST",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.5378151260504276,
+        "patternSeq": [
+          "thrust",
+          "close-slash",
+          "slash",
+          "thrust",
+          "slash-thrust",
+          "back-thrust",
+          "thrust-slash"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 2,
+      "bossName": "SERAPH",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 35,
+      "time": 16.941666666666347,
+      "hits": 0,
+      "perfects": 8,
+      "rank": "S",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.11313330054106802,
+        "labelCounts": {},
+        "topLabel": null,
+        "topShare": 0,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.9444171175602736,
+        "patternSeq": [
+          "arrow-arrow",
+          "rain",
+          "kick-back",
+          "backstep-arrow",
+          "kick-back",
+          "rain",
+          "backstep-arrow",
+          "backstep-triple",
+          "kick-rain"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 2,
+      "bossName": "SERAPH",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 35,
+      "time": 26.39166666666581,
+      "hits": 1,
+      "perfects": 9,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.07451847173981505,
+        "labelCounts": {
+          "KICK": 1
+        },
+        "topLabel": "KICK",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.8335964635301818,
+        "patternSeq": [
+          "rain",
+          "kick-back",
+          "rain",
+          "kick-back",
+          "backstep-arrow",
+          "kick-back",
+          "backstep-arrow",
+          "kick-rain",
+          "rain-arrow",
+          "kick-rain",
+          "rain-arrow",
+          "backstep-triple"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 2,
+      "bossName": "SERAPH",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 35,
+      "time": 30.949999999998884,
+      "hits": 2,
+      "perfects": 9,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.06300484652665458,
+        "labelCounts": {
+          "KICK": 1,
+          "RAIN": 1
+        },
+        "topLabel": "KICK",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.7431340872375066,
+        "patternSeq": [
+          "rain",
+          "kick-back",
+          "rain",
+          "backstep-arrow",
+          "rain",
+          "backstep-arrow",
+          "rain",
+          "kick-back",
+          "rain",
+          "backstep-arrow",
+          "rain",
+          "kick-back",
+          "kick-rain",
+          "backstep-triple",
+          "rain-arrow"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 3,
+      "bossName": "GRAVEN",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 40,
+      "time": 17.33333333333299,
+      "hits": 1,
+      "perfects": 7,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.08846153846153518,
+        "labelCounts": {
+          "CHARGE": 1
+        },
+        "topLabel": "CHARGE",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.8076923076923236,
+        "patternSeq": [
+          "charge",
+          "wave-slam",
+          "shockwave",
+          "slam",
+          "wave-slam",
+          "wave-wave",
+          "double-slam"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 3,
+      "bossName": "GRAVEN",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 40,
+      "time": 17.49999999999965,
+      "hits": 2,
+      "perfects": 7,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.11809523809523909,
+        "labelCounts": {
+          "SLAM": 1,
+          "CHARGE": 1
+        },
+        "topLabel": "SLAM",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.7428571428571578,
+        "patternSeq": [
+          "slam",
+          "shockwave",
+          "wave-slam",
+          "wave-wave",
+          "slam",
+          "charge-slam"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 3,
+      "bossName": "GRAVEN",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 40,
+      "time": 20.608333333332805,
+      "hits": 1,
+      "perfects": 7,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.1010917913465395,
+        "labelCounts": {
+          "CHARGE": 1
+        },
+        "topLabel": "CHARGE",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.8249090173878093,
+        "patternSeq": [
+          "wave-slam",
+          "shockwave",
+          "charge",
+          "wave-slam",
+          "wave-wave",
+          "double-slam",
+          "wave-wave"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 4,
+      "bossName": "MIRROR",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 28.158333333332376,
+      "hits": 3,
+      "perfects": 13,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.05445398046759272,
+        "labelCounts": {
+          "THRUST": 1,
+          "SLAM": 1,
+          "ARROW": 1
+        },
+        "topLabel": "THRUST",
+        "topShare": 0.3333333333333333,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.9588635691033176,
+        "patternSeq": [
+          "thrust",
+          "arrow-close-slash",
+          "feint-thrust",
+          "thrust",
+          "slash-thrust",
+          "arrow-close-slash",
+          "arrow-arrow-slam",
+          "feint-slash-thrust",
+          "execution",
+          "arrow-arrow-slam",
+          "mirror-hand"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 4,
+      "bossName": "MIRROR",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "DEFEAT",
+      "par": 50,
+      "time": 31.46666666666552,
+      "hits": 4,
+      "perfects": 11,
+      "slainBy": {
+        "label": "SLASH",
+        "tell": "gold",
+        "kind": "melee",
+        "plunder": false
+      },
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.0609110169491513,
+        "labelCounts": {
+          "SLASH": 2,
+          "THRUST": 1,
+          "EXECUTION": 1
+        },
+        "topLabel": "SLASH",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.8580508474576584,
+        "patternSeq": [
+          "slam",
+          "thrust",
+          "feint-thrust",
+          "slash-thrust",
+          "arrow-close-slash",
+          "thrust",
+          "execution",
+          "arrow-arrow-slam",
+          "execution",
+          "mirror-hand",
+          "arrow-arrow-slam",
+          "mirror-hand",
+          "execution",
+          "feint-slash-thrust"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 4,
+      "bossName": "MIRROR",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 26.466666666665805,
+      "hits": 4,
+      "perfects": 13,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.07241813602014938,
+        "labelCounts": {
+          "THRUST": 2,
+          "ARROW": 1,
+          "SLASH": 1
+        },
+        "topLabel": "THRUST",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.8312342569269792,
+        "patternSeq": [
+          "thrust",
+          "slash-thrust",
+          "feint-thrust",
+          "arrow-close-slash",
+          "slash-thrust",
+          "thrust",
+          "slash-thrust",
+          "thrust",
+          "feint-slash-thrust",
+          "arrow-arrow-slam"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 5,
+      "bossName": "LANTERN",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 21.2666666666661,
+      "hits": 1,
+      "perfects": 8,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.24451410658307565,
+        "labelCounts": {
+          "ORB": 1
+        },
+        "topLabel": "ORB",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.7523510971787034,
+        "patternSeq": [
+          "orb",
+          "flicker-orb",
+          "far-orb",
+          "orb",
+          "flicker-orb",
+          "far-orb-behind-flicker",
+          "far-orb2"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 5,
+      "bossName": "LANTERN",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "DEFEAT",
+      "par": 50,
+      "time": 31.08333333333221,
+      "hits": 5,
+      "perfects": 10,
+      "slainBy": {
+        "label": "ORB",
+        "tell": "red",
+        "kind": "projectile"
+      },
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.34906166219838863,
+        "labelCounts": {
+          "ORB": 5
+        },
+        "topLabel": "ORB",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.804289544235954,
+        "patternSeq": [
+          "orb",
+          "far-orb",
+          "flicker-orb",
+          "far-orb",
+          "flicker-orb",
+          "orb",
+          "far-orb-behind-flicker",
+          "double-blink",
+          "far-orb-behind-flicker",
+          "far-orb2"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 5,
+      "bossName": "LANTERN",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 28.441666666665693,
+      "hits": 4,
+      "perfects": 10,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.1845883387049556,
+        "labelCounts": {
+          "ORB": 3,
+          "FLICKER": 1
+        },
+        "topLabel": "ORB",
+        "topShare": 0.75,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.773513038382681,
+        "patternSeq": [
+          "orb",
+          "flicker-orb",
+          "far-orb",
+          "behind-flicker",
+          "flicker-orb",
+          "behind-flicker",
+          "orb",
+          "flicker-orb",
+          "far-orb-behind-flicker",
+          "double-blink",
+          "behind-flicker-orb"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 6,
+      "bossName": "CHORUS",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 35,
+      "time": 18.14166666666628,
+      "hits": 2,
+      "perfects": 14,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.09278824069820912,
+        "labelCounts": {
+          "CANON": 2
+        },
+        "topLabel": "CANON",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.7165824529168734,
+        "patternSeq": [
+          "canon-cross-canon",
+          "refrain",
+          "canon",
+          "cross-canon-scissor",
+          "refrain2",
+          "canon-cross-refrain2"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 6,
+      "bossName": "CHORUS",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 35,
+      "time": 9.450000000000104,
+      "hits": 0,
+      "perfects": 8,
+      "rank": "S",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0,
+        "labelCounts": {},
+        "topLabel": null,
+        "topShare": 0,
+        "deathCauseFlag": false,
+        "decisionDensity": 1.1640211640211513,
+        "patternSeq": [
+          "canon",
+          "canon-cross-canon",
+          "canon",
+          "cross-canon-scissor",
+          "scissor-canon"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 6,
+      "bossName": "CHORUS",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 35,
+      "time": 26.241666666665818,
+      "hits": 4,
+      "perfects": 16,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.16386154334709774,
+        "labelCounts": {
+          "CANON": 2,
+          "REFRAIN": 2
+        },
+        "topLabel": "CANON",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.45728802794539425,
+        "patternSeq": [
+          "canon",
+          "refrain",
+          "cross-refrain",
+          "canon-cross-canon",
+          "refrain",
+          "refrain2",
+          "cross-canon-scissor"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 7,
+      "bossName": "BASTION",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 26.15833333333249,
+      "hits": 0,
+      "perfects": 6,
+      "rank": "S",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.05925453966231138,
+        "labelCounts": {},
+        "topLabel": null,
+        "topShare": 0,
+        "deathCauseFlag": false,
+        "decisionDensity": 1.032175852182257,
+        "patternSeq": [
+          "gate-wait-salvo",
+          "far-salvo-salvo",
+          "gate-wait-salvo",
+          "far-salvo-salvo",
+          "salvo",
+          "gate-salvo-salvo",
+          "cage-rally"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 7,
+      "bossName": "BASTION",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 43.80833333333149,
+      "hits": 2,
+      "perfects": 7,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.03728362183755142,
+        "labelCounts": {
+          "VOLLEY": 2
+        },
+        "topLabel": "VOLLEY",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 1.1413353623740257,
+        "patternSeq": [
+          "far-salvo-salvo",
+          "gate-wait-salvo",
+          "gate-salvo",
+          "salvo",
+          "gate-wait-salvo",
+          "gate-salvo",
+          "salvo",
+          "salvo-far-salvo",
+          "far-gate-salvo",
+          "gate-salvo-salvo",
+          "far-gate-salvo",
+          "cage-rally",
+          "far-gate-salvo"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 7,
+      "bossName": "BASTION",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 18.191666666666276,
+      "hits": 0,
+      "perfects": 6,
+      "rank": "S",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.0897846999541932,
+        "labelCounts": {},
+        "topLabel": null,
+        "topShare": 0,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.9894640403115192,
+        "patternSeq": [
+          "far-salvo-salvo",
+          "gate-salvo",
+          "gate-wait-salvo",
+          "salvo-far-salvo",
+          "cage-rally"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 8,
+      "bossName": "AVARICE",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 55,
+      "time": 29.608333333332293,
+      "hits": 2,
+      "perfects": 11,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.062482409231633944,
+        "labelCounts": {
+          "PLUNDER": 1,
+          "COUNT": 1
+        },
+        "topLabel": "PLUNDER",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.5403884041655129,
+        "patternSeq": [
+          "plunder-haul",
+          "close-loot",
+          "haul",
+          "close-loot",
+          "plunder-haul",
+          "haul",
+          "mirror-hand",
+          "plunder-loot",
+          "loot-chain",
+          "plunder-loot"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 8,
+      "bossName": "AVARICE",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "DEFEAT",
+      "par": 55,
+      "time": 38.61666666666512,
+      "hits": 5,
+      "perfects": 13,
+      "slainBy": {
+        "label": "COUNT",
+        "tell": "gold",
+        "kind": "melee",
+        "plunder": false
+      },
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.04790677600345194,
+        "labelCounts": {
+          "COUNT": 4,
+          "HAUL": 1
+        },
+        "topLabel": "COUNT",
+        "topShare": 0.8,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.5438066465257015,
+        "patternSeq": [
+          "haul",
+          "plunder-haul",
+          "close-loot",
+          "loot",
+          "close-loot",
+          "plunder-haul",
+          "close-loot",
+          "haul",
+          "mirror-hand",
+          "plunder-loot",
+          "mirror-hand",
+          "loot-chain",
+          "haul-loot",
+          "mirror-hand",
+          "loot-chain"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 8,
+      "bossName": "AVARICE",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 55,
+      "time": 33.92499999999872,
+      "hits": 3,
+      "perfects": 12,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.054532056005894315,
+        "labelCounts": {
+          "HAUL": 2,
+          "COUNT": 1
+        },
+        "topLabel": "HAUL",
+        "topShare": 0.6666666666666666,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.5305821665438668,
+        "patternSeq": [
+          "haul",
+          "close-loot",
+          "haul",
+          "plunder-haul",
+          "close-loot",
+          "loot",
+          "haul",
+          "loot",
+          "plunder-haul",
+          "loot",
+          "close-loot",
+          "loot-chain",
+          "haul-loot"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 9,
+      "bossName": "SENTINEL",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 31.908333333332163,
+      "hits": 2,
+      "perfects": 10,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0,
+        "labelCounts": {
+          "LANCE": 1,
+          "LINE": 1
+        },
+        "topLabel": "LANCE",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.6581352833638268,
+        "patternSeq": [
+          "claim-lance",
+          "line-lance",
+          "claim-lance",
+          "lance",
+          "line-lance",
+          "double-lance",
+          "claim-lance",
+          "double-lance",
+          "line-lance",
+          "double-lance"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 9,
+      "bossName": "SENTINEL",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 22.37499999999937,
+      "hits": 1,
+      "perfects": 10,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.08789571694599375,
+        "labelCounts": {
+          "LANCE": 1
+        },
+        "topLabel": "LANCE",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.5810055865921951,
+        "patternSeq": [
+          "lance-lance",
+          "lance",
+          "lance-lance",
+          "claim-lance",
+          "lance-lance",
+          "claim-lance",
+          "line-lance",
+          "double-lance"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 9,
+      "bossName": "SENTINEL",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 50,
+      "time": 31.074999999998877,
+      "hits": 2,
+      "perfects": 9,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0,
+        "labelCounts": {
+          "LINE": 1,
+          "LANCE": 1
+        },
+        "topLabel": "LINE",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 0.7079646017699371,
+        "patternSeq": [
+          "line-lance",
+          "lance",
+          "line-lance",
+          "claim-lance",
+          "line-lance",
+          "lance",
+          "claim-lance",
+          "line-lance",
+          "claim-lance",
+          "lance-line",
+          "double-lance"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 10,
+      "bossName": "TEMPEST",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "DEFEAT",
+      "par": 46,
+      "time": 24.283333333332596,
+      "hits": 5,
+      "perfects": 6,
+      "slainBy": {
+        "label": "SURGE",
+        "tell": "gold",
+        "kind": "projectile"
+      },
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.21070693205216295,
+        "labelCounts": {
+          "SQUALL": 3,
+          "SURGE": 2
+        },
+        "topLabel": "SQUALL",
+        "topShare": 0.6,
+        "deathCauseFlag": false,
+        "decisionDensity": 1.2765957446808898,
+        "patternSeq": [
+          "drift-squall",
+          "back-surge",
+          "back-squall",
+          "surge",
+          "back-squall",
+          "drift-squall",
+          "back-squall",
+          "back-surge",
+          "back-squall",
+          "back-surge"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 10,
+      "bossName": "TEMPEST",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 46,
+      "time": 20.033333333332838,
+      "hits": 1,
+      "perfects": 9,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.18219633943427566,
+        "labelCounts": {
+          "SQUALL": 1
+        },
+        "topLabel": "SQUALL",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 1.2978369384359723,
+        "patternSeq": [
+          "squall",
+          "surge",
+          "back-surge",
+          "back-squall",
+          "surge",
+          "back-squall",
+          "surge-squall",
+          "back-surge",
+          "back-squall2",
+          "back-surge",
+          "back-squall2"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 10,
+      "bossName": "TEMPEST",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 46,
+      "time": 25.941666666665835,
+      "hits": 2,
+      "perfects": 9,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.2023771281721802,
+        "labelCounts": {
+          "SQUALL": 2
+        },
+        "topLabel": "SQUALL",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 1.194988756826251,
+        "patternSeq": [
+          "squall",
+          "back-surge",
+          "back-squall",
+          "back-surge",
+          "back-squall",
+          "back-surge",
+          "back-squall",
+          "surge-squall",
+          "squall",
+          "back-squall2",
+          "back-surge",
+          "back-squall2",
+          "back-surge"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 11,
+      "bossName": "HOLLOW",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 60,
+      "time": 34.69166666666534,
+      "hits": 3,
+      "perfects": 9,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.047561854431899184,
+        "labelCounts": {
+          "BRAND": 1,
+          "EMBER": 2
+        },
+        "topLabel": "EMBER",
+        "topShare": 0.6666666666666666,
+        "deathCauseFlag": true,
+        "decisionDensity": 1.2683161181840503,
+        "patternSeq": [
+          "brand",
+          "back-ember",
+          "brand",
+          "back-ember-brand",
+          "brand",
+          "back-ember-brand",
+          "brand-back-ember",
+          "back-ember-brand-red",
+          "brand-red-brand",
+          "brand-back-ember",
+          "brand-wait-brand-red",
+          "brand-red-brand",
+          "back-ember-brand-red"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 11,
+      "bossName": "HOLLOW",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "DEFEAT",
+      "par": 60,
+      "time": 33.22499999999876,
+      "hits": 5,
+      "perfects": 8,
+      "slainBy": {
+        "label": "BRAND",
+        "tell": "gold",
+        "kind": "mark"
+      },
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.10785051417105712,
+        "labelCounts": {
+          "BRAND": 5
+        },
+        "topLabel": "BRAND",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 1.3243039879609224,
+        "patternSeq": [
+          "back-ember-brand",
+          "brand",
+          "back-ember-brand",
+          "back-ember",
+          "back-ember-brand",
+          "brand",
+          "back-ember-brand",
+          "brand-red-brand",
+          "brand-wait-brand-red",
+          "brand-red-brand",
+          "brand-wait-brand-red",
+          "brand-back-ember"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 11,
+      "bossName": "HOLLOW",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 60,
+      "time": 27.574999999999076,
+      "hits": 2,
+      "perfects": 10,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.13417951042611145,
+        "labelCounts": {
+          "EMBER": 1,
+          "BRAND": 1
+        },
+        "topLabel": "EMBER",
+        "topShare": 0.5,
+        "deathCauseFlag": false,
+        "decisionDensity": 1.2692656391659538,
+        "patternSeq": [
+          "back-ember",
+          "back-ember-brand",
+          "brand",
+          "back-ember",
+          "back-ember-brand",
+          "brand-back-ember",
+          "back-ember-brand-red",
+          "brand-back-ember",
+          "brand-red-brand",
+          "brand-back-ember"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 12,
+      "bossName": "ADAMANT",
+      "seed": 7,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 52,
+      "time": 28.34999999999903,
+      "hits": 3,
+      "perfects": 13,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.3380364491475635,
+        "labelCounts": {
+          "SHARDS": 2,
+          "GUARD": 1
+        },
+        "topLabel": "SHARDS",
+        "topShare": 0.6666666666666666,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.8465608465608755,
+        "patternSeq": [
+          "far-shards",
+          "guard",
+          "far-shards-close-guard",
+          "far-shards",
+          "far-shards-close-guard",
+          "guard-guard",
+          "far-shards-close-guard"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 12,
+      "bossName": "ADAMANT",
+      "seed": 11,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 52,
+      "time": 29.758333333332285,
+      "hits": 3,
+      "perfects": 13,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.24558947073648682,
+        "labelCounts": {
+          "GUARD": 2,
+          "SHARDS": 1
+        },
+        "topLabel": "GUARD",
+        "topShare": 0.6666666666666666,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.940912909549179,
+        "patternSeq": [
+          "far-shards-close-guard",
+          "far-shards",
+          "close-guard",
+          "far-shards-close-guard",
+          "far-shards",
+          "guard-guard",
+          "far-shards-shards",
+          "close-guard",
+          "far-shards-close-guard",
+          "far-shards-shards"
+        ],
+        "patternRepeatRate": 0
+      }
+    },
+    {
+      "ok": true,
+      "boss": 12,
+      "bossName": "ADAMANT",
+      "seed": 23,
+      "profile": "skilled",
+      "outcome": "VICTORY",
+      "par": 52,
+      "time": 30.574999999998905,
+      "hits": 1,
+      "perfects": 15,
+      "rank": "A",
+      "errors": [],
+      "metrics": {
+        "unreactableHits": [],
+        "unmatchedHits": [],
+        "sameSourceRepeats": [],
+        "deadTimeRatio": 0.27527936767512,
+        "labelCounts": {
+          "SHARDS": 1
+        },
+        "topLabel": "SHARDS",
+        "topShare": 1,
+        "deathCauseFlag": true,
+        "decisionDensity": 0.9484873262469677,
+        "patternSeq": [
+          "far-shards",
+          "guard",
+          "far-shards",
+          "far-shards-close-guard",
+          "far-shards",
+          "close-guard",
+          "guard-guard",
+          "far-shards-shards",
+          "close-guard",
+          "far-shards-shards"
+        ],
+        "patternRepeatRate": 0
+      }
+    }
+  ],
+  "byBoss": [
+    {
+      "boss": 1,
+      "bossName": "VESPER",
+      "winRate": "3/3",
+      "avgTime": 11.986111111111072,
+      "avgHits": 1.3333333333333333,
+      "avgDeadTimeRatio": 0.20705912597671564,
+      "avgDecisionDensity": 0.5898867873663604,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "THRUST": 2,
+        "SLASH": 2
+      },
+      "pooledTopLabel": "THRUST",
+      "pooledTopShare": 0.5,
+      "pooledDeathCauseFlag": false,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 2,
+      "bossName": "SERAPH",
+      "winRate": "3/3",
+      "avgTime": 24.76111111111035,
+      "avgHits": 1,
+      "avgDeadTimeRatio": 0.08355220626917921,
+      "avgDecisionDensity": 0.8403825561093207,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "KICK": 2,
+        "RAIN": 1
+      },
+      "pooledTopLabel": "KICK",
+      "pooledTopShare": 0.6666666666666666,
+      "pooledDeathCauseFlag": true,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 3,
+      "bossName": "GRAVEN",
+      "winRate": "3/3",
+      "avgTime": 18.480555555555146,
+      "avgHits": 1.3333333333333333,
+      "avgDeadTimeRatio": 0.10254952263443791,
+      "avgDecisionDensity": 0.7918194893124303,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "CHARGE": 3,
+        "SLAM": 1
+      },
+      "pooledTopLabel": "CHARGE",
+      "pooledTopShare": 0.75,
+      "pooledDeathCauseFlag": true,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 4,
+      "bossName": "MIRROR",
+      "winRate": "2/3",
+      "avgTime": 28.69722222222123,
+      "avgHits": 3.6666666666666665,
+      "avgDeadTimeRatio": 0.0625943778122978,
+      "avgDecisionDensity": 0.8827162244959851,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "THRUST": 4,
+        "SLAM": 1,
+        "ARROW": 2,
+        "SLASH": 3,
+        "EXECUTION": 1
+      },
+      "pooledTopLabel": "THRUST",
+      "pooledTopShare": 0.36363636363636365,
+      "pooledDeathCauseFlag": false,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 5,
+      "bossName": "LANTERN",
+      "winRate": "2/3",
+      "avgTime": 26.930555555554665,
+      "avgHits": 3.3333333333333335,
+      "avgDeadTimeRatio": 0.2593880358288066,
+      "avgDecisionDensity": 0.7767178932657796,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "ORB": 9,
+        "FLICKER": 1
+      },
+      "pooledTopLabel": "ORB",
+      "pooledTopShare": 0.9,
+      "pooledDeathCauseFlag": true,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 6,
+      "bossName": "CHORUS",
+      "winRate": "3/3",
+      "avgTime": 17.94444444444407,
+      "avgHits": 2,
+      "avgDeadTimeRatio": 0.08554992801510229,
+      "avgDecisionDensity": 0.7792972149611397,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "CANON": 4,
+        "REFRAIN": 2
+      },
+      "pooledTopLabel": "CANON",
+      "pooledTopShare": 0.6666666666666666,
+      "pooledDeathCauseFlag": true,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 7,
+      "bossName": "BASTION",
+      "winRate": "3/3",
+      "avgTime": 29.386111111110086,
+      "avgHits": 0.6666666666666666,
+      "avgDeadTimeRatio": 0.06210762048468534,
+      "avgDecisionDensity": 1.054325084955934,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "VOLLEY": 2
+      },
+      "pooledTopLabel": "VOLLEY",
+      "pooledTopShare": 1,
+      "pooledDeathCauseFlag": true,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 8,
+      "bossName": "AVARICE",
+      "winRate": "2/3",
+      "avgTime": 34.04999999999871,
+      "avgHits": 3.3333333333333335,
+      "avgDeadTimeRatio": 0.054973747080326735,
+      "avgDecisionDensity": 0.5382590724116938,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "PLUNDER": 1,
+        "COUNT": 6,
+        "HAUL": 3
+      },
+      "pooledTopLabel": "COUNT",
+      "pooledTopShare": 0.6,
+      "pooledDeathCauseFlag": false,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 9,
+      "bossName": "SENTINEL",
+      "winRate": "3/3",
+      "avgTime": 28.452777777776802,
+      "avgHits": 1.6666666666666667,
+      "avgDeadTimeRatio": 0.029298572315331253,
+      "avgDecisionDensity": 0.6490351572419862,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "LANCE": 3,
+        "LINE": 2
+      },
+      "pooledTopLabel": "LANCE",
+      "pooledTopShare": 0.6,
+      "pooledDeathCauseFlag": false,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 10,
+      "bossName": "TEMPEST",
+      "winRate": "2/3",
+      "avgTime": 23.419444444443755,
+      "avgHits": 2.6666666666666665,
+      "avgDeadTimeRatio": 0.19842679988620626,
+      "avgDecisionDensity": 1.256473813314371,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "SQUALL": 6,
+        "SURGE": 2
+      },
+      "pooledTopLabel": "SQUALL",
+      "pooledTopShare": 0.75,
+      "pooledDeathCauseFlag": true,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 11,
+      "bossName": "HOLLOW",
+      "winRate": "2/3",
+      "avgTime": 31.830555555554394,
+      "avgHits": 3.3333333333333335,
+      "avgDeadTimeRatio": 0.0965306263430226,
+      "avgDecisionDensity": 1.2872952484369755,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "BRAND": 7,
+        "EMBER": 3
+      },
+      "pooledTopLabel": "BRAND",
+      "pooledTopShare": 0.7,
+      "pooledDeathCauseFlag": true,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    },
+    {
+      "boss": 12,
+      "bossName": "ADAMANT",
+      "winRate": "3/3",
+      "avgTime": 29.561111111110076,
+      "avgHits": 2.3333333333333335,
+      "avgDeadTimeRatio": 0.28630176251972345,
+      "avgDecisionDensity": 0.9119870274523407,
+      "avgPatternRepeatRate": 0,
+      "pooledLabelCounts": {
+        "SHARDS": 4,
+        "GUARD": 3
+      },
+      "pooledTopLabel": "SHARDS",
+      "pooledTopShare": 0.5714285714285714,
+      "pooledDeathCauseFlag": false,
+      "unreactableHitCount": 0,
+      "sameSourceRepeatCount": 0
+    }
+  ]
+}
