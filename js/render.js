@@ -972,7 +972,8 @@
     }
 
     // 공격 active 중 무기 호 궤적
-    if (b.attack && b.attack.stage === 'active' && b.attack.def.kind === 'melee') {
+    var Mk = b.attack && global.MOTIONS ? global.MOTIONS[b.attack.def.kind] : null;
+    if (b.attack && b.attack.stage === 'active' && (b.attack.def.kind === 'melee' || (Mk && Mk.melee))) {
       var a = b.attack;
       var kk = 1 - a.t / Math.max(0.01, a.def.active);
       var bh = BUILD[b.silhouette] ? BUILD[b.silhouette].h : 84;
@@ -980,6 +981,37 @@
       drawSwing(ctx, b.x, b.facing, bh,
         a.tell === 'red' ? C.COLORS.RED : C.COLORS.GOLD,
         sk, a.def.reach, kk, 0.75);
+    }
+
+    // 반격 자세 — 회색 점선 링. 텔 색이 아니라 "지금 치면 안 된다"는 상태 표시 (스펙 2026-09-23 §2.3)
+    var M = C.MOTION;
+    if (b.attack && b.attack.stage === 'windup' && b.attack.def.kind === 'stance') {
+      ctx.save();
+      ctx.globalAlpha = 0.8;
+      ctx.strokeStyle = C.COLORS.GREY;
+      ctx.lineWidth = 4;
+      ctx.setLineDash([10, 6]);
+      ctx.beginPath();
+      ctx.arc(b.x, V.FLOOR_Y - C.BOSS.HEIGHT * 0.55, M.STANCE_RING_R, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 악보 콜 — 음표 줄. 가로 간격 = 시각 × SCORE_PIP_PX 라 리듬이 보인다. 울린 음표만 금색
+    var sa = b.attack;
+    if (sa && sa.def.kind === 'score' && sa.scoreIdx === 0 && sa.callAt) {
+      var span = sa.callAt[sa.callAt.length - 1] * M.SCORE_PIP_PX;
+      var x0 = b.x - span / 2, py = V.FLOOR_Y - M.SCORE_PIP_Y;
+      ctx.save();
+      for (var i = 0; i < sa.callAt.length; i++) {
+        var lit = i < sa.callNext;
+        ctx.globalAlpha = lit ? 1 : 0.35;
+        ctx.fillStyle = lit ? C.COLORS.GOLD : C.COLORS.GREY;
+        ctx.beginPath();
+        ctx.arc(x0 + sa.callAt[i] * M.SCORE_PIP_PX, py, M.SCORE_PIP_R, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
     }
   }
 

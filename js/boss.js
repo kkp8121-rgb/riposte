@@ -634,6 +634,22 @@
     this.stagger(dur, false);
   };
 
+  /** 반격 자세(스펙 2026-09-23 §3.8) 중인가 — 이 윈드업은 카운터 창이 아니라 벌 창이다 */
+  Boss.prototype.stanceOpen = function () {
+    var a = this.attack;
+    return !this.dead && this.state === 'attack' && !!a && a.stage === 'windup' && a.def.kind === 'stance';
+  };
+
+  /** 자세 중에 맞았다 — 진행 중 공격을 버리고 곧바로 반격(def.stance.counter, 접근 없음). 피해 0, 손패 환급 없음 */
+  Boss.prototype.punishStance = function () {
+    var id = this.attack.def.stance.counter;
+    this.cancelAttackSpawns();
+    this.attack = null;
+    FX.pop(C.MOTION.STANCE_POP, this.x, V.FLOOR_Y - B.HEIGHT - 16, C.COLORS.GREY, { size: 17 });
+    RAudio.parryBlock();
+    this.beginAttack(id, { _approached: true });
+  };
+
   Boss.prototype.enterPhase2 = function () {
     this.phase = 2;
     this.cancelAttackSpawns();

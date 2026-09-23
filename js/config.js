@@ -462,6 +462,12 @@
       RIPOSTE_HZ: 120,
       STEAL_ARPEGGIO: [523.25, 659.25, 783.99], // C5 E5 G5
       STEAL_GAP_MS: 60,
+      /* 악보 음표 (스펙 2026-09-23 §3.9) — 텔이 아니라 "예고의 예고". 금 텔(2200Hz tick)과 다른 음 */
+      NOTE_HZ: 1320,
+      NOTE_MS: 60,
+      /* 반격 자세 (스펙 2026-09-23 §3.8) — "지금 치지 마라" 상태의 소리 채널. 금 tick 과 함께 울리는 낮은 울림 */
+      GUARD_HZ: 150,
+      GUARD_MS: 260,
       /* Phase 2 심박 킥 BPM (보스별) */
       BPM: { vesper: 96, seraph: 104, graven: 84, mirror: 116,
              lantern: 100, chorus: 120, bastion: 88, avarice: 124,

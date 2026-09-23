@@ -860,6 +860,9 @@
     var b = this.boss;
     if (!b || b.dead) return;
 
+    // 반격 자세(스펙 2026-09-23 §3.8) — 참지 못한 리포스트는 피해 0, 곧바로 적 반격. 방벽 판정이 먼저다
+    if (!b.wallUp() && b.stanceOpen()) { b.punishStance(); return; }
+
     var counter = false;
     if (b.state === 'attack' && b.attack && b.attack.stage === 'windup') counter = true;
     if (b.state === 'stagger' && b.staggerCounter) counter = true;
@@ -968,6 +971,12 @@
 
   /* ---- 판정: 퍼펙트 / 블록 ------------------------------------------------ */
 
+  /** 진행 중인 새 동작이 퍼펙트 패리의 경직을 막는가 (악보 — 남은 타격이 있다, 스펙 2026-09-23 §3.9) */
+  Game.prototype.parryHolds = function (boss) {
+    var a = boss.attack, M = a && global.MOTIONS ? global.MOTIONS[a.def.kind] : null;
+    return !!(M && M.holdOnParry && M.holdOnParry(a));
+  };
+
   Game.prototype.onPerfectParry = function (def, boss, projectile) {
     var p = this.player;
     p.onParrySuccess();
@@ -997,7 +1006,7 @@
     }
 
     if (projectile) projectile.reflect();
-    else if (boss && !boss.dead && !this.bossIsInvulnerable(boss)) {
+    else if (boss && !boss.dead && !this.bossIsInvulnerable(boss) && !this.parryHolds(boss)) {
       boss.stagger(C.PARRY.FLINCH, false);   // 포효 중이면 경직으로 덮어쓰지 않는다
     }
 
@@ -1173,6 +1182,8 @@
 
   Game.prototype.resolveProjectileHitBoss = function (pr) {
     var b = this.boss;
+    // 손패 shot 도 "참지 못한" 리포스트다. 반사탄(fromHand 없음)은 자세를 건드리지 않는다
+    if (pr.fromHand && !b.wallUp() && b.stanceOpen()) { b.punishStance(); return; }
     var counter = (b.state === 'attack' && b.attack && b.attack.stage === 'windup') ||
                   (b.state === 'stagger' && b.staggerCounter);
     var empowered = this.player.isEmpowered();

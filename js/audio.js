@@ -177,6 +177,18 @@
     noise(t, d * 0.8, 0.16, 'lowpass', 320, 1);
   };
 
+  /** 악보 음표: 삼각파 짧은 음 (금 텔과 구분된다) */
+  RAudio.note = function () {
+    if (!ok()) return;
+    tone('triangle', A.NOTE_HZ, now(), A.NOTE_MS / 1000, 0.14);
+  };
+
+  /** 반격 자세: 낮은 사각파 울림 — 자세 표시(회색 점선 링)의 소리 채널 (색·모양·소리 3채널, 스펙 §2.2) */
+  RAudio.guard = function () {
+    if (!ok()) return;
+    tone('square', A.GUARD_HZ, now(), A.GUARD_MS / 1000, 0.10);
+  };
+
   /** 퍼펙트 패리: 노이즈 버스트 + 금속 배음 감쇠 0.5s */
   RAudio.parryPerfect = function () {
     if (!ok()) return;
