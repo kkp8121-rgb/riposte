@@ -811,6 +811,7 @@
       if (ps.t <= 0) {
         this.pendingShots.splice(i, 1);
         var proj = ps.make();
+        if (!proj) continue;                 // 발사 취소 (협공 뒤 탄 — 등 뒤 공간이 사라졌다). 기존 make 는 null 을 돌려주지 않는다
         this.spawnProjectile(proj);
         // 연사 후속탄은 "예고"가 아니라 "발사"다 — 텔 플래시가 아니라 작은 발사 스파크
         if (ps.cue && b && !b.dead) b.releaseSpark(proj.tell);
@@ -1005,7 +1006,9 @@
       FX.pop('PERFECT', px, py - 46, C.COLORS.GOLD, { size: 19 });
     }
 
-    if (projectile) projectile.reflect();
+    // 등 뒤에서 온 탄(부메랑 귀환·협공 뒤 탄)은 뒤집으면 벽으로 간다 — 보스 쪽으로 보낸다
+    if (projectile) projectile.reflect((projectile.returning || projectile.fromBehind) && boss
+      ? (boss.x >= projectile.x ? 1 : -1) : undefined);
     else if (boss && !boss.dead && !this.bossIsInvulnerable(boss) && !this.parryHolds(boss)) {
       boss.stagger(C.PARRY.FLINCH, false);   // 포효 중이면 경직으로 덮어쓰지 않는다
     }
@@ -1119,6 +1122,17 @@
       var pr = this.projectiles[i];
       pr.update(dt);
 
+      // 부메랑(스펙 2026-09-23 §3.2) — 플레이어를 turnDist 지나거나 아레나 끝에 닿으면 돌아온다
+      if (pr.boomerang && !pr.returning && pr.owner === 'boss') this.turnBoomerang(pr);
+      if (pr.dead) { this.projectiles.splice(i, 1); continue; }        // 벽 코앞에서 부서진 부메랑
+      // 받지 못한 귀환탄·등 뒤 탄은 **플레이어를 지나간 뒤** 보스에 닿으면 사라진다 (보스가 받는다).
+      // 지나가기 전이면 보스 몸을 그냥 통과한다 — 보스가 순간이동해 귀환 경로 위에 서 있어도 탄을 먹지 않게
+      if (pr.owner === 'boss' && (pr.returning || pr.fromBehind) && b &&
+          (pr.x - p.x) * pr.vx > 0 && Math.abs(pr.x - b.x) <= C.BOSS.HALF_W) {
+        this.projectiles.splice(i, 1);
+        continue;
+      }
+
       if (pr.owner === 'boss' && !this.ko) {
         var d = Math.abs(pr.x - p.x);
         if (!pr.pierced) {
@@ -1160,6 +1174,35 @@
 
       if (pr.dead) this.projectiles.splice(i, 1);
     }
+  };
+
+  /**
+   * 부메랑 회전. 속도 = 남은 거리 / backTime — 벽 코앞에서 돌아도 "두 번째 텔 → 교차"가 backTime 으로 일정하다.
+   * 도는 순간 그 자리에서 텔 버스트(두 번째 예고). 플레이어가 벽에 붙어 받는 거리 안에서 돌게 되면 부서진다 —
+   * 예고와 타격이 같은 순간이 되는 억울한 귀환을 만들지 않는다.
+   */
+  Game.prototype.turnBoomerang = function (pr) {
+    var p = this.player, bm = pr.boomerang;
+    var dir = pr.vx >= 0 ? 1 : -1;
+    var past = (pr.x - p.x) * dir;                                  // 플레이어를 지나간 거리
+    var atWall = (dir > 0 && pr.x >= V.MAX_X) || (dir < 0 && pr.x <= V.MIN_X);
+    if (past < bm.turnDist && !atWall) return;
+    var dist = Math.abs(pr.x - p.x);
+    if (dist <= C.PARRY.PROJECTILE_CATCH) {                          // 벽 코앞 — 돌 자리가 없다
+      FX.sparks(pr.x, pr.y, C.FX.BLOCK_SPARKS, pr.color, { speed: 160, life: 0.3, size: 2 });
+      pr.dead = true;
+      return;
+    }
+    var speed = Math.min(C.MOTION.BOOMERANG_SPEED_MAX, dist / bm.backTime);
+    var red = bm.backTell === 'red';
+    pr.returning = true;
+    pr.vx = -dir * speed;
+    pr.tell = bm.backTell;
+    pr.color = red ? C.COLORS.RED : C.COLORS.GOLD;
+    pr.pierced = false;
+    pr.trail.length = 0;
+    FX.tellBurst(pr.x, pr.y, pr.color, red ? 'red' : 'gold');
+    if (red) RAudio.tellRed(); else RAudio.tellGold();
   };
 
   /** 반사탄이 방벽에 맞았다 / 방벽이 깨졌다 (스펙 §2.4). broke=true 면 카운터 경직이 열렸다 */

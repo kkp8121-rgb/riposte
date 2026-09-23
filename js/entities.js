@@ -278,6 +278,10 @@
     this.dead = false;
     this.age = 0;
     this.trail = [];
+    /* 새 동작 (스펙 2026-09-23 §3.2·3.3) */
+    this.boomerang = o.boomerang || null;   // 부메랑 표 {turnDist, backTime, backTell} — 정의 공유, 읽기만
+    this.returning = false;                 // 부메랑이 돌아서 오는 중
+    this.fromBehind = !!o.fromBehind;       // 협공 뒤 탄 — 플레이어 등 뒤에서 생겼다
   }
 
   Projectile.prototype.update = function (dt) {
@@ -288,8 +292,13 @@
     if (this.x < -60 || this.x > V.W + 60) this.dead = true;
   };
 
-  Projectile.prototype.reflect = function () {
-    this.vx = -this.vx * C.PROJECTILE.REFLECT_MULT;
+  /**
+   * 퍼펙트 패리 반사. toward(±1)가 있으면 그 방향으로 보낸다 — 등 뒤에서 온 탄(부메랑 귀환·협공 뒤 탄)만 넘긴다.
+   * 없으면 기존대로 속도를 뒤집는다 (보스 쪽에서 온 탄은 뒤집으면 보스 쪽이다).
+   */
+  Projectile.prototype.reflect = function (toward) {
+    var speed = Math.abs(this.vx) * C.PROJECTILE.REFLECT_MULT;
+    this.vx = (toward === undefined || toward === null) ? -this.vx * C.PROJECTILE.REFLECT_MULT : toward * speed;
     this.owner = 'player';
     this.tell = 'player';
     this.color = C.COLORS.PLAYER;

@@ -105,6 +105,51 @@
     }
   };
 
+  /* ---- 부메랑 (§3.2 LANTERN) ---------------------------------------------
+   * 나간다(def.tell) → 플레이어를 turnDist 지나거나 벽에서 돈다(game.turnBoomerang) → backTell 로 돌아온다. */
+  MOTIONS.boomerang = {
+    remote: true,
+    active: function (boss, a) {
+      var def = a.def, dir = boss.dirToPlayer();
+      boss.fire(def, function () { return boss.newShot(def, dir, { boomerang: def.boomerang }); });
+    }
+  };
+
+  /* ---- 협공 (§3.3 TEMPEST) -----------------------------------------------
+   * 앞 탄(마지막 발)이 받는 거리에 닿고 gap 초 뒤, 등 뒤 backDist 에서 생긴 탄이 받는 거리에 닿도록 예약한다.
+   * 뒤 탄은 생기는 순간 그 자리에서 텔 버스트 — 생성 → 도착이 일정하다. */
+  function backShot(boss, def, g) {
+    var pc = def.pincer, p = g.player, side = behindDir(boss, p);
+    var pad = C.MOTION.PINCER_SPAWN_PAD;
+    // 그새 플레이어가 등 뒤 벽으로 물러섰다 — 뒤 탄이 몸 위에 예고 없이 생기므로 쏘지 않는다 (null = 발사 취소)
+    if (roomBehind(boss, p) - pad < C.MOTION.PINCER_MIN_ROOM) return null;
+    var x = clamp(p.x + side * pc.backDist, V.MIN_X + pad, V.MAX_X - pad);
+    var y = V.FLOOR_Y - pc.y;
+    var red = pc.backTell === 'red';
+    FX.tellBurst(x, y, red ? C.COLORS.RED : C.COLORS.GOLD, red ? 'red' : 'gold');
+    if (red) RAudio.tellRed(); else RAudio.tellGold();
+    return new Projectile({
+      x: x, y: y, vx: -side * pc.backSpeed, r: pc.r, tell: pc.backTell,
+      damage: pc.damage === undefined ? 1 : pc.damage, reflectDamage: pc.reflectDamage || 0, shape: pc.shape || 'bolt',
+      skill: red ? null : (def.steal || null), label: def.label || def.id,
+      owner: 'boss', fromBehind: true
+    });
+  }
+  MOTIONS.pincer = {
+    remote: true,
+    canBegin: function (boss, def, g) { return roomBehind(boss, g.player) >= C.MOTION.PINCER_MIN_ROOM; },
+    active: function (boss, a, g) {
+      var def = a.def, pc = def.pincer, p = g.player, dir = boss.dirToPlayer();
+      boss.fire(def, function () { return boss.newShot(def, dir); });
+      var catchD = C.PARRY.PROJECTILE_CATCH;
+      var lastFront = def.volley ? boss.volleyInterval(def) * (def.volley.count - 1) : 0;
+      var spawnX = boss.x + dir * (B.HALF_W + 10);
+      var eta = Math.max(0, Math.abs(p.x - spawnX) - catchD) / def.proj.speed + lastFront;
+      var backTravel = Math.max(0, pc.backDist - catchD) / pc.backSpeed;
+      g.scheduleProjectile(Math.max(0, eta + pc.gap - backTravel), function () { return backShot(boss, def, g); }, false);
+    }
+  };
+
   /* ---- 동작 항목은 이 줄 위에 추가한다 ---- */
 
   global.MOTIONS = MOTIONS;

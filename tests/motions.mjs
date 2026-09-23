@@ -254,6 +254,125 @@ check('악보 — 응답 간격 = 콜 간격', melee3.scoreRhythm);
 check('악보 — P2 에서도 응답 간격은 콜과 같다(gap 만 짧다)', melee3.scoreP2, JSON.stringify(melee3.scoreP2Data.times));
 check('악보 — 세 타 전부 퍼펙트로 받을 수 있다(중간 경직 없음)', melee3.scoreParryAll, `(stagger at scoreIdx ${JSON.stringify(melee3.scoreStaggers)})`);
 
+/* ---- 부메랑 · 협공 (Task 4) ------------------------------------------------ */
+const shots = await page.evaluate(() => {
+  const g = window.__RIPOSTE.game, T = window.__T, C = window.CONFIG;
+  const out = {};
+  const ORB = { id: 'orb', label: 'ORB', tell: 'red', kind: 'boomerang', windup: 0.6, active: 0.06, recover: 0.5,
+                proj: { speed: 340, r: 11, y: 50, damage: 1, reflectDamage: 14, shape: 'arrow' },
+                boomerang: { turnDist: 200, backTime: 0.6, backTell: 'gold' },
+                steal: { id: 'ORB', label: 'ORB', kind: 'shot', damage: 14 } };
+  const bossShot = () => g.projectiles.find((p) => p.owner === 'boss' || p.boomerang);
+
+  /* 적으로 와서 대시로 넘기고 → 등 뒤에서 금으로 돌아온다 → 받으면 보스 쪽으로 반사 + 훔침 */
+  T.setup({ orb: ORB }, 400, 750);
+  T.attack('orb');
+  out.orbRemote = g.boss.attackState().remote === true;
+  let dashed = false, parried = false, turn = null;
+  T.run(4.0, (gg) => {
+    const pr = bossShot(); if (!pr) return;
+    const p = gg.player, d = Math.abs(pr.x - p.x);
+    if (!pr.returning && !dashed && d < 60) { p.startDash(1); dashed = true; }
+    if (pr.returning && !turn) turn = { tell: pr.tell, vx: pr.vx, behind: pr.x < p.x };
+    if (pr.returning && pr.owner === 'boss' && !parried && d <= 45) { p.startParry(); parried = true; }
+  });
+  out.orbTurn = turn && turn.tell === 'gold' && turn.vx > 0 && turn.behind;
+  out.orbSteal = g.player.hand.some((s) => s.id === 'ORB') && g.hits === 0;
+  out.orbToBoss = g.boss.hp < 999;                 // 반사된 귀환탄이 보스를 맞혔다 (벽 쪽으로 갔다면 hp 그대로)
+
+  /* 보스가 귀환 경로 위(플레이어와 도는 지점 사이)에 서 있어도 귀환탄은 플레이어까지 온다 */
+  T.setup({ orb: ORB }, 400, 750);
+  g.player.iframes = 99;
+  T.attack('orb');
+  let reached = false, moved = false;
+  T.run(4.0, (gg) => {
+    const pr = gg.projectiles.find((p) => p.boomerang); if (!pr) return;
+    if (pr.returning && !moved) { gg.boss.x = gg.player.x - 110; moved = true; }   // LANTERN P2 orb-behind-flicker 자리
+    if (pr.returning && Math.abs(pr.x - gg.player.x) <= C.PROJECTILE.HIT_DIST) reached = true;
+  });
+  out.orbPassBoss = moved && reached;
+
+  /* 벽 코앞(받는 거리 안)에서 돌게 되면 부서진다 — 예고와 타격이 같은 순간이 되지 않게 */
+  T.setup({ orb: ORB }, 90, 800);
+  g.player.iframes = 99;
+  T.attack('orb');
+  let returned = false;
+  T.run(4.0, () => { if (g.projectiles.some((p) => p.boomerang && p.returning)) returned = true; });
+  out.orbWallBreak = !returned && g.projectiles.every((p) => !p.boomerang);
+
+  /* 두 번째 텔 → 교차가 backTime 으로 일정 — 보통 거리와 벽 코앞 (Review Focus 2) */
+  const crossTime = (px) => {
+    T.setup({ orb: ORB }, px, 800);
+    g.player.iframes = 99;
+    T.attack('orb');
+    let t0 = null, t1 = null, lastSide = null;
+    T.run(5.0, (gg) => {
+      const pr = g.projectiles.find((p) => p.boomerang); if (!pr) return;
+      if (pr.returning && t0 === null) { t0 = gg.time; lastSide = Math.sign(pr.x - gg.player.x); }
+      if (t0 !== null && t1 === null) {
+        const side = Math.sign(pr.x - gg.player.x);
+        if (side !== lastSide) t1 = gg.time;
+      }
+    });
+    return t0 === null || t1 === null ? null : +(t1 - t0).toFixed(3);
+  };
+  out.crossOpen = crossTime(400);
+  out.crossWall = crossTime(130);
+  out.orbConst = out.crossOpen !== null && out.crossWall !== null &&
+                 Math.abs(out.crossOpen - 0.6) < 0.03 && Math.abs(out.crossWall - 0.6) < 0.03;
+
+  /* 협공 — 앞(금) 뒤 gap 초에 등 뒤(적) */
+  const SQUALL = { id: 'squall', label: 'SQUALL', tell: 'gold', kind: 'pincer', windup: 0.6, active: 0.06, recover: 0.6,
+                   proj: { speed: 420, r: 12, y: 50, damage: 1, reflectDamage: 14, shape: 'arrow' },
+                   pincer: { backDist: 260, backSpeed: 360, backTell: 'red', gap: 0.45, y: 30, r: 11, shape: 'bolt' },
+                   steal: { id: 'SQUALL', label: 'SQUALL', kind: 'shot', damage: 14 } };
+  T.setup({ squall: SQUALL }, 420, 760);
+  g.player.iframes = 99;
+  T.attack('squall');
+  out.pincerRemote = g.boss.attackState().remote === true;
+  let front = null, rear = null, rearInfo = null;
+  T.run(3.0, (gg) => {
+    const p = gg.player;
+    for (const pr of gg.projectiles) {
+      if (pr.owner !== 'boss') continue;
+      const d = Math.abs(pr.x - p.x);
+      if (pr.tell === 'gold' && !pr.fromBehind && front === null && d <= C.PARRY.PROJECTILE_CATCH) front = gg.time;
+      if (pr.fromBehind) {
+        if (!rearInfo) rearInfo = { tell: pr.tell, behind: pr.x < p.x, vx: pr.vx };
+        if (rear === null && d <= C.PARRY.PROJECTILE_CATCH) rear = gg.time;
+      }
+    }
+  });
+  out.pincerGap = front !== null && rear !== null ? +(rear - front).toFixed(3) : null;
+  out.pincerOk = out.pincerGap !== null && Math.abs(out.pincerGap - 0.45) < 0.03 &&
+                 rearInfo.tell === 'red' && rearInfo.behind && rearInfo.vx > 0;
+  /* 등 뒤 공간이 없으면 스텝을 건너뛴다 */
+  T.setup({ squall: SQUALL }, 150, 700);
+  T.attack('squall');
+  out.pincerSkip = g.boss.attack === null;
+  /* 예고 뒤 플레이어가 벽으로 물러서면 뒤 탄은 생기지 않는다 (몸 위에 예고 없이 생기지 않게) */
+  T.setup({ squall: SQUALL }, 420, 760);
+  g.player.iframes = 99;
+  T.attack('squall');
+  T.run(0.3);
+  g.player.x = 70;
+  let rearSeen = false;
+  T.run(2.5, (gg) => { if (gg.projectiles.some((p) => p.fromBehind)) rearSeen = true; });
+  out.pincerRetreat = !rearSeen;
+  return out;
+});
+check('부메랑 — attackState.remote', shots.orbRemote);
+check('부메랑 — 적으로 가서 등 뒤에서 금으로 돌아온다', shots.orbTurn);
+check('부메랑 — 귀환탄을 받으면 훔치고 무피격', shots.orbSteal);
+check('부메랑 — 받은 귀환탄은 보스 쪽으로 가서 맞힌다', shots.orbToBoss);
+check('부메랑 — 보스가 귀환 경로 위에 있어도 플레이어까지 온다', shots.orbPassBoss);
+check('부메랑 — 벽 코앞에서 돌게 되면 부서진다', shots.orbWallBreak);
+check('부메랑 — 두 번째 텔 → 교차 = backTime (보통 거리)', shots.orbConst, `(open ${shots.crossOpen} · wall ${shots.crossWall})`);
+check('협공 — attackState.remote', shots.pincerRemote);
+check('협공 — 앞 금 → gap 뒤 등 뒤 적', shots.pincerOk, `(gap ${shots.pincerGap})`);
+check('협공 — 등 뒤 공간이 없으면 건너뛴다', shots.pincerSkip);
+check('협공 — 예고 뒤 벽으로 물러서면 뒤 탄이 생기지 않는다', shots.pincerRetreat);
+
 /* ---- 새 동작 검사는 이 줄 위에 추가한다 ------------------------------------ */
 
 check('pageerror 0', errors.length === 0, errors.slice(0, 3).join(' | '));
