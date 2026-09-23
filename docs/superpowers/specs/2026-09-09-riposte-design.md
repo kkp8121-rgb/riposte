@@ -86,6 +86,8 @@
 - **모양도 다르다 (2026-09-18 추가 — 접근성).** 금은 방사선 8줄, **적은 굵은 X자 4줄**(45/135/225/315도 고정). Game Accessibility Guidelines 1급 권고가 "고정된 색 하나만으로 정보를 전달하지 말 것"이라, 색·소리·모양 세 채널로 이중화한다 — 음소거 상태에서도, 색 구분이 어려워도 읽힌다. 수치는 `C.TELL.RED_*`. 호출부(`Boss.flash`)가 텔 종류를 **명시적으로** 넘긴다(색 문자열로 자동 판정하지 않는다).
 - 색 재사용 금지: 세 번째 대응 유형이 필요해지면 색을 돌려 쓰지 말고 새 색·새 모양을 배정한다(Sekiro가 한 기호로 3종 대응을 표시해 "몸에 가려 못 읽는다"는 불만을 산 사례).
 - **어둠 규칙 (2026-09-19 추가 — HOLLOW §3.11)**: **텔은 절대 어두워지지 않는다.** 아레나 `darkness` 는 배경·기둥·바닥·보스 몸통만 덮고, 금 버스트·적 X자·투사체·존·플레이어·HUD 는 어둠 레이어 **위에** 그린다(렌더 순서가 규칙, 계수는 세기일 뿐). `?nofx=1` 로 꺼지지 않는다 — 판정의 일부다.
+- **악보 예외 (2026-09-23 추가 — CHORUS §3.6)**: 이 게임에서 유일하게, 첫 타격 뒤로는 플래시가 없다. 첫 플래시가 예고인 동시에 "이후 타격이 올 시각 전부"를 약속하고(간격은 공격별로 항상 일정), 플레이어는 그때부터 반응이 아니라 **기억**으로 받는다 — §2.2 의 "예고 → 타격은 항상 일정하다"는 원칙은 그대로 지킨다.
+- **자세 상태 표시 (2026-09-23 추가 — ADAMANT §3.12)**: 회색 점선 링 + 낮은 울림(`RAudio.guard`) + 팝 `GUARD`는 **텔이 아니라 보스 상태 표시**다(GRAVEN 아머·ADAMANT 방벽과 같은 부류). 대응 색은 여전히 금(패리)·적(대시) 둘뿐 — 반격 자세가 세 번째 텔 색을 만들지 않는다.
 
 ### 2.3 패리 (K)
 
@@ -163,9 +165,11 @@
 
 챕터(2026-09-17 확장): `config.CHAPTERS = [{ id: 1, name: 'CHAPTER I — THE HAND', bosses: ['vesper','seraph','graven','mirror'] }, { id: 2, name: 'CHAPTER II — THE DEBT', bosses: ['lantern','chorus','bastion','avarice'] }, { id: 3, name: 'CHAPTER III — THE WALL', bosses: ['sentinel','tempest','hollow','adamant'] }]`(챕터 3 은 2026-09-19 추가). 진행은 지금처럼 `window.BOSSES` 순서를 따르고, 챕터 마지막 보스 격파 시 INTERLUDE 카드가 끼어든다(마지막 챕터 뒤는 ENDING). 챕터 선택 화면은 만들지 않는다(`?boss=5..12` 로 충분). 챕터 1 이 "동사를 배운다"(패리→반사→강화→인내)면 챕터 2 는 "상대가 나를 안다" — 같은 동사를 상대가 역이용한다. 챕터 3 은 "빼앗기가 통하지 않는다"(THE WALL) — 주지도 되빼앗지도 않고 막아선다. 설계 근거·대안 비교는 `2026-09-17-riposte-chapter2-proposal.md` · `2026-09-19-riposte-chapter3-design.md`.
 
-**신규 보스 차별화 원칙 (2026-09-18, 사용자 지시)**: 새 보스는 먼저 등록된 보스와 **패턴·컨셉이 겹치면 안 된다** — 의도된 기획(예: MIRROR 가 챕터 1 기술을 되돌려 쓰는 것)이 아니라면. 판정은 `node tools/boss-overlap.mjs --check` 가 한다: (a) 실루엣 동일 금지, (b) 패턴 모양(스텝 열 형태)이 먼저 등록된 보스와 50% 이상 겹침 금지, (c) 공격 구성(kind/tell) 유사도 75% 이상 금지. 의도된 복제는 보스 정의에 `overlapIntended: '<이유>'` 로 선언한다. 이 검사는 보스 추가·수정 PR 의 게이트이며, 기획서(§3.x)에는 "챕터 1 이 쓰지 않은 공간 모양 1개 이상" 을 명시한다. (배경: 2026-09-17 챕터 2 1차 구현이 챕터 1 패턴 모양을 16/18 복제 — 기획·QA·밸런스 전 단계에 차별화 기준이 없었던 결함.)
+**신규 보스 차별화 원칙 (2026-09-18, 사용자 지시)**: 새 보스는 먼저 등록된 보스와 **패턴·컨셉이 겹치면 안 된다** — 의도된 기획(예: MIRROR 가 챕터 1 기술을 되돌려 쓰는 것)이 아니라면. 판정은 `node tools/boss-overlap.mjs --check` 가 한다: (a) 실루엣 동일 금지, (b) 패턴 모양(스텝 열 형태)이 먼저 등록된 보스와 50% 이상 겹침 금지, (c) 공격 구성(kind/tell) 유사도 75% 이상 금지, (d) **(2026-09-23 추가)** 챕터 2 이후 보스는 먼저 등록된 보스 누구와든 **동작 서명**(`kind`/`tell` + 행동을 바꾸는 표지 — `linger`·`echo`. `volley`·`anchor`·수치는 서명에 넣지 않는다)이 같은 공격을 최대 1개까지만 가진다(손패 공급용 기본기 1장). `kind` 는 엔진이 아는 것(기존 4종 + `js/motions.js` 에 등록된 동작)만 허용한다 — 새 kind 이름을 붙여 수치 변주를 새 서명으로 통과시키는 길을 막는다. 의도된 복제는 보스 정의에 `overlapIntended: '<이유>'` 로 선언한다(단, (d)는 `overlapIntended` 로 면제되지 않는다). 이 검사는 보스 추가·수정 PR 의 게이트이며, 기획서(§3.x)에는 "챕터 1 이 쓰지 않은 공간 모양 1개 이상" 을 명시한다. (배경: 2026-09-17 챕터 2 1차 구현이 챕터 1 패턴 모양을 16/18 복제 — 기획·QA·밸런스 전 단계에 차별화 기준이 없었던 결함.)
 
 공통 하한: **windup 은 배수(P2 ×0.8)를 먹여도 `BOSS.MIN_WINDUP`(0.34s) 아래로 내려가지 않는다** — 플래시를 보고 반응할 수 있는 최소 시간을 보장한다. 돌진(charge)은 진행 방향 벽까지 `BOSS.MIN_CHARGE_RUN`(260px)이 안 나오면 그 스텝을 건너뛴다(시작하자마자 자기 경직으로 끝나는 무의미한 돌진 방지).
+
+🔴 **공정성 수정 2건 (챕터 2·3 구현 중 발견, 2026-09-23)**: (1) 경직·포효로 공격이 끊기면 그 공격이 예약해 둔 후속 발사(연사 volley·협공 뒤 탄 등, `a.spawns`)도 함께 취소된다 — 끊은 공격의 결과가 뒤늦게 코앞에서 나오지 않는다(commit `c699b0f`). (2) 되받아치기(deflect)는 되받은 탄이 플레이어의 받는 거리에 `C.BOSS.DEFLECT_MIN_REACT`(0.40s) 이상 걸려야 발동한다 — 반응할 수 없는 거리(코앞)에서는 되받지 않는다(commit `6f8585a`, §3.7 BASTION).
 
 ### 3.1 VESPER — 결투가 (HP 120, par 30s) — 튜토리얼 보스
 
@@ -214,142 +218,141 @@
 - P1 패턴: `[thrust]`, `[feint-thrust]`, `[slash, thrust]`, `[arrow, close, slash]`, `[slam]`
 - P2 패턴: `[mirror ×hand.length]`, `[feint-slash, thrust]`, `[execution]`, `[arrow, arrow, slam]`
 
-### 3.5 LANTERN — 환술사 (HP 280, par 65) — 챕터 2 · 색 읽기 + 등 뒤 순간이동 (2026-09-18 재설계)
+### 3.5 LANTERN — 환술사 (HP 280, par 50) — 챕터 2 · 부메랑 + 등 뒤 순간이동 (2026-09-23 재설계)
 
-실루엣 신규 `lantern`(등불 + 단검, 무기 `dagger`), 색 `#7dff9a`. 엔진 변경: 스텝 `{ move: 'behind' }`(플레이어 등 뒤 `prefer.close` 거리로 즉시 이동 + 잔상, `BOSS.BLINK_PAUSE` 0.12s 정지 후 다음 스텝).
-
-| 공격 | 텔 | windup | 비고 | 훔친 기술 |
-|---|---|---|---|---|
-| flicker | 금 | 0.55 | reach 160, lunge 계열 | FLICKER (lunge, 18) |
-| flicker-red | **적** | 0.55 | **flicker 와 동일 박자·리치.** 색만 다르다 | — |
-| glow | 금 (투사체, 속도 240, 느린 빛 구슬) | 0.50 | 패리 시 반사 | GLOW (shot, 12) |
-
-- P1 패턴: `[behind, flicker]`, `[flicker-red]`, `[glow, behind, flicker]`, `[flicker, wait .3, flicker-red, wait .3, flicker]`(색 교대 리듬)
-- P2 패턴: `[behind, flicker-red]`, `[glow, wait .3, glow, behind, flicker]`, `[behind, flicker, behind, flicker-red]`(연속 순간이동), `[flicker-red, wait .25, flicker]`
-- 챕터 1 이 쓰지 않는 공간 모양: **뒤에서 온다.** 플레이어는 자동으로 보스를 보지만 잔상 순간에 방향이 뒤집힌다. 색과 방향을 같이 읽어야 한다.
-- 판정기 예상: 실루엣 고유 · 비기본 패턴 모양 챕터 1 과 0% · 공격 구성 [m/g, m/r, p/g] vs VESPER 50%.
-
-### 3.6 CHORUS — 쌍검 (HP 300, par 45) — 챕터 2 · 연속 패리 + 좌우 교차 (2026-09-18 재설계)
-
-실루엣 신규 `twin`(양손 단검 2자루, 무기 `twin`), 색 `#4d9dff`. 엔진 변경: 스텝 `{ move: 'cross' }`(플레이어를 **지나쳐** 반대편 `prefer.close` 거리로 `BOSS.CROSS_SPEED` 700px/s 로 달려 넘어간다 — LANTERN 의 순간이동과 달리 눈에 보이는 이동. 히트박스 없음).
+실루엣 `lantern`(등불 + 단검, 무기 `dagger`), 색 `#7dff9a`. 엔진: 스텝 `{ move: 'behind' }`(순간이동, 유지) + 신규 `kind:'boomerang'`(§3 엔진 표 — 적으로 나가 등 뒤에서 금으로 돌아온다).
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
-| twin | 금 ×2 (volley interval 0.35) | 0.45 | 근접 2연타 — active 뒤 recover 대신 0.35s windup + 새 플래시 (`BOSS.MIN_VOLLEY_GAP`) | TWIN (slash, 13) |
-| bolt | 금 (투사체, 속도 600) | 0.42 | 패리 시 반사 | BOLT (shot, 11) |
-| triad (P2) | 금 ×3 (volley interval 0.35) | 0.50 | 근접 3연타 | TWIN |
-| scissor (P2) | **적** (근접 광역, reach 200) | 0.70 | 양쪽을 동시에 베는 가위 — 대시로만 회피 | — |
+| flicker | 금 | 0.55 | reach 160, lunge 계열 — 챕터 1 과 서명이 같은 유일한 기본기 | FLICKER (lunge, 18) |
+| orb | 적→금 (부메랑, 속도 340) | 0.60 | 적으로 나가 `turnDist` 200 에서 돈다. 도는 자리에서 두 번째(금) 텔 버스트, `backTime` 0.60 으로 귀환 텔→타격이 일정. 퍼펙트 패리하면 보스 쪽으로 반사 | ORB (shot, 14) |
+| orb2 (P2) | 적→금 ×2 (volley 0.30) | 0.55 | 부메랑 두 발 연속 | ORB |
 
-- P1 패턴: `[cross, twin]`, `[twin]`, `[bolt, cross, twin]`, `[cross, twin, cross, twin]`
-- P2 패턴: `[triad]`, `[cross, triad, scissor]`, `[bolt, wait .3, bolt, cross, triad]`, `[scissor]`
-- 챕터 1 이 쓰지 않는 공간 모양: **한 패턴 안에서 플레이어의 반대편으로 넘어간다.** 연타 사이에 몸을 돌려 받아야 한다. 적색 돌진(lance)은 GRAVEN 과 겹쳐 삭제.
-- 판정기 예상: 실루엣 고유 · 비기본 모양(`m:cross …`) 0% · 공격 구성 [m/g/volley ×2, p/g, m/r] vs VESPER 17%.
+- P1 패턴: `[behind, flicker]`, `[orb]`, `[far, orb]`, `[flicker, wait .5, orb]`
+- P2 패턴: `[far, orb2]`(far 먼저 — 몸 옆에서 쏜 외출탄은 생기자마자 맞는다, 실측), `[behind, flicker, orb]`, `[far, orb, behind, flicker]`(귀환 비행 중 순간이동 — **P2 만**, 돌아오는 방향이 보스 쪽과 어긋나는 것을 읽기가 두 배로 어려워진다), `[behind, flicker, behind, flicker]`
+- 챕터 1 이 쓰지 않는 공간 모양: **같은 탄의 색이 비행 중에 바뀐다.** 앞으로 오는 적색은 대시로 넘기고, 등 뒤에서 돌아오는 금색을 뒤돌아 받는다.
+- 실측 교훈(`docs/qa/balance-2026-09-23.md`): 숙련 3시드 다수결 2/3 이지만 s7 칸이 회차에 따라 갈린다(기준 경계 — 플레이테스트에서 따로 볼 것). flicker 뒤 코앞 외출탄은 봇에겐 안 보이지만 사람에게는 붉은 근접과 같은 박자로 읽힐 수 있어 플레이테스트 항목.
 
-### 3.7 BASTION — 수문장 (HP 310, par 50) — 챕터 2 · 아머 + 되받아치기 + 문 (2026-09-18 재설계)
+### 3.6 CHORUS — 쌍검 (HP 250, par 35) — 챕터 2 · 악보 + 메아리 + 좌우 교차 (2026-09-23 재설계)
 
-실루엣 신규 `shield`(큰 방패 + 짧은 철퇴, 무기 `shield`), 색 `#a8b8c8`, armor: true, deflect: true. 엔진 변경: 존 정의 `zone.anchor: 'boss'`(보스 앞 `zone.offset` px 에 고정 — 기본은 플레이어 위치).
-
-| 공격 | 텔 | windup | 비고 | 훔친 기술 |
-|---|---|---|---|---|
-| salvo | 금 (지면 투사체, 속도 380) | 0.65 | 패리 시 반사. **반사되면 deflect 대상** | VOLLEY (shot, 20) |
-| gate | **적** (존, 보스 앞 offset 140, 폭 220) | 1.00 | 문이 닫힌다 — 근접 접근 차단. 대시로만 통과 | — |
-| ward | 금 | 0.80 | reach 170, slam 계열 | WARD (slam, 30) |
-
-- P1 패턴: `[salvo]`, `[gate, salvo]`, `[far, salvo, wait .45, salvo]`, `[ward]`
-- P2 패턴: `[gate, salvo, wait .4, salvo]`(랠리, 2연사), `[far, gate]`, `[ward, gate]`, `[salvo, far, salvo]`
-- deflect(스펙 유지): 플레이어 쪽 투사체가 `DEFLECT_REACH` 안이면 idle/recover 중 확률(`DEFLECT_CHANCE_P1/P2` 0.35/0.55, 랠리 `DEFLECT_MAX_RALLY`(3) 회째엔 0)로 되받는다. 되받은 직후 `DEFLECT_RECOVER` 경직 = 카운터 창. 되받은 탄은 `DEFLECT_SPEED_MULT`(0.55)로 느려진다(상한 `DEFLECT_SPEED_MAX` 380) — 반응 시간 (거리−DEFLECT_REACH)/속도 가 퍼펙트 창 0.18s 를 넘도록. 랠리는 `DEFLECT_MAX_RALLY`(3)에서 반드시 끝난다(`rally` 는 `Projectile.reflect()` 가 리셋하지 않는다).
-- 챕터 1 이 쓰지 않는 공간 모양: **보스 앞이 막힌다.** 문이 닫힌 동안은 원거리(반사·shot)만 통하고, 되받는 순간만이 열린 틈. 돌진(bulwark)은 GRAVEN 과 겹쳐 삭제.
-- 판정기 예상: 실루엣 고유 · 비기본 모양(`m:far …`) 0% · 공격 구성 [p/g, z/r, m/g] vs GRAVEN 50% · vs SERAPH 60%.
-
-### 3.8 AVARICE — 약탈자 (HP 400, par 55) — 챕터 2 보스 · 빼앗김 · 자기 기술 없음 (2026-09-18 재설계)
-
-실루엣 신규 `taker`(후드 + 긴 외투, 무기 없음, player 보다 큼), 색 `#ff2fa6`, stealOnHit: true, `overlapIntended: '되돌림용 공격표는 챕터 1·2 기술 정의를 그대로 담는다'`.
-
-- **되돌림용 공격표**(thrust/slash/arrow/slam/flicker/glow/ward, windup ×0.80)는 **패턴에서 직접 호출하지 않는다.** `{ mirror: 'loot' }`(빼앗은 손패)와 `{ mirror: 'all' }`(플레이어 현재 손패)로만 나온다.
-- 직접 호출하는 공격은 둘뿐:
+실루엣 `twin`(양손 단검 2자루, 무기 `twin`), 색 `#4d9dff`. 엔진: 스텝 `{ move: 'cross' }`(교차 이동, 유지) + 신규 `kind:'score'`(악보 — 콜을 들려주고 같은 리듬으로 친다) + 근접 정의의 표지 `echo`(메아리 — 친 자리의 잔상이 다시 친다).
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
-| count | 금 (근접 광역, reach 190, 느린 선딜) | 0.90 | "하나, 둘, 셋" 세며 걷어가는 한 번의 큰 휘두르기. **fallbackAttack** — loot·손패가 비면 이것이 나온다(플레이어가 첫 카드를 훔칠 유일한 금색) | COUNT (slash, 25) |
-| plunder | **적** (잡기, reach 230) | 0.95 | 피해 1 + 손패 전부 강탈. 대시로만 회피. **P1 부터** | — |
+| refrain | 금 (악보, 콜 간격 0.45·0.90) | 0.60 | 첫 플래시가 콜을 들려준 뒤 같은 리듬으로 3타 — **두 번째 타격부터 플래시 없음**, 외워서 받는다 | TWIN (slash, 13) |
+| refrain2 (P2) | 금 (악보, 콜 간격 0.35·0.35·0.70) | 0.55 | 4타 | TWIN |
+| canon | 금 (메아리 `delay` 0.70) | 0.55 | 친 자리에서 0.7초 뒤 잔상이 같은 박자로 다시 친다 — 보스는 그새 반대편으로 건너가 있다, **위치를 기억**해야 한다 | CANON (lunge, 15) |
+| scissor (P2, 기본기) | **적** (근접 광역, reach 200) | 0.70 | 양쪽을 동시에 베는 가위 — 대시로만 회피 | — |
 
-- P1 패턴: `[loot]`, `[loot, loot]`, `[close, loot]`, `[plunder]`
-- P2 패턴: `[all]`, `[loot, wait .3, loot, wait .3, loot]`, `[plunder, loot]`, `[count]`
+- P1 패턴: `[refrain]`, `[canon]`, `[canon, cross, canon]`(잔상 둘이 양쪽에서), `[cross, refrain]`
+- P2 패턴: `[refrain2]`, `[canon, cross, refrain2]`, `[cross, canon, scissor]`, `[scissor, wait .3, canon]`
+- 챕터 1 이 쓰지 않는 공간 모양: **악보**(예고에서 불규칙한 리듬을 먼저 들려주고 그대로 친다, §2.2 악보 예외) + **메아리**(친 공격을 보스가 있던 자리의 잔상이 같은 박자로 다시 친다).
+- 실측 교훈(`docs/qa/balance-2026-09-23.md`): 카드 피해가 13~15 라 완벽 봇도 퍼펙트 10~17회가 필요해 금 타격마다 붙는 놓칠 확률이 쌓여 숙련 봇이 1/3 로 졌다 → **hp 300 → 250**(길이 레버가 아니라 처치까지 받아야 하는 금 타격 수를 줄인 것)으로 숙련 3/3. par 45 → 35.
+
+### 3.7 BASTION — 수문장 (HP 310, par 50) — 챕터 2 · 아머 + 되받아치기 + 기둥 (2026-09-23 재설계)
+
+실루엣 `shield`(큰 방패 + 짧은 철퇴, 무기 `shield`), 색 `#a8b8c8`, armor: true, deflect: true. 엔진: 신규 `kind:'pillar'`(기둥 — 등 뒤(와 P2 는 사이에도) 서서 걷기·대시·밀림을 막는다, 칸 폭이 `C.ARENA.SAFE_MIN_W`(200) 미만이 되면 서지 않는다).
+
+| 공격 | 텔 | windup | 비고 | 훔친 기술 |
+|---|---|---|---|---|
+| salvo | 금 (지면 투사체, 속도 380) | 0.65 | 패리 시 반사, **반사되면 deflect 대상**. 손패 공급원 하나라 모든 패턴에 있다 | VOLLEY (shot, 20) |
+| gate | **적** (기둥, 등 뒤 150px, `up` 4.0s) | 0.90 | 물러설 곳이 막힌다 — 아머 보스를 정면으로 받게 만든다 | — |
+| cage (P2) | **적** (기둥 2개 — 등 뒤 + 보스·플레이어 사이, `up` 3.5s) | 0.95 | 투사체만 오가는 방. 되받아치기 랠리는 기둥을 사이에 두고 계속된다 | — |
+
+- P1 패턴: `[salvo]`, `[gate, salvo]`, `[far, salvo, wait .45, salvo]`, `[gate, wait .5, salvo]`
+- P2 패턴: `[cage, salvo, wait .4, salvo]`(랠리, 2연사), `[gate, salvo, salvo]`, `[far, gate, salvo]`, `[salvo, far, salvo]`
+- deflect(스펙 유지): 플레이어 쪽 투사체가 `DEFLECT_REACH` 안이면 idle/recover 중 확률(`DEFLECT_CHANCE_P1/P2` 0.35/0.55, 랠리 `DEFLECT_MAX_RALLY`(3) 회째엔 0)로 되받는다. 되받은 탄은 `DEFLECT_SPEED_MULT`(0.55)로 느려진다. 🔴 **2026-09-23 추가**: 되받은 탄이 받는 거리(`PARRY.PROJECTILE_CATCH`)에 닿기까지 `C.BOSS.DEFLECT_MIN_REACT`(0.40s) 보다 짧게 걸리면 되받지 않는다(§3 공통 공정성 수정 2 — commit `6f8585a`) — 코앞(28px)에서 되받혀 반응 시간이 0에 가깝던 결함을 막는다.
+- 챕터 1 이 쓰지 않는 공간 모양: **보스 앞이 막힌다.** 기둥이 선 동안은 원거리(반사·shot)만 통하고, 되받는 순간만이 열린 틈.
+- 실측 교훈(`docs/qa/balance-2026-09-23.md` §5): 완벽 12/12·숙련 3/3 이지만 **평균 프로파일이 3/3 VICTORY 로 기준(≥2/3 DEFEAT) 미달** — 허용 레버(구성·gap·hp) 3개로 못 바꿨다. 원인은 salvo 하나로 필요한 퍼펙트 수(6~8)가 정해지고, 봇이 기둥에 한 번도 부딪히지 않아서(전 판 `dash 0`) — 기둥의 "물러설 곳을 막는다"는 봇 수치에 드러나지 않는다. **사용자 결정 대기**: salvo 수치(피해·속도) 하향 / 되받기가 실제로 나오는 자리(설계) / 사람 플레이테스트로 넘김.
+
+### 3.8 AVARICE — 약탈자 (HP 400, par 55) — 챕터 2 보스 · 끌어당김 · 빼앗김 (2026-09-23 재설계)
+
+실루엣 `taker`(후드 + 긴 외투, 무기 없음, player 보다 큼), 색 `#ff2fa6`, stealOnHit: true. 엔진: 신규 `kind:'pull'`(끌어당김 — windup 동안 플레이어를 보스 쪽으로 끈다, `melee: true` 지만 접근하지 않는다).
+
+- **되돌림은 이제 자기 카드뿐이다.** `MIRROR_MAP = { COUNT: 'count', HAUL: 'haul' }` — 보스마다 `Player.hardReset()` 이 손패를 비우므로 이 전투의 손패엔 AVARICE 가 준 카드만 있다(챕터 1·2 기술 사본 7종은 도달 불가능한 죽은 정의였다 — 2026-09-23 제거, `overlapIntended` 선언도 필요 없어졌다). `{ mirror: 'loot' }`(빼앗은 손패)와 `{ mirror: 'all' }`(플레이어 현재 손패)로 되돌려 쓴다.
+
+| 공격 | 텔 | windup | 비고 | 훔친 기술 |
+|---|---|---|---|---|
+| count | 금 (근접 광역, reach 190) | 0.90 | **fallbackAttack** — loot·손패가 비면 나오는, 플레이어가 첫 카드를 훔칠 유일한 금색 | COUNT (slash, 25) |
+| haul | 금 (끌어당김, `pull.speed` 170) | 0.90 | windup 동안 보스 쪽으로 끌려간다. `pull.speed`(170) < `PLAYER.SPEED`(265) 라 걸어서 버티면 사거리 밖에서 헛친다 | HAUL (slash, 20) |
+| plunder | **적** (끌어당김 + 잡기, `pull.speed` 150) | 0.95 | 피해 1 + 손패 전부 강탈. 대시로만 회피 | — |
+
+- P1 패턴: `[loot]`, `[haul]`, `[close, loot]`, `[plunder, haul]`
+- P2 패턴: `[all]`, `[haul, loot]`, `[plunder, loot]`, `[loot, wait .3, loot, wait .3, loot]`
 - stealOnHit(유지): 피격마다 손패 맨 앞 1장 → 보스 인스턴스 `loot`. plunder 는 전부. loot 는 def 가 아니라 인스턴스에만.
-- 챕터 1 이 쓰지 않는 공간 모양: **되돌림의 연쇄.** MIRROR 는 손패를 한 번 통째로 비추고, AVARICE 는 빼앗은 것을 잘게 나눠 두 번 세 번 되돌린다. 맞을수록 내 기술이 상대 손에 쌓인다 — 무피격이 곧 공격권.
-- 판정기 예상: 실루엣 고유 · 비기본 모양(`M M`, `m:close M`, `M w M w M`) 0% · 공격 구성은 `overlapIntended` 선언.
+- 챕터 1 이 쓰지 않는 공간 모양: **끌어당김** — 예고 동안 보스 쪽으로 끌려간다. 버티며 걸어 나가 헛치게 만들지, 끌려가며 타이밍을 다시 잡을지 고른다. 빼앗긴 HAUL 을 되돌려 쓰면 다시 끌려간다.
+- 실측 교훈(`docs/qa/balance-2026-09-23.md`): par 55 유지(숙련 중앙 31.8s×2=63.5, 완벽 최소×3=54.7, 차 0.3 → 10s 허용 안).
 
-**챕터 2 수치는 2026-09-18 확정 — `docs/qa/balance-2026-09-18.md`.** 2026-09-17 의 par/HP 확정값은 복제된 기반 위의 값이라 폐기했다. 챕터 1 과 같은 3프로파일(완벽·숙련·평균) 봇 실측(완벽 8/8·숙련 8/8 VICTORY, 평균 8/8 DEFEAT)으로 par/HP 를 다시 확정했다. HP 는 길이 레버가 아니다(handover 교훈 3) — 레버는 엠파워·카운터 배수 스택과 패턴 간격(gap). 이전 실측·레버 기록은 `docs/qa/balance-2026-09-17.md`.
+**챕터 2 수치는 2026-09-23 확정 — `docs/qa/balance-2026-09-23.md`.** 2026-09-18 의 par/HP 는 동작 재설계 전 값이라 폐기했다(LANTERN·CHORUS 만 값이 바뀌었다, 위 각 절 참조). HP 는 길이 레버가 아니다(handover 교훈 3). 이전 실측 기록은 `docs/qa/balance-2026-09-18.md`.
 
-### 3.9 SENTINEL — 창의 파수꾼 (HP 320, par 50) — 챕터 3 · 설 자리가 줄어든다 (2026-09-19)
+### 3.9 SENTINEL — 창의 파수꾼 (HP 320, par 50) — 챕터 3 첫 보스 · 지속 구역 + 쓸기 빔 (2026-09-19 초안, 2026-09-23 쓸기 빔 추가)
 
-실루엣 `spear`(키 큰 파수꾼 + 긴 창 — 렌더러만 있고 아무 보스도 쓰지 않던 것을 살렸다), 색 `#8fe3c8`, 아레나 `wall`. **이동하지 않는다**(기존 전원 이동) — `prefer` 를 넓게 잡아 접근·후퇴 스텝이 발동하지 않고, 패턴에 move 스텝이 없다. 엔진 추가: 존 `linger`(지속형 위험 구역 — `LINGER_TICK` 단위로 재타격) + `C.ARENA.SAFE_MIN_W`(200, 안전 지대 폭 하한 = 대시 190 + 여유 10).
+실루엣 `spear`(키 큰 파수꾼 + 긴 창 — 렌더러만 있고 아무 보스도 쓰지 않던 것을 살렸다), 색 `#8fe3c8`, 아레나 `wall`. **이동하지 않는다**(기존 전원 이동) — `prefer` 를 넓게 잡아 접근·후퇴 스텝이 발동하지 않고, 패턴에 move 스텝이 없다. 엔진: 존 `linger`(지속형 위험 구역, `LINGER_TICK` 단위 재타격) + `C.ARENA.SAFE_MIN_W`(200) + 신규 `kind:'sweep'`(쓸기 빔 — 등 뒤 벽에서 보스 쪽으로 쓸고 온다).
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
 | lance | 금 (reach 260, 찌르기) | 0.70 | 움직이지 않으므로 리치가 위협의 전부 | LANCE (lunge, 22) |
-| sweep | 금 (reach 150, 광역) | 0.55 | 붙으면 맞는다 | SWEEP (slash, 18) |
+| line | **적** (쓸기 빔, 폭 90, 속도 320) | 0.85 | 등 뒤 벽에서 pending 예고로 나타나 windup 끝에 보스 쪽으로 움직인다. **빔 쪽으로 대시**하면 넘고(0.10s < 대시 무적 0.20s), 반대로 대시하면 걷기(265) < 빔(320) 이라 따라잡힌다 — 방향 선택이 강제된다 | — |
 | claim | **적** (존, anchor boss, offset 320, 폭 120, **linger 1.8**) | 0.95 | 설 자리를 지운다. 대시로만 | — |
 
-- P1 패턴: `[lance]`, `[sweep]`, `[claim]`, `[lance, wait .45, sweep]`
-- P2 패턴: `[claim, wait .3, lance]`, `[lance, wait .35, lance]`, `[sweep, wait .4, claim]`, `[lance]`
-- 🔴 한 패턴에 claim 은 최대 하나 — 보스가 고정이라 살아 있는 구역은 최대 2개(합 400px), 남는 맨바닥이 `SAFE_MIN_W` 보다 넓다. **플레이어가 물리적으로 갇히는 일은 없어야 한다.**
-- 챕터 1·2 가 쓰지 않는 공간 모양: **설 자리가 줄어든다.** 대시로 도망칠 곳이 줄어 "붉은 것은 대시" 규칙이 자원 관리가 된다.
+- P1 패턴: `[lance]`, `[line, wait .3, lance]`, `[claim, wait .3, lance]`, `[lance, wait .45, lance]`
+- P2 패턴: `[claim, wait .3, lance]`, `[line, lance]`, `[lance, wait .35, lance]`, `[lance, wait .3, line]`
+- 🔴 한 패턴에 claim 은 최대 하나 — 보스가 고정이라 살아 있는 구역은 최대 2개(합 400px), 남는 맨바닥이 `SAFE_MIN_W` 보다 넓다. 🔴 **claim 과 line 은 한 패턴에 넣지 않고, 구역이 살아 있으면 `onPickPattern` 이 line 패턴을 뽑지 않는다**(2026-09-23 추가) — 빔을 넘는 대시의 착지점이 지속 구역일 수 있다(갇힘). **플레이어가 물리적으로 갇히는 일은 없어야 한다.**
+- 챕터 1·2 가 쓰지 않는 공간 모양: **설 자리가 줄어든다**(claim, 대시로 도망칠 곳이 자원 관리가 된다) + **등 뒤에서 쓸고 오는 빔**(line, 도망쳐도 따라잡혀 방향을 골라야 한다).
 - 실측 교훈: `linger` 는 `LINGER_TICK`(0.9) 의 배수로만 의미가 있다(1.5 = 1.8). 2.4 에서는 존이 살아 있는 동안 플레이어가 창 리치 밖으로 물러나 금 텔이 오지 않는 죽은 시간이었다(완벽 봇 43.6s → 27.1s).
 
-### 3.10 TEMPEST — 비 (HP 330, par 46) — 챕터 3 · 부피 속 선별 (2026-09-19)
+### 3.10 TEMPEST — 비 (HP 330, par 46) — 챕터 3 · 협공 (2026-09-23 재설계)
 
-실루엣 신규 `storm`(무기 없는 넓은 어깨 — 던지는 자), 색 `#7fc4ff`, 아레나 `wall`, 부제 THE RAIN. 옆으로 흘러다니며(left/right) 각도를 바꾸고, 붙으면(`RANGE.CROWDED` 180) 밀어내거나 물러난 뒤에만 쏜다(`onPickPattern` 이 far/near/any 태그로 풀을 고른다).
+실루엣 `storm`(무기 없는 넓은 어깨 — 던지는 자), 색 `#7fc4ff`, 아레나 `wall`, 부제 THE RAIN. 옆으로 흘러다니며(left/right) 각도를 바꾸고, 붙으면(`RANGE.CROWDED` 180) 밀어내거나 물러난 뒤에만 쏜다(`onPickPattern` 이 far/near 태그로 풀을 고른다). 엔진: 신규 `kind:'pincer'`(협공 — 앞 탄과 등 뒤 탄이 일정한 시차로 온다).
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
 | surge | 금 (대형 투사체 r16, 속도 380, **3연발** 간격 0.26) | 0.55 | 세 발이 동시에 떠 있다 — 전부 받아낼 수 없다 | SURGE (shot, 14) |
-| shear | **적** (낮은 투사체 r12, 속도 340) | 0.60 | 대시로만 | — |
-| deluge | **적** (존, 예고 시점 플레이어 위치, 폭 150, linger 없음) | 0.95 | 서 있던 자리로 쏟아진다 | — |
-| gust | **적** (근접 reach 130, push 120) | 0.50 | 붙으면 밀려난다 | — |
+| squall | 금→적 (협공, `gap` 0.45) | 0.60 | 앞 금 1발 → 0.45초 뒤 **등 뒤**에서 적 1발이 그 자리 텔 버스트와 함께 나타난다(`backDist/backSpeed` 로 텔→타격 일정). 등 뒤 공간이 `PINCER_MIN_ROOM`(160) 보다 좁으면 뒤 탄은 생기지 않는다 | SQUALL (shot, 14) |
+| squall2 (P2) | 금×3→적 (협공) | 0.60 | 앞은 surge 와 같은 3연발, 마지막 앞 탄 0.45초 뒤 등 뒤 적 1발 | SQUALL |
 
-- P1 패턴(far): `[surge]`, `[shear, back]`, `[left, surge]`, `[surge, wait .85, shear]` · (any) `[deluge, right]` · (near) `[gust, back]`, `[back, surge]`
-- P2 패턴(far): `[surge, right, surge]`, `[left, surge, wait .75, shear]`, `[deluge, wait .3, surge]`, `[shear, wait .35, shear]` · (near) `[gust, left]`, `[back, surge]`
-- 🔴 각 탄의 플래시 → 타격 간격은 windup 하나로 고정(§2.2). 동시 비행 탄이 많아도 "읽을 수 없어서 죽는다" 가 되면 텔 문법 위반 — 동시 발수를 되돌린다.
-- 챕터 1·2 가 쓰지 않는 공간 모양: **물량 속 선별.** SERAPH 는 정확도(한 발씩 읽기), TEMPEST 는 무엇을 버릴지 고르기. 금색은 surge 하나 — 나머지 셋(적)을 피하는 동안 surge 몇 발을 포기할지가 선택이다. 판정기: SERAPH 와 같은 `projectile/gold+red` 구성이라 `zone`·`melee` 를 섞어 갈랐다.
+- P1 패턴(far): `[surge]`, `[far, squall]`, `[left, far, squall]`, `[surge, wait .85, far, squall]` · (near) `[back, surge]`, `[back, squall]`
+- P2 패턴(far): `[far, squall2]`, `[surge, right, far, squall]`, `[left, far, squall2]`, `[far, squall, wait .5, surge]` · (near) `[back, squall2]`, `[back, surge]`
+- 🔴 각 탄의 플래시 → 타격 간격은 windup(또는 `backDist/backSpeed`) 하나로 고정(§2.2).
+- 챕터 1·2 가 쓰지 않는 공간 모양: **협공.** 앞(금)과 등 뒤(적)에서 일정한 시차로 온다 — 앞을 받고 곧바로 뒤를 넘는다. 두 방향·두 색·순서를 같이 읽어야 한다.
+- 실측 교훈: `gap` 0.45 순서형으로 시작(사용자 결정, `docs/qa/balance-2026-09-23.md`). 사람 플레이테스트에서 "패리하고 대시하는 순서 문제"로만 읽히면(설계 검토 지적) 재설계 스펙(2026-09-23) §6 되돌릴 기준대로 `gap` 을 줄여 앞·뒤가 겹치게 한다.
 
-### 3.11 HOLLOW — 어둠 (HP 300, par 75) — 챕터 3 · 텔만 남는다 (2026-09-19)
+### 3.11 HOLLOW — 어둠 (HP 300, par 60) — 챕터 3 · 표식 (2026-09-23 재설계)
 
-실루엣 신규 `hollow`(무기 없이 키만 크고 몹시 가늘다), 색 `#8a7fb0`, 아레나 **`void`**(유일하게 `darkness: { p1: 0.72, p2: 0.85 }` 가 붙은 무대 — 그 외 값은 `wall` 과 같다). 보스 자체는 단순하게 둔다 — 어려움은 공격이 아니라 텔 하나만 보고 싸우는 데서 나와야 하고, 두 축을 겹치면 무엇이 재미를 만들었는지 가를 수 없다.
-
-| 공격 | 텔 | windup | 비고 | 훔친 기술 |
-|---|---|---|---|---|
-| grasp | 금 (reach 170, approach 70, 찌르기) | 0.62 | 파고드는 손 | GRASP (lunge, 22) |
-| rend | **적** (reach 140, 넓은 호) | 0.80 | 느리다, 텔이 길다 | — |
-| snuff | **적** (돌진 820, wallStun 0.9) | 0.75 | 어둠이 덮쳐온다 | — |
-| ember | 금 (투사체 r12, 속도 340, **2연발** 간격 0.45/0.38) | 0.72 | 어둠 속 빛 두 점 | EMBER (shot, 14) |
-
-- P1 패턴: `[grasp]`, `[rend, wait .4, grasp]`, `[back, ember]`, (far) `[back, ember, snuff]`, `[close, grasp, wait .4, rend]`
-- P2 패턴: `[grasp, wait .35, rend, wait .35, grasp]`, (far) `[back, ember, snuff, grasp]`, (far) `[back, ember, snuff]`, `[close, rend, back, ember]`, `[back, ember, wait .3, close, grasp]`
-- 금색 둘의 플래시 → 타격 간격이 서로 다르게 고정돼 있어(0.62 / 0.72) 어둠 속에서 "어느 텔인지" 를 시간으로 읽게 한다. 🔴 ember 는 반드시 back 뒤에만 — 코앞에서 생성된 탄은 받아낼 수 없다. 🔴 snuff 는 거리가 있을 때(`RANGE.OPEN` 200 밖)만, back 뒤에만.
-- **핵심 보호 규칙(§2.2 어둠 규칙)**: 텔·투사체·존·플레이어·HUD 는 어두워지지 않는다. "내 주변만 밝고 보스는 어둠 속" 안은 기각 — 보스가 안 보이면 텔도 안 보인다. 위치 정보는 무기 끝에서 터지는 텔이 준다.
-- 챕터 1·2 가 쓰지 않는 공간 모양: **시야.** 12스테이지 내내 "플래시를 읽어라" 라고 가르친 것을 플래시밖에 없는 상황에서 시험한다.
-- 실측 교훈: 붉은 공격만 있는 패턴이 있으면 손패가 말라 숙련 봇이 진다 — 지금은 10패턴 전부에 금 공격 ≥1(금 17 : 붉 7). 어둠은 봇에겐 보이지 않으므로 봇 실측으로는 판정할 수 없다 — **사람 플레이테스트 항목.** 되돌릴 기준: 텔을 못 읽으면 어둠을 옅게, 그래도 안 되면 축을 버린다(수치로 덮지 않는다).
-
-### 3.12 ADAMANT — 벽 (HP 340, par 75) — 챕터 3 최종 · 리턴이 있는 기믹 + 카운터 전용 (2026-09-19)
-
-실루엣 신규 `adamant`(가장 크고 가장 두껍다 — 대검 하나), 색 `#c9b8ff`, 아레나 `wall`. 엔진 추가: **`wall: { hits: 2, up: 6.0, breakStagger: 1.6 }`** · **`counterOnly: {}`** · `takeDamage(dmg, opt)` 의 `opt.counter`.
+실루엣 `hollow`(무기 없이 키만 크고 몹시 가늘다), 색 `#8a7fb0`, 아레나 **`void`**(유일하게 `darkness: { p1: 0.72, p2: 0.85 }` 가 붙은 무대 — 그 외 값은 `wall` 과 같다). 엔진: 신규 `kind:'mark'`(표식 — 플레이어 몸에 붙어 따라다니는 카운트다운). 공격 구성을 표식·ember 둘로 좁혔다(grasp·rend·snuff 삭제) — 어려움은 공격 수가 아니라 텔 하나만 보고 싸우는 데서 나와야 한다.
 
 | 공격 | 텔 | windup | 비고 | 훔친 기술 |
 |---|---|---|---|---|
-| cleave | 금 (reach 190, approach 60, 대검) | 0.78 | 느리고 크고 무겁다 | CLEAVE (slam, 24) |
-| shards | 금 (투사체 r13, 속도 360, **2연발** 간격 0.5/0.42, 반사 피해 14) | 0.62 | 받아서 벽에 되돌리는 것이 정답 | SHARD (shot, 12) |
-| advance | **적** (돌진 700, wallStun 1.0) | 0.80 | 벽이 걸어온다 | — |
-| quake | **적** (존, anchor boss, 기본 offset, 폭 160) | 0.90 | 발밑이 갈라진다 | — |
+| brand | 금 (표식, `delay` 1.40) | 0.70 | active 순간 플레이어 위치에 두 번째 텔 버스트로 표식이 붙는다. 붙은 자리에서 1.4초 뒤 터진다 — **보스가 아니라 자기 몸의 카운트다운**을 읽는다. 받으면 훔친다 | BRAND (lunge, 20) |
+| brand-red (P2) | **적** (표식, `delay` 1.40) | 0.70 | 터지는 순간 대시 | — |
+| ember | 금 (투사체 r12, 속도 340, **2연발** 간격 0.45/0.38) | 0.72 | 어둠 속 빛 두 점. 반드시 back 뒤에만 — 코앞 생성 탄은 받아낼 수 없다 | EMBER (shot, 14) |
 
-- P1 패턴(wall): `[far, shards]`, `[far, shards, close, cleave]` · (any) `[cleave]`, `[quake, wait .4, cleave]`, `[advance, cleave]`
-- P2 패턴(wall): `[far, shards, shards]`, `[close, cleave, wait .3, far, shards]`, `[far, shards, quake, close, cleave]` · (any) `[quake, advance]`, `[advance, cleave]`
-- **방벽(Phase 1~2)**: 서 있는 동안 리포스트는 튕기고(피해 0·손패 환급, 팝 `WALL`) **반사탄만** `hits` 를 깎는다 — 🔴 훔친 SHARD 를 손패에서 쏜 탄(`fromHand`)은 깎지 않는다(owner 만으로는 반사탄과 손패탄을 못 가른다 — 09-19 결함 수정). `hits` 0 → `breakStagger` 동안 카운터 경직(보상, 그 창의 리포스트 전부 ×1.5, 팝 `BREAK`) → `WALL_DOWN`(5.0) 뒤 다시 선다. `up` 초 안에 깨지지 않으면 보상 없이 저절로 내려간다 — **기믹은 의무가 아니라 노리는 기회다.** 방벽이 서 있으면 `onPickPattern` 이 shards 가 든 풀만 뽑는다(벽을 깰 재료를 운에 맡기지 않는다).
-- **Phase 2 counterOnly**: 윈드업·카운터 경직 중 명중만 피해(팝 `COUNTER ONLY`). `softMult` 를 두지 않아 일반 피해 0 — 완벽 봇이 P2 를 못 넘으면 0.2 로 내린다(허용된 완화안. 09-19 실측에서는 기각 — 레버 8).
-- 챕터 1·2 가 쓰지 않는 공간 모양: 멀리서 붙는 이동(`m:far … m:close`). GRAVEN 아머는 *위력* 조건(엠파워), ADAMANT 는 *타이밍* 조건(윈드업 중 명중) — 반사 + 카운터, 12스테이지가 가르친 것의 기말고사.
-- 실측 교훈: `wall.up` 4.0 은 볼리 한 번이 겨우 들어가 첫 볼리를 놓치면 보상 없이 내려갔다(완벽 봇 21.4 / 33.2 / 67.7s, 세 배 편차). 6.0(볼리 두 번)에서 26.4~33.9s(비 1.28). 남은 편차(숙련 26~53s)는 P2 `counterOnly` 의 성질이다 — 봇은 idle·recover 에만 리포스트하므로 P2 피해가 운에 좌우된다. 후보(`phase2At` 보스별 진입 비율 · P2 wall 풀 비중 상향 · counterOnly 폐기)는 **사용자 결정 대기**(`docs/qa/balance-2026-09-19.md` §6).
+- P1 패턴: `[brand]`, `[back, ember]`, `[brand, wait .2, back, ember]`(표식이 도는 동안 탄이 온다 — 겹침이 이 동작의 핵심), `[back, ember, brand]`
+- P2 패턴: `[brand-red, brand]`, `[brand, wait .2, back, ember]`, `[back, ember, brand-red]`, `[brand, wait .3, brand-red]`
+- 표식은 붙은 뒤 보스가 경직돼도 사라지지 않는다(이미 약속된 타격) — 붙기 전(windup)에 끊기면 붙지 않는다. 표식·카운트다운 링은 어둠 **위에** 그린다.
+- **핵심 보호 규칙(§2.2 어둠 규칙)**: 텔·투사체·존·플레이어·HUD 는 어두워지지 않는다. "내 주변만 밝고 보스는 어둠 속" 안은 기각 — 보스가 안 보이면 텔도 안 보인다.
+- 챕터 1·2 가 쓰지 않는 공간 모양: **시야 + 표식.** 12스테이지 내내 "플래시를 읽어라" 라고 가르친 것을, 어둠 속에서는 보스가 아니라 자기 몸에 붙은 빛을 읽는 것으로 시험한다.
+- 실측 교훈(`docs/qa/balance-2026-09-23.md`): par 75 → **60**. 어둠은 봇에겐 보이지 않으므로 봇 실측으로는 판정할 수 없다 — **사람 플레이테스트 항목**. 되돌릴 기준(재설계 스펙 §6): 표식과 다른 공격의 겹침이 "읽을 수 없다"면 표식 중에는 금 공격만 겹치게 제한한다.
 
-**챕터 3 수치는 2026-09-19 확정 — `docs/qa/balance-2026-09-19.md`.** 3시드(7·11·23) 실측: 완벽 12/12 · 숙련 9~10 매번 VICTORY, 11(HOLLOW) 2/3, 12(ADAMANT) 2/3 · 평균 챕터 3 전패 · 연타 0/36 · 하드 12/12. 채택 조건 C1(`overlapIntended` 선언 없이 판정기 통과)·C7(정의 테이블 불변) 충족. 설계 근거·되돌릴 기준은 `2026-09-19-riposte-chapter3-design.md` §7.
+### 3.12 ADAMANT — 벽 (HP 340, par 52) — 챕터 3 최종 · 방벽 + 반격 자세 (2026-09-19 초안 방벽, 2026-09-23 반격 자세로 재설계)
+
+실루엣 `adamant`(가장 크고 가장 두껍다 — 대검 하나), 색 `#c9b8ff`, 아레나 `wall`. 엔진: **`wall: { hits: 2, up: 6.0, breakStagger: 1.6 }`**(유지) · **`counterOnly: {}`**(유지) · 신규 `kind:'stance'`(반격 자세 — 이 윈드업 중에 치면 벌을 받는다).
+
+| 공격 | 텔 | windup | 비고 | 훔친 기술 |
+|---|---|---|---|---|
+| shards | 금 (투사체 r13, 속도 360, **2연발** 간격 0.5/0.42, 반사 피해 14) | 0.62 | 방벽을 깨는 재료 — **반사탄만** `hits` 를 깎는다(손패에서 쏜 SHARD 는 안 깎는다). far 뒤에만 | SHARD (shot, 12) |
+| guard | 금 (반격 자세) | 0.90 | 자세 표시 **3채널**(회색·점선 링·낮은 울림) — 텔은 여전히 금(끝의 강타를 약속). 끝까지 참으면 windup 끝에 금 강타 → 패리하면 CLEAVE 를 훔친다. 자세 중 리포스트가 맞으면 피해 0·환급 없음(팝 `GUARD`)에 즉시 `retort` | CLEAVE (slam, 24) |
+| retort | **적** (자세 벌 반격, reach 240, windup `MIN_WINDUP` 0.34) | 0.34 | 자세 중 맞았을 때만 발동 — **패턴이 직접 부르지 않는다**(서명 `stance/counter`, `stanceCounter: true`) | — |
+
+- P1 패턴(wall): `[far, shards]`, `[far, shards, close, guard]` · (any) `[guard]`, `[close, guard]`
+- P2 패턴(wall): `[far, shards, shards]`, `[far, shards, close, guard]` · (any) `[guard, wait .4, guard]`, `[close, guard]`
+- **방벽(Phase 1~2, 유지)**: 서 있는 동안 리포스트는 튕기고(피해 0·손패 환급, 팝 `WALL`) 반사탄만 `hits` 를 깎는다. `hits` 0 → `breakStagger` 동안 카운터 경직(보상, 팝 `BREAK`) → `WALL_DOWN`(5.0) 뒤 다시 선다. `up` 초 안에 깨지지 않으면 보상 없이 저절로 내려간다. 방벽이 서 있으면 `onPickPattern` 이 shards 가 든 풀만 뽑는다.
+- **Phase 2 counterOnly(유지)**: 윈드업·카운터 경직 중 명중만 피해(팝 `COUNTER ONLY`).
+- 반격 자세는 카운터 창이 아니다 — 방벽이 서 있으면 방벽 판정이 먼저다(방벽에 튕긴 리포스트는 벌을 받지 않는다).
+- 챕터 1·2 가 쓰지 않는 공간 모양: 멀리서 붙는 이동(far…close) + **참기**(guard, 지금까지 "윈드업 중 명중 = 카운터"였던 규칙을 뒤집는다). GRAVEN 아머는 *위력* 조건(엠파워), ADAMANT 는 *타이밍* 조건 — 반사 + 카운터, 12스테이지가 가르친 것의 기말고사.
+- 실측 교훈(`docs/qa/balance-2026-09-23.md`): par 75 → **52**. `wall.up` 6.0(볼리 두 번)에서 완벽 26.4~33.9s. 벽 코너(x=900)에 몰린 보스는 어떤 배치로도 멀어지지 못해 P2 SHARDS 두 번째 탄이 코앞에서 생기는 경우가 남는다 — 컨트롤러 판정: 엔진 수정 없음(연사 후속탄은 예고된 첫 탄 뒤 정해진 간격으로 오므로 읽을 수 있다), **사람 플레이테스트 항목**. 숙련 봇의 남은 패배는 GUARD(반격 자세) 오판이다.
+
+**챕터 3 수치는 2026-09-23 확정 — `docs/qa/balance-2026-09-23.md`.** 3시드(7·11·23) 실측: 완벽 12/12(챕터 2·3 전체) · 숙련 5~11 전부 2/3 이상 · 평균 5·6·8~12 는 2/3 이상 DEFEAT(**BASTION 만 3/3 VICTORY로 미달**, §3.7) · 연타 0/36 · 하드 12/12 · 판정기(`tools/boss-overlap.mjs --check`) 8보스 전원 재활용 ≤1·새 서명 ≥1을 `overlapIntended` 없이 통과. 남은 과제(BASTION 평균 미달·LANTERN 숙련 경계·ADAMANT 벽 코너 후속탄·LANTERN 코앞 외출탄)는 전부 사람 플레이테스트로 넘겼다 — `docs/qa/playtest-ch23-attacks.md`. 설계 근거·되돌릴 기준은 `2026-09-23-riposte-ch23-attacks-design.md` §5~6, 2026-09-19 초안(방벽·claim·surge 등 1차 확정)은 `2026-09-19-riposte-chapter3-design.md`·`docs/qa/balance-2026-09-19.md`.
 
 ---
 
@@ -457,9 +460,10 @@ js/fx.js              파티클·흔들림·히트스톱·플래시·슬로모·
 js/input.js           키 상태 / justPressed / 리매핑 테이블
 js/entities.js        Player, Projectile, Zone
 js/boss.js            Boss 베이스: 패턴 실행기, 공격 생명주기(windup→active→recover), feint/charge/zone/projectile/armor/mirror 지원 (+ deflect, mirror:'loot' — 2026-09-17)
+js/motions.js          새 공격 동작 표 window.MOTIONS[kind](부메랑·협공·쓸기 빔·끌어당김·기둥·표식·반격 자세·악보 + echo 표지) — boss.js 는 새 kind 를 이 표로 넘기기만 한다, 기존 kind(melee·projectile·zone·charge)는 그대로 (2026-09-23)
 js/bosses/vesper.js  seraph.js  graven.js  mirror.js   — 챕터 1 데이터 정의 + 훅, window.BOSSES 등록
-js/bosses/lantern.js chorus.js  bastion.js avarice.js  — 챕터 2 (2026-09-17). 로딩 순서 = 진행 순서
-js/bosses/sentinel.js tempest.js hollow.js adamant.js — 챕터 3 (2026-09-19). 훅 onPickPattern(거리·방벽 태그로 풀 선택)
+js/bosses/lantern.js chorus.js  bastion.js avarice.js  — 챕터 2 (2026-09-23 재설계: 부메랑·악보+메아리·기둥·끌어당김). 로딩 순서 = 진행 순서
+js/bosses/sentinel.js tempest.js hollow.js adamant.js — 챕터 3 (2026-09-23 재설계: 쓸기 빔·협공·표식·반격 자세). 훅 onPickPattern(거리·방벽·구역 태그로 풀 선택)
 js/story.js           대사 테이블 window.STORY (보스 key → before/after/choice). 정본: 2026-09-17-riposte-story-bible.md
 js/render.js          아레나·캐릭터·텔·투사체 드로잉
 js/ui.js              HUD·화면(타이틀/인트로/승리/패배/엔딩 + 스토리 박스/TAKEN 카드/인터루드)
@@ -474,7 +478,9 @@ tests/pad.mjs · options.mjs  게임패드 · 옵션 화면
 tests/mash.mjs        연타 봇 — --expect-lose 로 연타 전패 검증(스태미너 §2.6.1)
 tests/dev.mjs         dev 모드(THIEF 커맨드·?dev=1·F키 치트·noSave) — 꺼져 있으면 어떤 키로도 발동하지 않는다
 tests/zone.mjs        존 linger 동작 — 단발 존은 때리고 사라지고, 지속 존은 LINGER_TICK 마다 재타격
-tools/boss-overlap.mjs 보스 차별화 판정기(§3 공통) · tools/check-pages.mjs Pages 배포 확인
+tests/motions.mjs     새 공격 동작 9종 단위 검증(부메랑 귀환·협공·빔 방향 선택·끌어당김·기둥 통행 차단·표식 지연 폭발·반격 자세 벌/보상·악보 무플래시 응답·메아리) + 기존 kind 불변 (2026-09-23)
+tools/boss-overlap.mjs 보스 차별화 판정기(§3 공통, 2026-09-23 부터 동작 서명 재활용 검사 포함) · tools/check-pages.mjs Pages 배포 확인
+tools/funqa.mjs        재미 QA 계측 — 봇 지표(퍼펙트/블록/피격 비율·되받기 발동 등)로 보스별 체감 난도 신호를 뽑는다
 tools/shots.mjs       README 용 스크린샷 3장 → docs/media/
 README.md
 ```
@@ -497,6 +503,7 @@ README.md
 7. `node tests/story.mjs` — 대사 테이블: 장면당 ≤4줄, 느낌표 0, 보스별 전속 어미 교차 0(바이블 §3 표), 선택지 3개에 각각 `ok:true` 하나·`ok:false` 하나.
 8. 밸런스: 새 챕터 보스 4종을 3프로파일(완벽·숙련 `--jitter=0.05 --miss=0.15 --think=0.25`·평균 `--miss=0.3 --jitter=0.09 --think=0.45`)로 실측해 par/HP 확정. **기준은 3시드(7·11·23) 다수결** — 완벽은 매 시드 승리, 숙련은 3시드 중 2 이상 승리(최종 보스·BASTION 은 1/3 허용), 평균은 3시드 중 2 이상 패배. (2026-09-19 정정: 이전 문구 "숙련 프로파일 전부 승리" 는 seed 7 단일 표본 위의 기준이었다 — 챕터 1·2 기준선이 seed 7 하나로만 측정됐음이 `docs/qa/balance-2026-09-19.md` §6 에서 확인됐고, seed 11 에서는 MIRROR·LANTERN·CHORUS·AVARICE 숙련이 지고 VESPER·SERAPH·GRAVEN 평균이 이긴다. `main` 에서도 같으므로 회귀가 아니라 기준선의 성질이다.) **챕터 1·2 재조정은 별도 결정이다** — 이 정정은 기준 문구만 고친다.
 9. `node tests/dev.mjs` — dev 모드가 꺼져 있으면 F키·`THIEF` 가 아무 효과도 없고, 켜진 판은 저장하지 않는다. `node tests/zone.mjs` — 단발 존은 한 번 때리고 사라지고, 지속 존(linger)은 LINGER_TICK 마다 다시 때리는지 검증.
+10. `node tests/motions.mjs`(2026-09-23) — 새 공격 동작 9종이 각각 "플레이어가 새로 하는 일"을 한 줄씩 검증(부메랑은 대시로 넘긴 뒤 등 뒤에서 금으로 돌아온다·빔은 빔 쪽 대시로만 넘는다·끌어당김은 걸어서 버티면 헛친다·기둥은 걷기·대시를 막고 칸이 좁으면 서지 않는다·표식은 부착 뒤 delay 에 터지고 경직으로 안 사라진다·반격 자세는 맞으면 벌·참으면 보상·악보는 두 번째 타격부터 플래시가 없다·메아리는 기록된 자리에서 친다) + 기존 kind(melee·projectile·zone·charge)는 한 줄도 다르지 않은지.
 
 ---
 
