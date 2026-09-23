@@ -86,6 +86,7 @@ export const TUNE = {
   APPROACH_MIN: 150,      // 손패가 비었을 때 이 거리보다 멀면 붙는다
   STUCK_MELEE: 2.5,       // 근접 기술이 이만큼 안 닿으면 흘려보내 큐를 돌린다
   TAP_MS: 40,
+  FORCE_DIR: 0.08,        // 방향 있는 대시의 방향 키 유지(시뮬레이션 초) — 게임이 다음 스텝에 대시 방향을 읽을 때까지
   SEED,                   // 봇 내부 RNG 시드 (게임 판정용 RNG와는 별개 스트림)
   JITTER,                 // 패리/대시 입력 시점 균등분포 오프셋 ±s (기본 0 = 지터 없음)
   MISS,                   // 텔을 놓쳐 패리/대시를 안 누를 확률 [0,1] (기본 0 = 항상 반응)
@@ -126,6 +127,7 @@ export function installBot(TUNE) {
   const stats = { parries: 0, dashes: 0, ripostes: 0, ticks: 0, hitLog: [] };
   let lastHp = null;
   let lastParry = -9, lastDash = -9, lastRiposte = -9, meleeStuckSince = null;
+  let forceDir = null, forceUntil = -9;       // 방향 있는 대시(빔) — 게임이 대시를 읽을 때까지 방향 키를 붙잡는다
   let handSince = null;
 
   /* human-like 모드: 게임 자체 RNG(패턴 선택)와 분리된 봇 전용 스트림.
@@ -149,7 +151,8 @@ export function installBot(TUNE) {
     /* --- 위협 수집: 가장 먼저 닿는 것부터 --------------------------------- */
     const threats = [];
     // windup 중이거나, charge 처럼 active 인데 타격 시점이 아직 앞에 있는 것만
-    if (ca && (ca.stage === 'windup' || (ca.stage === 'active' && ca.hitAt > now))) {
+    // remote = 이 공격은 windup 끝에 몸으로 때리지 않는다(빔·기둥·표식·부메랑·협공) — 위협은 아래 월드 배열이 준다
+    if (ca && !ca.remote && (ca.stage === 'windup' || (ca.stage === 'active' && ca.hitAt > now))) {
       threats.push({ t: ca.hitAt - now, kind: ca.tell === 'gold' ? 'parry' : 'dash', src: 'attack' });
     }
     for (const z of s.zones) threats.push({ t: z.tRemain, kind: 'dash', src: 'zone' });
@@ -165,6 +168,27 @@ export function installBot(TUNE) {
         if (gap > TUNE.PROJ_DASH_DIST + 80) continue;
         threats.push({ t: (gap - TUNE.PROJ_HIT) / speed, kind: 'dash', src: 'proj', gap: gap });
       }
+    }
+    /* 새 동작 (스펙 2026-09-23 §4) — 배열이 비어 있으면 위의 기존 위협만 남는다 */
+    for (const bm of (s.beams || [])) {
+      if (bm.pending || !bm.vx) continue;
+      const dir = bm.vx > 0 ? 1 : -1;
+      const gap = (s.playerX - bm.x) * dir - bm.w / 2;          // 빔 앞머리 → 플레이어 중심 (다가오면 양수)
+      if (gap < -bm.w) continue;                                 // 이미 지나감
+      // 빔 쪽으로 대시해야 넘는다 — 빔이 오는 쪽 방향키
+      threats.push({ t: (gap - TUNE.PROJ_HIT) / Math.abs(bm.vx), kind: 'dash', src: 'beam',
+                     dir: dir > 0 ? 'ArrowLeft' : 'ArrowRight' });
+    }
+    for (const pl of (s.pillars || [])) {
+      if (pl.tRise <= 0 || Math.abs(s.playerX - pl.x) > pl.w / 2 + TUNE.PROJ_HIT) continue;
+      threats.push({ t: pl.tRise, kind: 'dash', src: 'pillar' });
+    }
+    for (const m of (s.marks || [])) {
+      threats.push({ t: m.tRemain, kind: m.tell === 'gold' ? 'parry' : 'dash', src: 'mark' });
+    }
+    for (const e of (s.echoes || [])) {
+      if (Math.abs(s.playerX - e.x) > e.reach) continue;
+      threats.push({ t: e.hitAt - now, kind: e.tell === 'gold' ? 'parry' : 'dash', src: 'echo' });
     }
     threats.sort(function (a, b) { return a.t - b.t; });
     const th = threats[0];
@@ -191,8 +215,14 @@ export function installBot(TUNE) {
     const inReach = front ? (reach === Infinity || dist <= reach * TUNE.REACH_MARGIN) : false;
     const needClose = charging || (front ? (reach !== Infinity && !inReach)
                                          : dist > TUNE.APPROACH_MIN);
-    hold(toBoss, needClose);
-    hold(away, false);
+    if (forceDir && now < forceUntil) {
+      hold(forceDir === toBoss ? away : toBoss, false);
+      hold(forceDir, true);
+    } else {
+      forceDir = null;
+      hold(toBoss, needClose);
+      hold(away, false);
+    }
 
     /* --- 방어 ------------------------------------------------------------ */
     let acted = false;
@@ -204,6 +234,11 @@ export function installBot(TUNE) {
       } else if (th.kind === 'dash' && th.t <= TUNE.DASH_LEAD + lockJitter &&
                  now - lastDash > TUNE.DASH_COOLDOWN &&
                  (th.src !== 'proj' || th.gap <= TUNE.PROJ_DASH_DIST + 40)) {
+        // 빔은 방향이 있다 — 반대 방향키를 놓고 빔 쪽 방향키를 쥔 채 대시한다
+        if (th.dir) {
+          forceDir = th.dir; forceUntil = now + TUNE.FORCE_DIR;
+          hold(th.dir === toBoss ? away : toBoss, false); hold(th.dir, true);
+        }
         tap('Space'); lastDash = now; stats.dashes++; acted = true;
       }
     }
