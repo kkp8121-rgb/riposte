@@ -270,6 +270,9 @@
       DEFLECT_SPEED_MULT: 0.55,
       DEFLECT_SPEED_MAX: 380,
       DEFLECT_RECOVER: 0.45,      // 되받은 직후 경직 = 카운터 창
+      /* 되받은 탄이 플레이어의 받는 거리(PARRY.PROJECTILE_CATCH)에 닿기까지 이만큼(초)은 걸려야 되받는다 (Task 16.1).
+         MIN_WINDUP(0.34, 반응 하한) + 여유. 되받기는 확률이라 박자로 예측할 수 없으므로 반응 시간을 보장해야 한다 */
+      DEFLECT_MIN_REACT: 0.40,
       /* 챕터 2 재설계 (스펙 §3.5~3.7) */
       BLINK_PAUSE: 0.12,          // move:'behind' 순간이동 뒤 멈춤 — 잔상을 볼 시간
       BLINK_GHOSTS: 3,            // 순간이동 잔상 수

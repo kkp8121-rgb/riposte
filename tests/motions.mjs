@@ -613,6 +613,37 @@ check('예약 발사 — 경직되면 남은 연사는 나가지 않는다', can
 check('예약 발사 — 2페이즈 포효로 끊겨도 나가지 않는다', cancelShots.phase2 === 1, `(${cancelShots.phase2})`);
 check('예약 발사 — 경직되면 협공 뒤 탄도 나가지 않는다', cancelShots.pincerCancel);
 
+/* ---- 반응 시간이 없는 되받아치기 금지 (Task 16.1) ------------------------- */
+const deflect = await page.evaluate(() => {
+  const g = window.__RIPOSTE.game, T = window.__T, C = window.CONFIG;
+  const out = {};
+  const oldP1 = C.BOSS.DEFLECT_CHANCE_P1;
+  C.BOSS.DEFLECT_CHANCE_P1 = 1;                      // 확률 제거 — 되받을 수 있으면 반드시 되받는다
+  const shoot = (px, bx) => {
+    T.setup({}, px, bx, { deflect: true });
+    const skill = { id: 'VOLLEY', label: 'VOLLEY', kind: 'shot', damage: 20 };
+    const pr = new window.Projectile({ x: px + 22, y: C.VIEW.FLOOR_Y - 48, vx: C.RIPOSTE_KINDS.shot.projSpeed,
+                                       r: 9, tell: 'player', owner: 'player', damage: 20, fromHand: skill });
+    g.projectiles.push(pr);
+    let deflectedAt = null, catchAt = null;
+    T.run(1.5, (gg) => {
+      if (deflectedAt === null && pr.owner === 'boss') deflectedAt = gg.time;
+      if (deflectedAt !== null && catchAt === null && Math.abs(pr.x - gg.player.x) <= C.PARRY.PROJECTILE_CATCH) catchAt = gg.time;
+    });
+    return { deflected: deflectedAt !== null, react: deflectedAt !== null && catchAt !== null ? +(catchAt - deflectedAt).toFixed(3) : null,
+             bossHp: g.boss.hp };
+  };
+  out.far = shoot(300, 700);                          // 멀리서 쏜 탄 — 되받는다, 반응 시간 ≥ DEFLECT_MIN_REACT
+  out.near = shoot(560, 700);                         // 코앞에서 쏜 탄 — 되받지 않는다, 보스가 맞는다
+  C.BOSS.DEFLECT_CHANCE_P1 = oldP1;
+  out.min = C.BOSS.DEFLECT_MIN_REACT;
+  return out;
+});
+check('되받기 — 멀리서 쏜 탄은 되받는다(반응 시간 ≥ 하한)',
+  deflect.far.deflected && deflect.far.react !== null && deflect.far.react >= deflect.min - 0.02, JSON.stringify(deflect.far));
+check('되받기 — 코앞에서 쏜 탄은 되받지 않는다(보스가 맞는다)',
+  !deflect.near.deflected && deflect.near.bossHp < 999, JSON.stringify(deflect.near));
+
 /* ---- 새 동작 검사는 이 줄 위에 추가한다 ------------------------------------ */
 
 check('pageerror 0', errors.length === 0, errors.slice(0, 3).join(' | '));

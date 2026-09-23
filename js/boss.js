@@ -813,13 +813,18 @@
                (this.state === 'attack' && this.attack && this.attack.stage === 'recover');
     if (!open) return false;
 
+    // 반응 시간이 없는 되받기는 하지 않는다 — 코앞에서 쏜 탄을 그 자리에서 되돌리면 받는 거리 안에서
+    // 되돌아와 반응할 수 없다 (Task 16.1). 확률 추첨보다 먼저 본다
+    var speed = Math.min(B.DEFLECT_SPEED_MAX, Math.abs(pr.vx) * B.DEFLECT_SPEED_MULT);
+    var room = Math.abs(pr.x - this.game.player.x) - C.PARRY.PROJECTILE_CATCH;
+    if (room / speed < B.DEFLECT_MIN_REACT) return false;
+
     var rally = pr.rally || 0;
     var chance = (rally + 1 >= B.DEFLECT_MAX_RALLY) ? 0
                : (this.phase === 2 ? B.DEFLECT_CHANCE_P2 : B.DEFLECT_CHANCE_P1);
     if (!this.game.rng.chance(chance)) return false;
 
     pr.rally = rally + 1;
-    var speed = Math.min(B.DEFLECT_SPEED_MAX, Math.abs(pr.vx) * B.DEFLECT_SPEED_MULT);
     pr.vx = (pr.vx > 0 ? -1 : 1) * speed;      // 플레이어 쪽으로 되돌린다
     pr.owner = 'boss';
     pr.tell = 'gold';                          // 다시 패리 가능 (텔 문법 유지)
