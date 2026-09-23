@@ -53,7 +53,7 @@ function parseRangeList(s, max) {
 const BOSSES_ARG = arg('bosses', '1-12');
 const SEEDS = arg('seeds', '7,11,23').split(',').map((s) => parseInt(s.trim(), 10));
 const PROFILE = arg('profile', 'skilled');
-const OUT = arg('out', join(ROOT, 'docs', 'qa', `funqa-run.${PROFILE}.json`));
+const OUT = arg('out', join(ROOT, 'tests', 'out', `funqa-run.${PROFILE}.json`));
 
 const PROFILES = {
   perfect: { jitter: 0, miss: 0, think: 0 },
