@@ -66,10 +66,13 @@ async function runBoss(browser, n) {
   const before = await page.evaluate(snapshot);
   await page.evaluate((s) => window.__RIPOSTE.setTimeScale(s), SPEED);
 
-  // 손패를 심어 두면 약탈 보스(AVARICE)의 loot 큐와 {mirror:'loot'} 가 실데이터로 돈다 — 그래야 뒤의 불변 비교가 의미를 갖는다
+  // 손패를 심어 두면 약탈 보스(AVARICE)의 loot 큐와 {mirror:'loot'} 가 실데이터로 돈다 — 그래야 뒤의 불변 비교가 의미를 갖는다.
+  // 그 보스가 주는 카드를 먼저 심는다(되돌림 표 MIRROR_MAP 이 자기 카드만 매핑한다). 없으면 기술 표 앞에서.
   await page.evaluate(() => {
     const g = window.__RIPOSTE.game;
-    Object.keys(g.skillTable).slice(0, 3).forEach((k) => g.player.pushHand(g.skillTable[k]));
+    const own = Object.values(g.boss.def.attacks).map((a) => a.steal).filter(Boolean).map((s) => s.id);
+    const ids = [...new Set(own.concat(Object.keys(g.skillTable)))].slice(0, 3);
+    ids.forEach((k) => g.player.pushHand(g.skillTable[k]));
   });
 
   // 무입력으로 전투를 끝까지 굴린다 (approach / 패턴 실행기를 충분히 돌린다)
