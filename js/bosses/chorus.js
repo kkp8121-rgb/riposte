@@ -1,7 +1,8 @@
 /* =============================================================================
  * RIPOSTE — js/bosses/chorus.js
- * CHORUS — 쌍검 (챕터 2). 스펙 §3.6 (2026-09-18 재설계)
- * 근접 연타(volley 재-windup) + 좌우 교차(move:'cross' — 플레이어를 지나쳐 반대편으로).
+ * CHORUS — 쌍검 (챕터 2). 스펙 §3.6 · 2026-09-23 재설계 §2.4
+ * 악보(콜을 들려주고 같은 리듬으로 친다) + 메아리(친 자리의 잔상이 다시 친다) + 좌우 교차(move:'cross').
+ * "하나가 묻고, 하나가 답한다."
  * ========================================================================== */
 (function (global) {
   'use strict';
@@ -26,27 +27,28 @@
     gap: { 1: 0.75, 2: 0.5 },
 
     attacks: {
-      twin: {
-        id: 'twin', label: 'TWIN', tell: 'gold', kind: 'melee',
-        windup: 0.45, active: 0.10, recover: 0.40,
+      refrain: {                                   // 악보 — 콜 3음(0.45·0.90) → gap → 같은 리듬 3타 (§3.9)
+        id: 'refrain', label: 'REFRAIN', tell: 'gold', kind: 'score',
+        windup: 0.60, active: 0.10, recover: 0.45,
         reach: 150, approach: 60, damage: 1, swing: 'arc',
-        volley: { count: 2, interval: 0.35 },
+        score: { notes: [0.45, 0.90] },
         steal: { id: 'TWIN', label: 'TWIN', kind: 'slash', damage: 13 }
       },
-      bolt: {
-        id: 'bolt', label: 'BOLT', tell: 'gold', kind: 'projectile',
-        windup: 0.42, active: 0.06, recover: 0.45,
-        proj: { speed: 600, r: 7, y: 52, damage: 1, reflectDamage: 11, shape: 'bolt' },
-        steal: { id: 'BOLT', label: 'BOLT', kind: 'shot', damage: 11 }
-      },
-      triad: {                                     // P2 전용 3연타
-        id: 'triad', label: 'TRIAD', tell: 'gold', kind: 'melee',
-        windup: 0.50, active: 0.10, recover: 0.45,
+      refrain2: {                                  // P2 — 4타 (0.35·0.35·0.70)
+        id: 'refrain2', label: 'REFRAIN', tell: 'gold', kind: 'score',
+        windup: 0.55, active: 0.10, recover: 0.45,
         reach: 150, approach: 60, damage: 1, swing: 'arc',
-        volley: { count: 3, interval: 0.35 },
+        score: { notes: [0.35, 0.35, 0.70] },
         steal: { id: 'TWIN', label: 'TWIN', kind: 'slash', damage: 13 }
       },
-      scissor: {                                   // P2 전용 — 양쪽을 동시에 베는 가위, 대시로만 회피
+      canon: {                                     // 메아리 — 친 자리에서 0.7초 뒤 잔상이 다시 친다 (§3.10)
+        id: 'canon', label: 'CANON', tell: 'gold', kind: 'melee',
+        windup: 0.55, active: 0.10, recover: 0.50,
+        reach: 150, approach: 60, damage: 1, swing: 'thrust',
+        echo: { delay: 0.70 },
+        steal: { id: 'CANON', label: 'CANON', kind: 'lunge', damage: 15 }
+      },
+      scissor: {                                   // 기본기(P2) — 양쪽을 동시에 베는 가위, 대시로만
         id: 'scissor', label: 'SCISSOR', tell: 'red', kind: 'melee',
         windup: 0.70, active: 0.12, recover: 0.70,
         reach: 200, approach: 40, damage: 1, swing: 'arc',
@@ -56,16 +58,16 @@
 
     patterns: {
       1: [
-        { name: 'cross-twin',       steps: [{ move: 'cross' }, { atk: 'twin' }] },
-        { name: 'twin',             steps: [{ atk: 'twin' }] },
-        { name: 'bolt-cross-twin',  steps: [{ atk: 'bolt' }, { move: 'cross' }, { atk: 'twin' }] },
-        { name: 'weave',            steps: [{ move: 'cross' }, { atk: 'twin' }, { move: 'cross' }, { atk: 'twin' }] }
+        { name: 'refrain',          steps: [{ atk: 'refrain' }] },
+        { name: 'canon',            steps: [{ atk: 'canon' }] },
+        { name: 'canon-cross-canon', steps: [{ atk: 'canon' }, { move: 'cross' }, { atk: 'canon' }] },   // 잔상 둘이 양쪽에
+        { name: 'cross-refrain',    steps: [{ move: 'cross' }, { atk: 'refrain' }] }
       ],
       2: [
-        { name: 'triad',            steps: [{ atk: 'triad' }] },
-        { name: 'cross-triad-scissor', steps: [{ move: 'cross' }, { atk: 'triad' }, { atk: 'scissor' }] },
-        { name: 'bolt-bolt-cross-triad', steps: [{ atk: 'bolt' }, { wait: 0.3 }, { atk: 'bolt' }, { move: 'cross' }, { atk: 'triad' }] },
-        { name: 'scissor',          steps: [{ atk: 'scissor' }] }
+        { name: 'refrain2',         steps: [{ atk: 'refrain2' }] },
+        { name: 'canon-cross-refrain2', steps: [{ atk: 'canon' }, { move: 'cross' }, { atk: 'refrain2' }] },
+        { name: 'cross-canon-scissor', steps: [{ move: 'cross' }, { atk: 'canon' }, { atk: 'scissor' }] },
+        { name: 'scissor-canon',    steps: [{ atk: 'scissor' }, { wait: 0.3 }, { atk: 'canon' }] }
       ]
     }
   };
