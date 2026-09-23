@@ -14,7 +14,7 @@
     color: '#7dff9a',
     silhouette: 'lantern',
     hp: 280,
-    par: 65,                    // Task 3 봇 실측 확정 (숙련 33.4s ×2 → 65)
+    par: 50,                    // 2026-09-23 재설계 실측: 숙련 승 23.8~27.3s ×2 ≈ 51 · 완벽 16.6~17.5s(≈ 50/3). docs/qa/balance-2026-09-23.md
     armor: false,
     spawnX: 660,
     droneHz: 61.74,             // B1
@@ -58,9 +58,9 @@
         { name: 'flicker-orb',      steps: [{ atk: 'flicker' }, { wait: 0.5 }, { atk: 'orb' }] }
       ],
       2: [
-        { name: 'orb2',             steps: [{ atk: 'orb2' }] },
+        { name: 'far-orb2',         steps: [{ move: 'far' }, { atk: 'orb2' }] },   // far 먼저 — 몸 옆(54px 안)에서 쏜 외출탄은 생기자마자 맞는다 (2026-09-23 실측)
         { name: 'behind-flicker-orb', steps: [{ move: 'behind' }, { atk: 'flicker' }, { atk: 'orb' }] },
-        { name: 'orb-behind-flicker', steps: [{ atk: 'orb' }, { move: 'behind' }, { atk: 'flicker' }] },   // 귀환 중 순간이동 — P2 만 (§2.4)
+        { name: 'far-orb-behind-flicker', steps: [{ move: 'far' }, { atk: 'orb' }, { move: 'behind' }, { atk: 'flicker' }] },   // 귀환 중 순간이동 — P2 만 (§2.4)
         { name: 'double-blink',     steps: [{ move: 'behind' }, { atk: 'flicker' }, { move: 'behind' }, { atk: 'flicker' }] }
       ]
     }
