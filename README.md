@@ -78,15 +78,15 @@ The victory card also counts your tries on each boss and remembers your best.
 | 3 | **GRAVEN** | *The Bulwark* | Armor — only an **empowered** riposte interrupts it. Dash *into* the charge. | `SLAM` `SHOCKWAVE` |
 | 4 | **MIRROR** | *Your Reflection* | Patience. It feints, and in Phase II it replays **your own hand** back at you. | everything |
 | — | **CHAPTER II — THE DEBT** | | | |
-| 5 | **LANTERN** | *The Illusionist* | Reading the colour — and the direction: it blinks behind you. | `FLICKER` `GLOW` |
-| 6 | **CHORUS** | *The Twin Blades* | Chained parries while it crosses to your other side. | `TWIN` `BOLT` |
-| 7 | **BASTION** | *The Warden* | Armor, a gate at its feet, and it bats your reflected shots back — strike the recovery. | `VOLLEY` `WARD` |
-| 8 | **AVARICE** | *The Taker* | It has no moves of its own — every hit you take, it takes a card and uses it. | `COUNT` + everything |
+| 5 | **LANTERN** | *The Illusionist* | Reading the colour — and the direction: it blinks behind you, and a shot you dodge red comes home gold from over your shoulder. | `FLICKER` `ORB` |
+| 6 | **CHORUS** | *The Twin Blades* | Chained parries while it crosses to your other side — a rhythm called once and answered from memory, and an echo that strikes again from where it stood. | `TWIN` `CANON` |
+| 7 | **BASTION** | *The Warden* | Armor, a pillar at your back that seals retreat, and it bats your reflected shots back — strike the recovery. | `VOLLEY` |
+| 8 | **AVARICE** | *The Taker* | It has no moves of its own — it pulls you in, and every hit you take, it takes a card and uses it. | `COUNT` `HAUL` + everything |
 | — | **CHAPTER III — THE WALL** | | | |
-| 9 | **SENTINEL** | *The Spear* | It never moves. Red zones eat the floor from the edges in — the room shrinks, and dashing becomes a resource. | `LANCE` `SWEEP` |
-| 10 | **TEMPEST** | *The Rain* | Volume. Three big shots at once, gold and red mixed — you cannot catch them all, so choose what to give up. | `SURGE` |
-| 11 | **HOLLOW** | *The Dark* | The arena goes dark and only the tells stay lit. Twelve fights of "read the flash", tested with nothing else to read. | `GRASP` `EMBER` |
-| 12 | **ADAMANT** | *The Wall* | A wall only your **reflected** shots can break — break it and it staggers wide open. In Phase II only a **counter** hurts it. | `CLEAVE` `SHARD` |
+| 9 | **SENTINEL** | *The Spear* | It never moves. Red zones eat the floor from the edges in, and a beam sweeps the lane from behind you — dash into it, not away. The room shrinks, and dashing becomes a resource. | `LANCE` |
+| 10 | **TEMPEST** | *The Rain* | Volume, and a pincer that comes front and back on a timer — parry ahead, then spin and dash what's behind you before you can catch it all. | `SURGE` `SQUALL` |
+| 11 | **HOLLOW** | *The Dark* | The arena goes dark and a mark burns onto you — read your own countdown, not the boss, while another attack lands on top of it. | `BRAND` `EMBER` |
+| 12 | **ADAMANT** | *The Wall* | A wall only your **reflected** shots can break — break it and it staggers wide open. A guard stance punishes an early hit, so you wait for the strike at the end. In Phase II only a **counter** hurts it. | `CLEAVE` `SHARD` |
 
 ---
 
