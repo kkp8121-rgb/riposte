@@ -1,8 +1,7 @@
 /* =============================================================================
  * RIPOSTE — js/bosses/tempest.js
- * TEMPEST — 폭풍 (챕터 3 두 번째 보스). 스펙 §2.2
- * 설계 축은 "회피의 재미" — 큰 탄을 여러 발 동시에 띄워 전부 받아낼 수 없게 만들고,
- * 무엇을 버릴지 고르게 한다.
+ * TEMPEST — 폭풍 (챕터 3 두 번째 보스). 스펙 §3.10 · 2026-09-23 재설계 §2.4
+ * 협공 — 앞(금)과 등 뒤(적)에서 일정한 시차로 온다. 전부는 못 받는다, 버릴 것을 고른다.
  * 이 파일이 Tempest 의 모든 수치를 소유한다.
  * ========================================================================== */
 (function (global) {
@@ -39,8 +38,8 @@
     gap: { 1: 0.95, 2: 0.7 },
 
     /* ---- 공격 테이블 (스펙 §2.2) ----------------------------------------
-     * surge 만 금색(패리 가능)이다. 나머지 셋은 전부 적색 — 받아낼 수 없는 것을
-     * 피하는 동안 surge 몇 발을 포기할지가 이 보스의 선택이다.
+     * surge(금, 3연발) · squall/squall2(협공 — 앞 발은 금, gap 뒤 등 뒤에서 오는 발은 적).
+     * 앞만 받고 등 뒤를 포기할지, 물러나 등 뒤를 비울지가 이 보스의 선택이다.
      * -------------------------------------------------------------------- */
     attacks: {
       surge: {                                   // 큰 탄 연속 3발 — 전부 받아낼 수는 없다
@@ -55,26 +54,20 @@
         volley: { count: 3, interval: 0.26, p2Interval: 0.26 },
         steal: { id: 'SURGE', label: 'SURGE', kind: 'shot', damage: 14 }
       },
-      shear: {                                   // 낮은 한 발 — 패리 불가, 대시로만
-        id: 'shear', label: 'SHEAR', tell: 'red', kind: 'projectile',
-        windup: 0.60, active: 0.06, recover: 0.50,
-        /* 속도를 올리면(620) 텔에 반응한 대시가 끝나기 전에 도착해 두 번째 대시가 안 나온다 */
-        proj: { speed: 340, r: 12, y: 26, damage: 1, reflectDamage: 0, shape: 'bolt' },
-        steal: null
+      squall: {                                    // 협공 — 앞 금 1발 → 0.45초 뒤 등 뒤 적 1발 (§3.3)
+        id: 'squall', label: 'SQUALL', tell: 'gold', kind: 'pincer',
+        windup: 0.60, active: 0.06, recover: 0.60,
+        proj: { speed: 420, r: 12, y: 50, damage: 1, reflectDamage: 14, shape: 'arrow' },
+        pincer: { backDist: 260, backSpeed: 360, backTell: 'red', gap: 0.45, y: 30, r: 11, shape: 'bolt' },
+        steal: { id: 'SQUALL', label: 'SQUALL', kind: 'shot', damage: 14 }
       },
-      deluge: {                                  // 서 있던 자리로 쏟아진다 — 패리 불가
-        id: 'deluge', label: 'DELUGE', tell: 'red', kind: 'zone',
-        windup: 0.95, active: 0.10, recover: 0.60,
-        /* anchor 를 주지 않으면 예고 시점의 플레이어 위치에 깔린다.
-           linger 를 두지 않는다 — 탄이 떠 있는 동안 발밑까지 계속 맞으면 갇힌다. */
-        zone: { w: 150, damage: 1 },
-        steal: null
-      },
-      gust: {                                    // 붙으면 밀려난다 — 패리 불가
-        id: 'gust', label: 'GUST', tell: 'red', kind: 'melee',
-        windup: 0.50, active: 0.10, recover: 0.45,
-        reach: 130, approach: 0, damage: 1, push: 120, swing: 'arc',
-        steal: null
+      squall2: {                                   // P2 — 앞은 큰 탄 3연발, 마지막 앞 탄 0.45초 뒤 등 뒤 적
+        id: 'squall2', label: 'SQUALL', tell: 'gold', kind: 'pincer',
+        windup: 0.60, active: 0.06, recover: 0.65,
+        proj: { speed: 380, r: 16, y: 52, damage: 1, reflectDamage: 12, shape: 'arrow' },
+        volley: { count: 3, interval: 0.26, p2Interval: 0.26 },
+        pincer: { backDist: 260, backSpeed: 360, backTell: 'red', gap: 0.45, y: 30, r: 11, shape: 'bolt' },
+        steal: { id: 'SQUALL', label: 'SQUALL', kind: 'shot', damage: 14 }
       }
     },
 
@@ -85,20 +78,19 @@
     patterns: {
       1: [
         { name: 'surge',        steps: [{ atk: 'surge' }], tag: 'far' },
-        { name: 'shear-back',   steps: [{ atk: 'shear' }, { move: 'back' }], tag: 'far' },
-        { name: 'drift-surge',  steps: [{ move: 'left' }, { atk: 'surge' }], tag: 'far' },
-        { name: 'surge-shear',  steps: [{ atk: 'surge' }, { wait: 0.85 }, { atk: 'shear' }], tag: 'far' },
-        { name: 'deluge-drift', steps: [{ atk: 'deluge' }, { move: 'right' }], tag: 'any' },
-        { name: 'gust-back',    steps: [{ atk: 'gust' }, { move: 'back' }], tag: 'near' },
-        { name: 'back-surge',   steps: [{ move: 'back' }, { atk: 'surge' }], tag: 'near' }
+        { name: 'squall',       steps: [{ move: 'far' }, { atk: 'squall' }], tag: 'far' },
+        { name: 'drift-squall', steps: [{ move: 'left' }, { move: 'far' }, { atk: 'squall' }], tag: 'far' },
+        { name: 'surge-squall', steps: [{ atk: 'surge' }, { wait: 0.85 }, { move: 'far' }, { atk: 'squall' }], tag: 'far' },
+        { name: 'back-surge',   steps: [{ move: 'back' }, { atk: 'surge' }], tag: 'near' },
+        { name: 'back-squall',  steps: [{ move: 'back' }, { atk: 'squall' }], tag: 'near' }
       ],
       2: [
-        { name: 'surge-drift-surge', steps: [{ atk: 'surge' }, { move: 'right' }, { atk: 'surge' }], tag: 'far' },
-        { name: 'drift-surge-shear', steps: [{ move: 'left' }, { atk: 'surge' }, { wait: 0.75 }, { atk: 'shear' }], tag: 'far' },
-        { name: 'deluge-surge',      steps: [{ atk: 'deluge' }, { wait: 0.3 }, { atk: 'surge' }], tag: 'far' },
-        { name: 'shear-shear',       steps: [{ atk: 'shear' }, { wait: 0.35 }, { atk: 'shear' }], tag: 'far' },
-        { name: 'gust-drift',        steps: [{ atk: 'gust' }, { move: 'left' }], tag: 'near' },
-        { name: 'back-surge',        steps: [{ move: 'back' }, { atk: 'surge' }], tag: 'near' }
+        { name: 'squall2',            steps: [{ move: 'far' }, { atk: 'squall2' }], tag: 'far' },
+        { name: 'surge-drift-squall', steps: [{ atk: 'surge' }, { move: 'right' }, { move: 'far' }, { atk: 'squall' }], tag: 'far' },
+        { name: 'drift-squall2',      steps: [{ move: 'left' }, { move: 'far' }, { atk: 'squall2' }], tag: 'far' },
+        { name: 'squall-surge',       steps: [{ move: 'far' }, { atk: 'squall' }, { wait: 0.5 }, { atk: 'surge' }], tag: 'far' },
+        { name: 'back-squall2',       steps: [{ move: 'back' }, { atk: 'squall2' }], tag: 'near' },
+        { name: 'back-surge',         steps: [{ move: 'back' }, { atk: 'surge' }], tag: 'near' }
       ]
     },
 
