@@ -214,6 +214,10 @@ function findVisibleAt(hit, Q) {
     return cands.length ? cands[cands.length - 1].t : null;
   }
   if (hit.tell !== 'gold' && hit.tell !== 'red') return null;
+  // 알려진 한계: label 없는 버스트(부메랑 턴·협공 뒤·표식 부착·메아리·빔 자리)는 이 피격의
+  // label 과 무관하게 후보로 받아준다 — 그래서 this.attack 과 무관하게 살아있는 동시 위험
+  // (다른 표식·기둥·빔·메아리)이 우연히 같은 색으로 새 텔을 내면 그게 "가장 최근"으로 골라져
+  // 실제 텔보다 늦게 잡히고 반응 시간이 과소 보고될 수 있다.
   const cands = Q.bursts.filter((b) => b.tell === hit.tell && b.t < hit.t && hit.t - b.t <= 5.0 &&
     (b.label === null || b.label === undefined || b.label === hit.label));
   return cands.length ? cands[cands.length - 1].t : null;
@@ -393,6 +397,7 @@ async function runOne(browser, bossNum, seed, minWindup) {
       const m = r.metrics || {};
       const flags = [];
       if (m.unreactableHits && m.unreactableHits.length) flags.push(`억울한피격x${m.unreactableHits.length}`);
+      if (m.unmatchedHits && m.unmatchedHits.length) flags.push(`미매칭x${m.unmatchedHits.length}`);
       if (m.sameSourceRepeats && m.sameSourceRepeats.length) flags.push(`연속피격x${m.sameSourceRepeats.length}`);
       if (m.deathCauseFlag) flags.push(`쏠림:${m.topLabel}(${(m.topShare * 100).toFixed(0)}%)`);
       console.log(
@@ -429,6 +434,7 @@ async function runOne(browser, bossNum, seed, minWindup) {
       pooledLabelCounts: pooled, pooledTopLabel: topLabel, pooledTopShare: topShare,
       pooledDeathCauseFlag: totalHits > 0 && topShare > 0.6,
       unreactableHitCount: rs.reduce((a, r) => a + (r.metrics ? r.metrics.unreactableHits.length : 0), 0),
+      unmatchedHitCount: rs.reduce((a, r) => a + (r.metrics ? r.metrics.unmatchedHits.length : 0), 0),
       sameSourceRepeatCount: rs.reduce((a, r) => a + (r.metrics ? r.metrics.sameSourceRepeats.length : 0), 0)
     };
   });
@@ -440,7 +446,7 @@ async function runOne(browser, bossNum, seed, minWindup) {
       `avgHits=${b.avgHits.toFixed(1)}  dead=${(b.avgDeadTimeRatio * 100).toFixed(0)}%  ` +
       `dens=${b.avgDecisionDensity.toFixed(2)}/s  patRep=${(b.avgPatternRepeatRate * 100).toFixed(0)}%  ` +
       `쏠림=${b.pooledTopLabel || '-'}(${(b.pooledTopShare * 100).toFixed(0)}%)${b.pooledDeathCauseFlag ? ' ⚠' : ''}  ` +
-      `억울=${b.unreactableHitCount}  연속=${b.sameSourceRepeatCount}`
+      `억울=${b.unreactableHitCount}  미매칭=${b.unmatchedHitCount}  연속=${b.sameSourceRepeatCount}`
     );
   }
 
