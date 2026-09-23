@@ -1,6 +1,7 @@
 /* =============================================================================
  * RIPOSTE — js/bosses/sentinel.js
- * SENTINEL — 창의 파수꾼 (챕터 3 첫 보스). 스펙 §2.1
+ * SENTINEL — 창의 파수꾼 (챕터 3 첫 보스). 스펙 §3.9 · 2026-09-23 재설계 §2.4
+ * 지속 구역 claim(설 자리를 지운다) + 쓸기 빔 line(등 뒤 벽에서 경계선이 쓸고 온다). 이동하지 않는다.
  * 이 파일이 Sentinel 의 모든 수치를 소유한다.
  * ========================================================================== */
 (function (global) {
@@ -37,11 +38,11 @@
         reach: 260, approach: 0, damage: 1, swing: 'thrust',
         steal: { id: 'LANCE', label: 'LANCE', kind: 'lunge', damage: 22 }
       },
-      sweep: {                                   // 제자리 광역 — 붙으면 맞는다
-        id: 'sweep', label: 'SWEEP', tell: 'gold', kind: 'melee',
-        windup: 0.55, active: 0.12, recover: 0.5,
-        reach: 150, approach: 0, damage: 1, swing: 'arc',
-        steal: { id: 'SWEEP', label: 'SWEEP', kind: 'slash', damage: 18 }
+      line: {                                      // 쓸기 빔 — 빔 쪽으로 대시해야 넘는다 (§3.4)
+        id: 'line', label: 'LINE', tell: 'red', kind: 'sweep',
+        windup: 0.85, active: 0.06, recover: 0.60,
+        beam: { w: 90, speed: 320, damage: 1 },
+        steal: null
       },
       claim: {                                   // 설 자리를 지운다 — 지속 구역, 패리 불가
         id: 'claim', label: 'CLAIM', tell: 'red', kind: 'zone',
@@ -63,20 +64,33 @@
      * 🔴 한 패턴에 claim 은 최대 하나다. 보스가 고정이라 연속 claim 은 같은 자리에 겹칠 뿐이고,
      *    플레이어가 반대편으로 돌아가도 살아 있는 구역은 최대 2개(합 400px) — 남는 맨바닥이
      *    SAFE_MIN_W(200)보다 넓다.
+     * 🔴 claim 과 line 은 한 패턴에 넣지 않고, 구역이 살아 있으면 line 패턴(tag 'line')을 뽑지 않는다(onPickPattern) —
+     *    빔을 넘는 대시의 착지점이 지속 구역일 수 있다(갇힘, 스펙 2026-09-23 §2.4).
      * -------------------------------------------------------------------- */
     patterns: {
       1: [
         { name: 'lance',        steps: [{ atk: 'lance' }] },
-        { name: 'sweep',        steps: [{ atk: 'sweep' }] },
-        { name: 'claim',        steps: [{ atk: 'claim' }] },
-        { name: 'lance-sweep',  steps: [{ atk: 'lance' }, { wait: 0.45 }, { atk: 'sweep' }] }
+        { name: 'line-lance',   steps: [{ atk: 'line' }, { wait: 0.3 }, { atk: 'lance' }], tag: 'line' },
+        { name: 'claim-lance',  steps: [{ atk: 'claim' }, { wait: 0.3 }, { atk: 'lance' }] },
+        { name: 'lance-lance',  steps: [{ atk: 'lance' }, { wait: 0.45 }, { atk: 'lance' }] }
       ],
       2: [
         { name: 'claim-lance',  steps: [{ atk: 'claim' }, { wait: 0.3 }, { atk: 'lance' }] },
+        { name: 'line-lance',   steps: [{ atk: 'line' }, { atk: 'lance' }], tag: 'line' },
         { name: 'double-lance', steps: [{ atk: 'lance' }, { wait: 0.35 }, { atk: 'lance' }] },
-        { name: 'sweep-claim',  steps: [{ atk: 'sweep' }, { wait: 0.4 }, { atk: 'claim' }] },
-        { name: 'lance',        steps: [{ atk: 'lance' }] }
+        { name: 'lance-line',   steps: [{ atk: 'lance' }, { wait: 0.3 }, { atk: 'line' }], tag: 'line' }
       ]
+    },
+
+    /* ---- 훅: 구역이 살아 있으면 빔 패턴을 뽑지 않는다 ------------------------
+     * "한 패턴에 claim·line 금지"만으로는 모자란다 — claim 이 패턴 끝 가까이 있으면 linger 가
+     * 다음 패턴의 line 과 겹친다(패턴 사이 gap 0.6~0.85 < linger 1.8). 빔을 넘는 대시의 착지점이 구역이면 갇힌다. */
+    onPickPattern: function (boss, game) {
+      var pool = boss.def.patterns[boss.phase] || boss.def.patterns[1];
+      if (!game.zones.length) return pool;
+      var out = [];
+      for (var i = 0; i < pool.length; i++) if (pool[i].tag !== 'line') out.push(pool[i]);
+      return out.length ? out : pool;
     }
   };
 
