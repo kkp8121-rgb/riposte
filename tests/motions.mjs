@@ -645,21 +645,25 @@ check('되받기 — 코앞에서 쏜 탄은 되받지 않는다(보스가 맞�
   !deflect.near.deflected && deflect.near.bossHp < 999, JSON.stringify(deflect.near));
 
 /* ---- 기둥 — KO 중에는 조용히 선다 (검토 잔여 정리) -------------------------
- * onPillarRise 를 직접 호출해 그 함수 자체의 효과만 본다 — stepWorld 를 더 돌리면
- * blockByPillars(매 tick, side 만 있으면 항상 적용되는 정상적인 벽 충돌)가 같은 자리로
- * 밀어붙여 구분이 안 된다. 여기서는 그 한 호출 안에서 밀림·피격이 없는지만 확인한다. */
+ * KO 중에는 onPillarRise 가 pl.side 를 기록하지 않는다 — blockByPillars(매 tick,
+ * side 만 있으면 항상 적용되는 정상적인 벽 충돌)가 그 기둥을 건너뛰므로, stepWorld 를
+ * 그대로 돌려도(같은 tick 의 재호출 포함) 실제로 밀리지 않는지 확인한다. */
 const koPillar = await page.evaluate(() => {
   const g = window.__RIPOSTE.game, T = window.__T;
-  T.setup({}, 250, 600);
-  const pillar = new window.Pillar({ x: 250, w: 34, delay: 0, up: 4.0, damage: 1, label: 'GATE' });
+  const GATE = { id: 'gate', label: 'GATE', tell: 'red', kind: 'pillar', windup: 0.9, active: 0.1, recover: 0.5,
+                 pillar: { w: 34, up: 4.0, dist: 150, count: 1, damage: 1 }, steal: null };
+  T.setup({ gate: GATE }, 400, 600);
+  T.attack('gate'); T.run(0.3);
+  g.player.x = 250;
   const oldKo = g.ko, oldKoT = g.koT;
-  g.ko = 'victory'; g.koT = 999;
-  g.onPillarRise(pillar);
-  const out = { hits: g.hits, x: g.player.x, side: pillar.side };
+  g.ko = 'victory'; g.koT = 999;                  // koT 를 크게 — 메인 루프가 승리 처리로 넘어가지 않게
+  T.run(0.8);                                     // windup(0.9) 을 지나 기둥이 실제로 선다
+  const out = { hits: g.hits, x: g.player.x, side: g.pillars.length ? g.pillars[0].side : null };
   g.ko = oldKo; g.koT = oldKoT;
   return out;
 });
-check('기둥 — KO 중에는 조용히 선다', koPillar.hits === 0 && koPillar.x === 250, JSON.stringify(koPillar));
+check('기둥 — KO 중에는 조용히 선다',
+  koPillar.hits === 0 && Math.abs(koPillar.x - 250) < 0.5 && koPillar.side === 0, JSON.stringify(koPillar));
 
 /* ---- 협공 — 벽을 등져도 뒤 탄 시차는 일정 (fun-QA 사이드파인딩 1) ---------------
  * backShot 은 뒤 탄 자리를 아레나 안쪽으로 clamp 한다 — 플레이어가 등 뒤 벽에 가까우면

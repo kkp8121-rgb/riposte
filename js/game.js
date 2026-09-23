@@ -1157,7 +1157,7 @@
    */
   Game.prototype.onPillarRise = function (pl) {
     var p = this.player;
-    if (this.ko) { pl.side = this.player.x < pl.x ? -1 : 1; return; }
+    if (this.ko) { return; }   // side 를 기록하지 않는다 — blockByPillars 가 !pl.side 로 건너뛰어 KO 중엔 아예 밀지 않는다
     var half = pl.w / 2 + C.PLAYER.HALF_W;
     var inside = Math.abs(p.x - pl.x) < half;
     var toLeft = p.x < pl.x;
