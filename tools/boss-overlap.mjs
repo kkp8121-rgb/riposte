@@ -7,6 +7,7 @@
  *   절반 이상 겹치면 안 되며, (c) 공격 구성(kind/tell 다중집합)이 거의 같으면 안 된다.
  *   (d) 2026-09-23: 챕터 2 이후 보스는 먼저 등록된 보스와 "동작 서명"이 같은 공격을 1개까지만 — 수치 변주를 공격 단위로 잡는다.
  *       kind 는 엔진이 아는 것만(기존 4종 + js/motions.js). stanceCounter 는 stance.counter 로만 불리는 공격에만.
+ *       그 1개도 반드시 챕터 1 서명이어야 한다 — 챕터 2+ 보스의 새 동작을 재활용하는 것은 허용하지 않는다.
  *   의도된 복제(예: MIRROR 는 챕터 1 기술을 되돌려 쓴다)는 보스 정의에
  *   `overlapIntended: '<이유>'` 를 적어 선언한다 — 선언 없는 중복은 기획 결함이다.
  *
@@ -112,7 +113,7 @@ function stanceCounterOk(b, a) {
 
 console.log('');
 console.log('공격 재활용 (챕터 2+) — 먼저 등록된 보스와 동작 서명이 같은 공격 / 처음 쓰는 서명');
-const seen = new Map();                                    // 서명 → 처음 쓴 보스 이름
+const seen = new Map();                                    // 서명 → 처음 쓴 보스 { name, key }
 for (const b of window.BOSSES) {
   for (const a of Object.values(b.attacks)) {
     if (!KNOWN_KINDS.has(a.kind) && (!ONLY || ONLY === b.key)) violations.push(`${b.name}: 알 수 없는 kind '${a.kind}'(${a.id}) — 새 동작은 js/motions.js 에 등록한다`);
@@ -122,13 +123,21 @@ for (const b of window.BOSSES) {
   if (chapterOf(b.key) >= 2) {
     const reused = atks.filter((a) => seen.has(a.sig));
     const fresh = new Set(atks.filter((a) => !seen.has(a.sig)).map((a) => a.sig));
-    const bad = reused.length > LIMIT.REUSED_ATTACKS || fresh.size === 0;
-    if (bad && (!ONLY || ONLY === b.key)) {
-      violations.push(`${b.name}: 공격 재활용 ${reused.length}개(${reused.map((a) => `${a.id}=${a.sig}←${seen.get(a.sig)}`).join(', ')}) · 새 서명 ${fresh.size}개`);
+    const originBad = reused.some((a) => chapterOf(seen.get(a.sig).key) >= 2);
+    const countBad = reused.length > LIMIT.REUSED_ATTACKS || fresh.size === 0;
+    const bad = countBad || originBad;
+    if (countBad && (!ONLY || ONLY === b.key)) {
+      violations.push(`${b.name}: 공격 재활용 ${reused.length}개(${reused.map((a) => `${a.id}=${a.sig}←${seen.get(a.sig).name}`).join(', ')}) · 새 서명 ${fresh.size}개`);
+    }
+    if (!ONLY || ONLY === b.key) {
+      for (const a of reused) {
+        const origin = seen.get(a.sig);
+        if (chapterOf(origin.key) >= 2) violations.push(`${b.name}: ${a.id} 가 챕터 2+ 보스(${origin.name})의 새 동작을 재활용 — 재활용은 챕터 1 서명만`);
+      }
     }
     console.log(`  ${b.name.padEnd(8)} 재활용 ${reused.length} [${reused.map((a) => a.id).join(', ')}]  새 서명 ${fresh.size} [${[...fresh].join(', ')}] → ${bad ? 'VIOLATION' : 'OK'}`);
   }
-  for (const a of atks) if (!seen.has(a.sig)) seen.set(a.sig, b.name);
+  for (const a of atks) if (!seen.has(a.sig)) seen.set(a.sig, { name: b.name, key: b.key });
 }
 console.log('');
 
