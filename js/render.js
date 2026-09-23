@@ -606,6 +606,55 @@
     ctx.restore();
   }
 
+  /** 쓸기 빔 — 예고(pending) 중엔 옅은 윤곽, 움직이면 진한 띠. 앞머리 선이 오는 방향을 보여준다 */
+  function drawBeam(ctx, bm) {
+    var M = C.MOTION, x0 = bm.x - bm.w / 2, top = V.FLOOR_Y - M.BEAM_H;
+    ctx.save();
+    ctx.globalAlpha = bm.pending ? M.BEAM_WARN_ALPHA : M.BEAM_ALPHA;
+    ctx.fillStyle = C.COLORS.RED;
+    ctx.shadowColor = C.COLORS.RED;
+    ctx.shadowBlur = bm.pending ? 0 : 24;
+    ctx.fillRect(x0, top, bm.w, M.BEAM_H);
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = C.COLORS.RED;
+    ctx.lineWidth = 3;
+    var head = bm.x + bm.dir * bm.w / 2;
+    ctx.beginPath(); ctx.moveTo(head, top); ctx.lineTo(head, V.FLOOR_Y); ctx.stroke();
+    ctx.restore();
+  }
+
+  /** 기둥 — 예고 중엔 바닥 스트립 + 차오르는 윤곽, 선 뒤엔 회색 기둥 */
+  function drawPillar(ctx, pl) {
+    var M = C.MOTION, x0 = pl.x - pl.w / 2;
+    ctx.save();
+    if (pl.pending) {
+      var prog = 1 - clamp(pl.t / pl.delay, 0, 1);
+      ctx.globalAlpha = 0.35 + 0.4 * prog;
+      ctx.fillStyle = C.COLORS.RED;
+      ctx.fillRect(x0, V.FLOOR_Y - C.ZONE.STRIP_H, pl.w, C.ZONE.STRIP_H);
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = C.COLORS.RED;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x0, V.FLOOR_Y - M.PILLAR_H * prog, pl.w, M.PILLAR_H * prog);
+    } else {
+      ctx.globalAlpha = M.PILLAR_ALPHA;
+      ctx.fillStyle = C.COLORS.GREY;
+      ctx.fillRect(x0, V.FLOOR_Y - M.PILLAR_H, pl.w, M.PILLAR_H);
+      ctx.strokeStyle = C.COLORS.TEXT;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x0, V.FLOOR_Y - M.PILLAR_H, pl.w, M.PILLAR_H);
+    }
+    ctx.restore();
+  }
+
+  /** 바닥 위험물 — 존·빔·기둥. 어둠이 있으면 어둠 위에서 부른다 (스펙 §2.2 어둠 규칙) */
+  function drawHazards(ctx, game) {
+    var i;
+    for (i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
+    for (i = 0; i < game.pillars.length; i++) drawPillar(ctx, game.pillars[i]);
+    for (i = 0; i < game.beams.length; i++) drawBeam(ctx, game.beams[i]);
+  }
+
   /* ---- 파티클 / 링 / 텔 버스트 -------------------------------------------- */
 
   function drawParticles(ctx) {
@@ -812,7 +861,7 @@
     /* 어둠 (스펙 §2.3) — 아레나에 darkness 가 있으면 존은 어둠 위에 그린다(붉은 텔이다) */
     var dark = b && b.def && C.ARENA[b.def.arena] && C.ARENA[b.def.arena].darkness;
     var i;
-    if (!dark) for (i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
+    if (!dark) drawHazards(ctx, game);
 
     var pp = playerPose(p);
     var bp = b ? bossPose(b) : null;
@@ -851,7 +900,7 @@
       ctx.fillStyle = 'rgba(2,3,7,' + (b.phase === 2 ? dark.p2 : dark.p1) + ')';
       ctx.fillRect(0, 0, V.W, V.H);
       ctx.restore();
-      for (i = 0; i < game.zones.length; i++) drawZone(ctx, game.zones[i]);
+      drawHazards(ctx, game);
     }
 
     drawPlayer(ctx, p, pp, false);

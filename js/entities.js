@@ -354,7 +354,71 @@
     }
   };
 
+  /* =========================================================================
+   * Beam — 쓸기 빔 (스펙 2026-09-23 §3.4). pending(예고) 동안 벽에 서 있다가 dir 로 움직인다.
+   * 판정은 game.onBeamTouch 가 한다 — 무적(대시) 중이면 계속 살핀다.
+   * ====================================================================== */
+  function Beam(o) {
+    this.x = o.x;
+    this.w = o.w;
+    this.dir = o.dir;
+    this.speed = o.speed;
+    this.vx = 0;
+    this.t = o.delay;
+    this.damage = o.damage || 1;
+    this.label = o.label || 'BEAM';
+    this.pending = true;
+    this.hitDone = false;
+    this.dead = false;
+  }
+
+  Beam.prototype.contains = function (x) {
+    return x > this.x - this.w / 2 - C.PLAYER.HALF_W && x < this.x + this.w / 2 + C.PLAYER.HALF_W;
+  };
+
+  Beam.prototype.update = function (dt, game) {
+    if (this.dead) return;
+    if (this.pending) {
+      this.t -= dt;
+      if (this.t <= 0) { this.pending = false; this.vx = this.dir * this.speed; }
+      return;
+    }
+    this.x += this.vx * dt;
+    if (!this.hitDone && this.contains(game.player.x)) game.onBeamTouch(this);
+    if (this.x < V.MIN_X - this.w || this.x > V.MAX_X + this.w) this.dead = true;
+  };
+
+  /* =========================================================================
+   * Pillar — 기둥 (스펙 2026-09-23 §3.6). pending(바닥 경고) → 선다(game.onPillarRise) → up 초 뒤 사라진다.
+   * 선 동안 플레이어의 걷기·대시·밀림을 막는다(game.blockByPillars). 보스·투사체는 통과한다.
+   * ====================================================================== */
+  function Pillar(o) {
+    this.x = o.x;
+    this.w = o.w;
+    this.t = o.delay;
+    this.delay = o.delay;
+    this.up = o.up;
+    this.damage = o.damage || 1;
+    this.label = o.label || 'PILLAR';
+    this.pending = true;
+    this.side = 0;             // 설 때 플레이어가 있던 쪽(-1 왼쪽 / 1 오른쪽) — 그 쪽으로만 막는다 (game.blockByPillars)
+    this.dead = false;
+  }
+
+  Pillar.prototype.update = function (dt, game) {
+    if (this.dead) return;
+    if (this.pending) {
+      this.t -= dt;
+      if (this.t <= 0) { this.pending = false; game.onPillarRise(this); }
+      return;
+    }
+    this.up -= dt;
+    if (this.up <= 0) this.dead = true;
+  };
+
   global.Player = Player;
   global.Projectile = Projectile;
   global.Zone = Zone;
+  global.Beam = Beam;
+  global.Pillar = Pillar;
 })(window);

@@ -150,6 +150,52 @@
     }
   };
 
+  /* ---- 쓸기 빔 (§3.4 SENTINEL) -------------------------------------------
+   * 플레이어 등 뒤 벽에 빔이 예고(pending)로 서고 windup 끝에 보스 쪽으로 움직인다.
+   * 도망치면 따라잡힌다(빔 320 > 걷기 265) — 빔 쪽으로 대시해야 넘는다. */
+  MOTIONS.sweep = {
+    remote: true,
+    canBegin: function (boss, def, g) { return roomBehind(boss, g.player) >= C.MOTION.BEAM_MIN_ROOM; },
+    begin: function (boss, a, g) {
+      var bm = a.def.beam, side = behindDir(boss, g.player);
+      var x = side < 0 ? V.MIN_X : V.MAX_X;
+      var beam = new Beam({ x: x, w: bm.w, dir: -side, speed: bm.speed, delay: a.windupTotal,
+                            damage: bm.damage, label: a.def.label || a.def.id });
+      a.spawns.push(beam);
+      g.spawnBeam(beam);
+      FX.tellBurst(x - side * bm.w * 0.5, V.FLOOR_Y - C.MOTION.BEAM_H * 0.5, C.COLORS.RED, 'red');   // 빔 자리 예고
+    }
+  };
+
+  /* ---- 기둥 (§3.6 BASTION) -----------------------------------------------
+   * 등 뒤(과 count 2 면 플레이어·보스 사이)에 선다. 플레이어 칸이 SAFE_MIN_W 미만이 되거나
+   * 아레나 밖이면 스텝을 건너뛴다 — 갇히는 일은 없어야 한다. */
+  function pillarSpots(boss, def, g) {
+    var pl = def.pillar, p = g.player, half = pl.w / 2, i;
+    var xs = [p.x + behindDir(boss, p) * pl.dist];
+    if (pl.count >= 2) xs.push((p.x + boss.x) / 2);
+    var extra = [];
+    for (i = 0; i < xs.length; i++) {
+      if (xs[i] - half < V.MIN_X || xs[i] + half > V.MAX_X) return null;
+      extra.push({ x: xs[i], w: pl.w });
+    }
+    return g.cellWidth(p.x, extra) >= C.ARENA.SAFE_MIN_W ? xs : null;
+  }
+  MOTIONS.pillar = {
+    remote: true,
+    canBegin: function (boss, def, g) { return pillarSpots(boss, def, g) !== null; },
+    begin: function (boss, a, g) {
+      var pl = a.def.pillar, xs = pillarSpots(boss, a.def, g);
+      if (!xs) return;
+      for (var i = 0; i < xs.length; i++) {
+        var pil = new Pillar({ x: xs[i], w: pl.w, delay: a.windupTotal, up: pl.up,
+                               damage: pl.damage, label: a.def.label || a.def.id });
+        a.spawns.push(pil);
+        g.spawnPillar(pil);
+      }
+    }
+  };
+
   /* ---- 동작 항목은 이 줄 위에 추가한다 ---- */
 
   global.MOTIONS = MOTIONS;

@@ -373,6 +373,106 @@ check('협공 — 앞 금 → gap 뒤 등 뒤 적', shots.pincerOk, `(gap ${shot
 check('협공 — 등 뒤 공간이 없으면 건너뛴다', shots.pincerSkip);
 check('협공 — 예고 뒤 벽으로 물러서면 뒤 탄이 생기지 않는다', shots.pincerRetreat);
 
+/* ---- 쓸기 빔 · 기둥 (Task 5) ------------------------------------------------ */
+const area = await page.evaluate(() => {
+  const g = window.__RIPOSTE.game, T = window.__T, C = window.CONFIG;
+  const out = {};
+  const LINE = { id: 'line', label: 'LINE', tell: 'red', kind: 'sweep', windup: 0.85, active: 0.06, recover: 0.6,
+                 beam: { w: 90, speed: 320, damage: 1 }, steal: null };
+  /* 빔 — 가만히 있으면 맞는다 */
+  T.setup({ line: LINE }, 300, 700);
+  T.attack('line');
+  out.beamRemote = g.boss.attackState().remote === true;
+  out.beamPendingSafe = (() => { T.run(0.8); return g.hits === 0 && g.beams.length === 1 && g.beams[0].pending; })();
+  T.run(2.0);
+  out.beamIdle = g.hits === 1 && g.lastHitBy && g.lastHitBy.kind === 'beam';
+  /* 빔 반대쪽(보스 쪽)으로 대시하면 따라잡혀 맞는다 / 빔 쪽으로 대시하면 넘는다 */
+  const dashRun = (dir) => {
+    T.setup({ line: LINE }, 300, 700);
+    T.attack('line');
+    let dashed = false;
+    T.run(3.0, (gg) => {
+      const bm = gg.beams[0]; if (!bm || bm.pending || dashed) return;
+      const front = bm.x + bm.w / 2, back = gg.player.x - C.PLAYER.HALF_W;
+      if (back - front <= 20) { gg.player.startDash(dir); dashed = true; }
+    });
+    return g.hits;
+  };
+  out.beamWrong = dashRun(1) === 1;
+  out.beamRight = dashRun(-1) === 0;
+  /* 등 뒤 공간이 없으면 건너뛴다 */
+  T.setup({ line: LINE }, 100, 700);
+  T.attack('line');
+  out.beamSkip = g.boss.attack === null && g.beams.length === 0;
+
+  const GATE = { id: 'gate', label: 'GATE', tell: 'red', kind: 'pillar', windup: 0.9, active: 0.1, recover: 0.5,
+                 pillar: { w: 34, up: 4.0, dist: 150, count: 1, damage: 1 }, steal: null };
+  const CAGE = { id: 'cage', label: 'CAGE', tell: 'red', kind: 'pillar', windup: 0.95, active: 0.1, recover: 0.55,
+                 pillar: { w: 34, up: 3.5, dist: 150, count: 2, damage: 1 }, steal: null };
+  const edge = 250 + 17 + C.PLAYER.HALF_W;                 // 등 뒤 기둥(250) 오른쪽 면에 몸이 닿는 x
+  /* 기둥 — 등 뒤에 서서 걷기·대시를 막는다, up 뒤 사라진다 */
+  T.setup({ gate: GATE }, 400, 600);
+  T.attack('gate');
+  out.pillarRemote = g.boss.attackState().remote === true;
+  T.run(1.0);
+  out.pillarUp = g.pillars.length === 1 && !g.pillars[0].pending && Math.abs(g.pillars[0].x - 250) < 1;
+  T.run(1.0, null, -1);
+  out.pillarWalk = g.player.x >= edge - 0.5;
+  g.player.dashCd = 0; g.player.stamina = C.STAMINA.MAX;
+  g.player.startDash(-1); T.run(0.3);
+  out.pillarDash = g.player.x >= edge - 0.5;
+  /* 블록 밀림(40px, 기둥 쪽)이 기둥을 넘지 못한다 — 순간 이동도 설 때 있던 쪽으로 되돌린다 */
+  g.player.x = edge;
+  g.onBlock(null, { x: 600 });
+  T.run(T.DT * 2);
+  out.pillarBlockPush = g.player.x >= edge - 0.5;
+  T.run(4.0); T.run(1.0, null, -1);
+  out.pillarGone = g.pillars.length === 0 && g.player.x < edge - 20;
+  /* 기둥 자리에 서 있으면 맞고 바깥으로 밀려난다 */
+  T.setup({ gate: GATE }, 400, 600);
+  T.attack('gate'); T.run(0.3);
+  g.player.x = 250;
+  T.run(0.8);
+  out.pillarRise = g.hits === 1 && Math.abs(g.player.x - 250) >= 17 + C.PLAYER.HALF_W - 0.5;
+  /* 아레나 밖·칸이 좁으면 서지 않는다 */
+  T.setup({ gate: GATE }, 180, 600);
+  T.attack('gate');
+  out.pillarOut = g.boss.attack === null && g.pillars.length === 0;
+  T.setup({ cage: CAGE }, 400, 560);
+  T.attack('cage');
+  out.cageNarrow = g.boss.attack === null && g.pillars.length === 0;
+  /* windup 동안 기둥 자리 너머로 걸어가면(칸 [60, 233] = 173 < 200) 서지 않는다 */
+  T.setup({ gate: GATE }, 400, 600);
+  T.attack('gate'); T.run(0.3);
+  g.player.x = 200;
+  T.run(0.8);
+  out.pillarRecheck = g.pillars.length === 0 && g.hits === 0;
+  /* windup 중 보스가 경직되면 기둥은 서지 않는다 */
+  T.setup({ gate: GATE }, 400, 600);
+  T.attack('gate'); T.run(0.3);
+  g.boss.stagger(1.0, false);
+  T.run(1.0);
+  out.pillarCancel = g.pillars.length === 0;
+  return out;
+});
+check('빔 — attackState.remote', area.beamRemote);
+check('빔 — 예고 중에는 맞지 않는다', area.beamPendingSafe);
+check('빔 — 가만히 있으면 맞는다', area.beamIdle);
+check('빔 — 반대쪽으로 대시하면 따라잡힌다', area.beamWrong);
+check('빔 — 빔 쪽으로 대시하면 넘는다', area.beamRight);
+check('빔 — 등 뒤 공간이 없으면 건너뛴다', area.beamSkip);
+check('기둥 — attackState.remote', area.pillarRemote);
+check('기둥 — 등 뒤 150 에 선다', area.pillarUp);
+check('기둥 — 걷기를 막는다', area.pillarWalk);
+check('기둥 — 대시를 막는다', area.pillarDash);
+check('기둥 — 블록 밀림도 넘지 못한다', area.pillarBlockPush);
+check('기둥 — up 뒤 사라진다', area.pillarGone);
+check('기둥 — 자리에 서 있으면 맞고 밀려난다', area.pillarRise);
+check('기둥 — 아레나 밖이면 서지 않는다', area.pillarOut);
+check('기둥 — 칸이 SAFE_MIN_W 보다 좁으면 서지 않는다', area.cageNarrow);
+check('기둥 — 서는 순간 칸이 좁아졌으면 서지 않는다', area.pillarRecheck);
+check('기둥 — windup 중 경직되면 서지 않는다', area.pillarCancel);
+
 /* ---- 새 동작 검사는 이 줄 위에 추가한다 ------------------------------------ */
 
 check('pageerror 0', errors.length === 0, errors.slice(0, 3).join(' | '));

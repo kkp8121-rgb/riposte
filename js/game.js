@@ -776,6 +776,7 @@
 
     p.update(dt, koMode ? 0 : axis, b ? b.x : null);
     if (b) b.update(dt);
+    this.blockByPillars();             // 걷기·대시·보스 끌어당김까지 끝난 위치를 기둥으로 자른다 (스펙 2026-09-23 §3.6)
 
     // 리포스트 판정
     var rp = p.riposte;
@@ -821,6 +822,7 @@
     this.updateProjectiles(dt);
     this.updateZones(dt);
     this.updateMotionWorld(dt);
+    this.blockByPillars();
   };
 
   /* ---- 리포스트 ----------------------------------------------------------- */
@@ -1114,6 +1116,69 @@
     }
     if (p.isInvulnerable()) return;
     this.damagePlayer(src.damage, src.fromX, 0, { label: src.label, tell: src.tell, kind: src.kind });
+  };
+
+  /** 빔이 플레이어에 겹쳤다. 무적(대시)이면 판정하지 않고 계속 살핀다 — 무적이 끝났는데 겹쳐 있으면 맞는다 */
+  Game.prototype.onBeamTouch = function (bm) {
+    var p = this.player;
+    if (this.ko || p.isInvulnerable()) return;
+    bm.hitDone = true;
+    this.damagePlayer(bm.damage, bm.x, 0, { label: bm.label, tell: 'red', kind: 'beam' });
+  };
+
+  /**
+   * px 가 들어 있는 칸의 폭 — 살아 있는(설 예정 포함) 기둥과 아레나 벽 사이.
+   * @param {Array<{x:number,w:number}>} [extra] 더해 볼 기둥 (새로 세울 자리)
+   */
+  Game.prototype.cellWidth = function (px, extra) {
+    var walls = (extra || []).slice(), left = V.MIN_X, right = V.MAX_X, i;
+    for (i = 0; i < this.pillars.length; i++) if (!this.pillars[i].dead) walls.push(this.pillars[i]);
+    for (i = 0; i < walls.length; i++) {
+      var half = walls[i].w / 2;
+      if (walls[i].x < px) left = Math.max(left, walls[i].x + half);
+      else right = Math.min(right, walls[i].x - half);
+    }
+    return right - left;
+  };
+
+  /**
+   * 기둥이 서려 한다. 그 자리에 있었으면 공간이 있는 쪽 바깥으로 밀려나며 맞는다(대시 중이면 무사).
+   * 🔴 서는 순간 한 번 더 잰다 — windup 동안 플레이어가 기둥 자리 너머로 걸어가 칸이 SAFE_MIN_W 보다 좁아지면 서지 않는다.
+   * 선 기둥은 플레이어가 있던 쪽(side)을 기억한다 — 블록 밀림 같은 순간 이동이 기둥을 넘어도 그 쪽으로 되돌린다.
+   */
+  Game.prototype.onPillarRise = function (pl) {
+    var p = this.player;
+    var half = pl.w / 2 + C.PLAYER.HALF_W;
+    var inside = Math.abs(p.x - pl.x) < half;
+    var toLeft = p.x < pl.x;
+    if (inside) {
+      if (toLeft && pl.x - half < V.MIN_X) toLeft = false;
+      if (!toLeft && pl.x + half > V.MAX_X) toLeft = true;
+    }
+    var nx = inside ? (toLeft ? pl.x - half : pl.x + half) : p.x;
+    if (this.cellWidth(nx) < C.ARENA.SAFE_MIN_W) { pl.dead = true; return; }   // 갇힌다 — 서지 않는다
+    pl.side = toLeft ? -1 : 1;
+    FX.addShake(C.SHAKE.BLOCK);
+    FX.sparks(pl.x, V.FLOOR_Y, C.FX.DUST, C.COLORS.GREY,
+      { speed: 220, life: 0.4, dir: -Math.PI / 2, spread: Math.PI * 0.8, size: 2.2 });
+    RAudio.swing();
+    if (!inside) return;
+    if (!this.ko && !p.isInvulnerable()) {
+      this.damagePlayer(pl.damage, pl.x, 0, { label: pl.label, tell: 'red', kind: 'pillar' });
+    }
+    p.x = nx;
+  };
+
+  /** 선 기둥은 플레이어의 걷기·대시·밀림·끌림·블록 밀림이 넘지 못한다 — 설 때 있던 쪽(side)으로만 자른다 */
+  Game.prototype.blockByPillars = function () {
+    var p = this.player;
+    for (var i = 0; i < this.pillars.length; i++) {
+      var pl = this.pillars[i];
+      if (pl.pending || pl.dead || !pl.side) continue;
+      var lo = pl.x - pl.w / 2 - C.PLAYER.HALF_W, hi = pl.x + pl.w / 2 + C.PLAYER.HALF_W;
+      if (pl.side < 0 && p.x > lo) { p.x = lo; if (p.vx > 0) p.vx = 0; p.knock = 0; }
+      else if (pl.side > 0 && p.x < hi) { p.x = hi; if (p.vx < 0) p.vx = 0; p.knock = 0; }
+    }
   };
 
   Game.prototype.updateProjectiles = function (dt) {
