@@ -90,7 +90,7 @@
       ]
     },
 
-    /* ---- 훅: 방벽이 서 있으면 shards 가 든 패턴만 뽑는다 (TEMPEST·HOLLOW 선례) ---- */
+    /* ---- 훅: 방벽이 서 있으면 shards 가 든 패턴만 뽑는다 (TEMPEST·SENTINEL 선례) ---- */
     onPickPattern: function (boss, game) {
       var pool = boss.def.patterns[boss.phase] || boss.def.patterns[1];
       if (!boss.wallUp()) return pool;

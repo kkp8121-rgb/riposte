@@ -143,7 +143,12 @@
   }
   MOTIONS.pincer = {
     remote: true,
-    canBegin: function (boss, def, g) { return roomBehind(boss, g.player) >= C.MOTION.PINCER_MIN_ROOM; },
+    // backShot 이 스스로 pad 를 빼고 재는 것과 같은 기준으로 미리 걸러야 한다 — 안 그러면
+    // room 이 [PINCER_MIN_ROOM, +PAD) 사이일 때 canBegin 은 통과해 놓고 backShot 만 조용히
+    // 취소해 앞탄만 나가는 "반쪽 협공"이 된다(최종 리뷰 C).
+    canBegin: function (boss, def, g) {
+      return roomBehind(boss, g.player) - C.MOTION.PINCER_SPAWN_PAD >= C.MOTION.PINCER_MIN_ROOM;
+    },
     active: function (boss, a, g) {
       var def = a.def, pc = def.pincer, p = g.player, dir = boss.dirToPlayer();
       boss.fire(def, function () { return boss.newShot(def, dir); });

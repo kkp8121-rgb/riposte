@@ -144,7 +144,8 @@
       skill: skill, k: k, kind: skill.kind,
       stage: 'startup', t: k.startup, hasHit: false,
       empowered: this.isEmpowered(),
-      fired: false
+      fired: false,
+      startT: this.game.time   // 반격 자세 벌 판정용 — 언제 "시작"된 리포스트인지 (최종 리뷰 A)
     };
     this.parryT = -1;
   };
@@ -270,6 +271,7 @@
     this.color = o.color || (o.tell === 'red' ? C.COLORS.RED : C.COLORS.GOLD);
     this.skill = o.skill || null;        // 패리 시 훔칠 기술
     this.fromHand = o.fromHand || null;  // 손패에서 쓴 리포스트 탄이면 그 기술 (0딜이면 환불)
+    this.riposteT = o.riposteT || 0;     // 손패 shot 리포스트가 "시작"된 시각 — 반격 자세 벌 판정용 (최종 리뷰 A)
     this.label = o.label || null;        // 패배 화면 "SLAIN BY ..." 용
     this.reflectDamage = o.reflectDamage || 0;
     this.shape = o.shape || 'arrow';     // 'arrow' | 'wave' | 'bolt'

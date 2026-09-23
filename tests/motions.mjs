@@ -154,6 +154,7 @@ const melee3 = await page.evaluate(() => {
   const RETORT = { id: 'retort', label: 'RETORT', tell: 'red', kind: 'melee', windup: 0.34, active: 0.12, recover: 0.6,
                    reach: 240, approach: 0, damage: 1, swing: 'thrust', stanceCounter: true, steal: null };
   const skill = { id: 'X', label: 'X', kind: 'slash', damage: 20 };
+  const slamSkill = { id: 'SLAMX', label: 'SLAMX', kind: 'slam', damage: 24 };
   /* 자세 중 리포스트 → 피해 0 · 즉시 적 반격. 자세 시작엔 전용 소리(3채널 — 색·모양·소리) */
   T.setup({ guard: GUARD, retort: RETORT }, 300, 420);
   let guardSounds = 0;
@@ -162,17 +163,26 @@ const melee3 = await page.evaluate(() => {
   window.RAudio.guard = guardSnd;
   out.stanceSound = guardSounds === 1;
   out.stanceFlag = g.boss.attackState().stance === true;
-  g.resolveRiposteHit({ skill: skill, empowered: false });
+  g.resolveRiposteHit({ skill: skill, empowered: false, startT: g.time });
   out.stancePunish = g.boss.hp === 999 && g.boss.attack && g.boss.attack.id === 'retort' && g.boss.attack.tell === 'red';
+  /* 최종 리뷰 A — 자세가 뜨기 "전"에 이미 시작된 리포스트(slam)는 windup 중에 맞아도 벌하지 않는다.
+     그냥(비카운터) 히트로 처리된다 — 피해는 그대로 들어가고(카드 환급 경로 불변), 반격도 열리지 않는다. */
+  T.setup({ guard: GUARD, retort: RETORT }, 300, 420);
+  const beforeStance = g.time;
+  T.run(0.05);                      // 스탠스가 뜨기 전에 리포스트가 이미 커밋된 시점
+  T.attack('guard'); T.run(0.3);
+  g.resolveRiposteHit({ skill: slamSkill, empowered: false, startT: beforeStance });
+  out.stanceEarlyNotPunished = !(g.boss.attack && g.boss.attack.id === 'retort') && g.boss.hp === 999 - slamSkill.damage;
   /* 손패 shot 도 벌 / 반사탄(fromHand 없음)은 벌이 아니다 */
   T.setup({ guard: GUARD, retort: RETORT }, 300, 420);
   T.attack('guard'); T.run(0.3);
-  g.resolveProjectileHitBoss({ damage: 10, fromHand: skill });
+  g.resolveProjectileHitBoss({ damage: 10, fromHand: skill, riposteT: g.time });
   out.stanceShot = g.boss.hp === 999 && g.boss.attack && g.boss.attack.id === 'retort';
+  /* 최종 리뷰 B — 반사탄은 벌도 아니고, 카운터 배율(×1.5)도 걸리지 않는다(피해는 그대로 10) */
   T.setup({ guard: GUARD, retort: RETORT }, 300, 420);
   T.attack('guard'); T.run(0.3);
   g.resolveProjectileHitBoss({ damage: 10, fromHand: null });
-  out.stanceReflect = g.boss.hp < 999 && !(g.boss.attack && g.boss.attack.id === 'retort');
+  out.stanceReflect = g.boss.hp === 999 - 10 && !(g.boss.attack && g.boss.attack.id === 'retort');
   /* 방벽이 서 있으면 방벽 판정이 먼저 — 튕기고 자세는 그대로 */
   T.setup({ guard: GUARD, retort: RETORT }, 300, 420, { wall: { hits: 2, up: 6, breakStagger: 1.6 } });
   T.attack('guard'); T.run(0.3);
@@ -243,8 +253,9 @@ check('끌어당김 — 대시 중에는 끌지 않는다', melee3.pullDash);
 check('반격 자세 — attackState.stance', melee3.stanceFlag);
 check('반격 자세 — 시작에 전용 소리 1회', melee3.stanceSound);
 check('반격 자세 — 자세 중 리포스트는 피해 0 + 적 반격', melee3.stancePunish);
+check('반격 자세 — 자세가 뜨기 전에 시작된 리포스트는 벌하지 않는다(최종 리뷰 A)', melee3.stanceEarlyNotPunished);
 check('반격 자세 — 손패 shot 도 벌', melee3.stanceShot);
-check('반격 자세 — 반사탄은 벌이 아니다', melee3.stanceReflect);
+check('반격 자세 — 반사탄은 벌이 아니고 카운터 배율도 아니다(최종 리뷰 B)', melee3.stanceReflect);
 check('반격 자세 — 방벽이 서 있으면 방벽이 먼저', melee3.stanceWall);
 check('반격 자세 — 참으면 끝의 금 강타를 훔친다', melee3.stanceBash);
 check('악보 — 플래시는 처음 한 번', melee3.scoreFlash, JSON.stringify(melee3.scoreP1Data));
@@ -350,6 +361,12 @@ const shots = await page.evaluate(() => {
   T.setup({ squall: SQUALL }, 150, 700);
   T.attack('squall');
   out.pincerSkip = g.boss.attack === null;
+  /* 최종 리뷰 C — 죽음의 띠(PINCER_MIN_ROOM 160 ~ +PAD 20 사이, 예: 170)는 이전엔 canBegin 만
+     통과해 앞탄은 나가고 backShot 만 스스로 취소하는 "반쪽 협공"이었다. canBegin 도 pad 를 빼서
+     이 구간에서는 스텝 자체를 건너뛴다. */
+  T.setup({ squall: SQUALL }, C.VIEW.MIN_X + 170, 700);
+  T.attack('squall');
+  out.pincerDeadBand = g.boss.attack === null;
   /* 예고 뒤 플레이어가 벽으로 물러서면 뒤 탄은 생기지 않는다 (몸 위에 예고 없이 생기지 않게) */
   T.setup({ squall: SQUALL }, 420, 760);
   g.player.iframes = 99;
@@ -371,6 +388,7 @@ check('부메랑 — 두 번째 텔 → 교차 = backTime (보통 거리)', shot
 check('협공 — attackState.remote', shots.pincerRemote);
 check('협공 — 앞 금 → gap 뒤 등 뒤 적', shots.pincerOk, `(gap ${shots.pincerGap})`);
 check('협공 — 등 뒤 공간이 없으면 건너뛴다', shots.pincerSkip);
+check('협공 — 죽음의 띠(등 뒤 170)에서도 canBegin 이 건너뛴다(최종 리뷰 C)', shots.pincerDeadBand);
 check('협공 — 예고 뒤 벽으로 물러서면 뒤 탄이 생기지 않는다', shots.pincerRetreat);
 
 /* ---- 쓸기 빔 · 기둥 (Task 5) ------------------------------------------------ */

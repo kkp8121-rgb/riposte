@@ -793,7 +793,8 @@
           color: C.COLORS.PLAYER,
           shape: rp.skill.kind === 'shot' && rp.skill.id === 'SHOCKWAVE' ? 'wave' : 'arrow',
           damage: this.riposteDamage(rp),
-          fromHand: rp.skill          // 무적에 막혀 0딜이면 손패로 되돌려준다
+          fromHand: rp.skill,         // 무적에 막혀 0딜이면 손패로 되돌려준다
+          riposteT: rp.startT         // 자세 벌 판정 — 이 리포스트가 "시작"된 시각 (최종 리뷰 A)
         }));
         RAudio.swing();
       }
@@ -863,11 +864,18 @@
     var b = this.boss;
     if (!b || b.dead) return;
 
-    // 반격 자세(스펙 2026-09-23 §3.8) — 참지 못한 리포스트는 피해 0, 곧바로 적 반격. 방벽 판정이 먼저다
-    if (!b.wallUp() && b.stanceOpen()) { b.punishStance(); return; }
+    // 반격 자세(스펙 2026-09-23 §3.8) — 참지 못한 리포스트는 피해 0, 곧바로 적 반격. 방벽 판정이 먼저다.
+    // 단, 벌은 자세가 "뜬 뒤에" 시작된 리포스트에만 준다 — 자세 전에 이미 날아가던 리포스트가
+    // windup 중에 명중해도 그냥(비카운터) 히트로 처리한다(최종 리뷰 A). 자세 윈드업은 애초에
+    // 카운터 창도 아니므로(§3.8 "카운터 판정과의 관계") 벌하지 않는 동안은 counter 도 강제로 끈다(최종 리뷰 B).
+    var stance = !b.wallUp() && b.stanceOpen();
+    if (stance) {
+      var sa = b.attack;
+      if (rp.startT >= sa.hitAt - sa.windupTotal) { b.punishStance(); return; }
+    }
 
     var counter = false;
-    if (b.state === 'attack' && b.attack && b.attack.stage === 'windup') counter = true;
+    if (!stance && b.state === 'attack' && b.attack && b.attack.stage === 'windup') counter = true;
     if (b.state === 'stagger' && b.staggerCounter) counter = true;
 
     var mult = 1;
@@ -1315,10 +1323,16 @@
 
   Game.prototype.resolveProjectileHitBoss = function (pr) {
     var b = this.boss;
-    // 손패 shot 도 "참지 못한" 리포스트다. 반사탄(fromHand 없음)은 자세를 건드리지 않는다
-    if (pr.fromHand && !b.wallUp() && b.stanceOpen()) { b.punishStance(); return; }
-    var counter = (b.state === 'attack' && b.attack && b.attack.stage === 'windup') ||
-                  (b.state === 'stagger' && b.staggerCounter);
+    // 손패 shot 도 "참지 못한" 리포스트다 — 자세가 뜬 뒤 시작된 것만 벌한다(최종 리뷰 A).
+    // 반사탄(fromHand 없음)은 애초에 리포스트가 아니라 자세를 건드리지 않는다.
+    var stance = !b.wallUp() && b.stanceOpen();
+    if (stance && pr.fromHand) {
+      var sa = b.attack;
+      if (pr.riposteT >= sa.hitAt - sa.windupTotal) { b.punishStance(); return; }
+    }
+    // 자세 윈드업은 카운터 창이 아니다 — 벌하지 않는 동안(반사탄 포함)도 counter 는 끈다(최종 리뷰 B)
+    var counter = !stance && ((b.state === 'attack' && b.attack && b.attack.stage === 'windup') ||
+                  (b.state === 'stagger' && b.staggerCounter));
     var empowered = this.player.isEmpowered();
     var mult = counter ? C.COMBAT.COUNTER_MULT : 1;
     var dmg = Math.round(pr.damage * mult);
