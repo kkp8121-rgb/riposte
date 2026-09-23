@@ -60,7 +60,10 @@
       1: [
         { name: 'refrain',          steps: [{ atk: 'refrain' }] },
         { name: 'canon',            steps: [{ atk: 'canon' }] },
-        { name: 'canon-cross-canon', steps: [{ atk: 'canon' }, { move: 'cross' }, { atk: 'canon' }] },   // 잔상 둘이 양쪽에
+        // wait 0.45 — cross 뒤 곧바로 치면 첫 캐논의 메아리(echo, delay 0.70+windup 0.55=1.25)와
+        // 두 번째 캐논의 실타격이 0.35(MIN_VOLLEY_GAP) 아래로(벽 근처에서는 역전까지) 붙어 패리 록(RECOVERY_ON_SUCCESS
+        // 0.10) 안에 들어간다 — 실측 docs/qa 사이드파인딩. 캐논 수치는 그대로 두고 사이 간격만 늘려 뗀다.
+        { name: 'canon-cross-canon', steps: [{ atk: 'canon' }, { move: 'cross' }, { wait: 0.45 }, { atk: 'canon' }] },   // 잔상 둘이 양쪽에
         { name: 'cross-refrain',    steps: [{ move: 'cross' }, { atk: 'refrain' }] }
       ],
       2: [
