@@ -2993,6 +2993,83 @@ Expected: 연타 0/36 · 하드 12/12.
 
 ---
 
+## Task 16.1: 엔진 — 반응 시간이 없는 되받아치기(deflect) 금지
+
+(컨트롤러가 추가한 태스크 — Task 16 밸런스 실측에서 발견. 판정 근거: ledger "Ruling (T16 deflect)".)
+
+**문제**: BASTION 은 플레이어 쪽 투사체가 보스의 `C.BOSS.DEFLECT_REACH`(120) 안에 들어온 첫 스텝에 확률로 되받아친다(`Boss.prototype.tryDeflect`). 플레이어가 보스 가까이에서 손패 shot(VOLLEY)을 쏘면 탄이 쏘자마자 되받혀 **플레이어에게서 28px 떨어진 곳**에서 되돌아오고 0.01초 뒤 맞는다(Task 16 실측: 되받힌 손패 VOLLEY 15/15). 되받기는 확률이라 박자로 예측할 수도 없다 — 사람도 봇도 반응할 수 없는 타격이다. 기둥(gate/cage)이 플레이어를 보스 가까이 붙게 만들어 더 자주 일어난다. 기존 원칙("코앞에서 생긴 탄은 받을 수 없다" — HOLLOW·ADAMANT·TEMPEST 주석)과 같은 결함이다.
+
+**컨트롤러 판정**: 되돌아온 탄이 플레이어의 받는 거리(`C.PARRY.PROJECTILE_CATCH`)에 닿기까지 `C.BOSS.DEFLECT_MIN_REACT` 초 미만이면 **되받지 않는다**(탄은 그대로 보스에게 간다). 되받기 확률(rng) 추첨보다 **먼저** 검사한다 — 되받을 수 없는 탄에 확률을 쓰지 않는다. deflect 를 쓰는 보스는 BASTION 하나뿐이라 챕터 1 은 영향이 없다.
+
+**Files:**
+- Modify: `js/config.js` (`BOSS.DEFLECT_MIN_REACT`)
+- Modify: `js/boss.js` (`tryDeflect`)
+- Test: `tests/motions.mjs` (새 블록)
+
+- [ ] **Step 1: 실패하는 테스트** — `tests/motions.mjs` 의 `/* ---- 새 동작 검사는 이 줄 위에 추가한다 ---- */` 바로 위에 넣는다.
+
+```js
+/* ---- 반응 시간이 없는 되받아치기 금지 (Task 16.1) ------------------------- */
+const deflect = await page.evaluate(() => {
+  const g = window.__RIPOSTE.game, T = window.__T, C = window.CONFIG;
+  const out = {};
+  const oldP1 = C.BOSS.DEFLECT_CHANCE_P1;
+  C.BOSS.DEFLECT_CHANCE_P1 = 1;                      // 확률 제거 — 되받을 수 있으면 반드시 되받는다
+  const shoot = (px, bx) => {
+    T.setup({}, px, bx, { deflect: true });
+    const skill = { id: 'VOLLEY', label: 'VOLLEY', kind: 'shot', damage: 20 };
+    const pr = new window.Projectile({ x: px + 22, y: C.VIEW.FLOOR_Y - 48, vx: C.RIPOSTE_KINDS.shot.projSpeed,
+                                       r: 9, tell: 'player', owner: 'player', damage: 20, fromHand: skill });
+    g.projectiles.push(pr);
+    let deflectedAt = null, catchAt = null;
+    T.run(1.5, (gg) => {
+      if (deflectedAt === null && pr.owner === 'boss') deflectedAt = gg.time;
+      if (deflectedAt !== null && catchAt === null && Math.abs(pr.x - gg.player.x) <= C.PARRY.PROJECTILE_CATCH) catchAt = gg.time;
+    });
+    return { deflected: deflectedAt !== null, react: deflectedAt !== null && catchAt !== null ? +(catchAt - deflectedAt).toFixed(3) : null,
+             bossHp: g.boss.hp };
+  };
+  out.far = shoot(300, 700);                          // 멀리서 쏜 탄 — 되받는다, 반응 시간 ≥ DEFLECT_MIN_REACT
+  out.near = shoot(560, 700);                         // 코앞에서 쏜 탄 — 되받지 않는다, 보스가 맞는다
+  C.BOSS.DEFLECT_CHANCE_P1 = oldP1;
+  out.min = C.BOSS.DEFLECT_MIN_REACT;
+  return out;
+});
+check('되받기 — 멀리서 쏜 탄은 되받는다(반응 시간 ≥ 하한)',
+  deflect.far.deflected && deflect.far.react !== null && deflect.far.react >= deflect.min - 0.02, JSON.stringify(deflect.far));
+check('되받기 — 코앞에서 쏜 탄은 되받지 않는다(보스가 맞는다)',
+  !deflect.near.deflected && deflect.near.bossHp < 999, JSON.stringify(deflect.near));
+```
+
+- [ ] **Step 2: 실패 확인** — `node tests/motions.mjs` → `코앞에서 쏜 탄은 되받지 않는다` FAIL(현재는 되받는다). `멀리서` 는 통과할 수 있다(상한을 넣기 전에도 멀면 되받으므로) — 그래도 반응 시간 값이 기록된다.
+
+- [ ] **Step 3: 상수 — `js/config.js`** — `BOSS` 블록의 `DEFLECT_RECOVER: 0.45,` 줄 다음에 넣는다.
+
+```js
+      /* 되받은 탄이 플레이어의 받는 거리(PARRY.PROJECTILE_CATCH)에 닿기까지 이만큼(초)은 걸려야 되받는다 (Task 16.1).
+         MIN_WINDUP(0.34, 반응 하한) + 여유. 되받기는 확률이라 박자로 예측할 수 없으므로 반응 시간을 보장해야 한다 */
+      DEFLECT_MIN_REACT: 0.40,
+```
+
+- [ ] **Step 4: `js/boss.js` `tryDeflect`** — `if (!open) return false;` 다음 줄에 넣고, 아래쪽의 기존 `var speed = Math.min(B.DEFLECT_SPEED_MAX, Math.abs(pr.vx) * B.DEFLECT_SPEED_MULT);` 줄은 **지운다**(위에서 계산한 `speed` 를 그대로 쓴다).
+
+```js
+    // 반응 시간이 없는 되받기는 하지 않는다 — 코앞에서 쏜 탄을 그 자리에서 되돌리면 받는 거리 안에서
+    // 되돌아와 반응할 수 없다 (Task 16.1). 확률 추첨보다 먼저 본다
+    var speed = Math.min(B.DEFLECT_SPEED_MAX, Math.abs(pr.vx) * B.DEFLECT_SPEED_MULT);
+    var room = Math.abs(pr.x - this.game.player.x) - C.PARRY.PROJECTILE_CATCH;
+    if (room / speed < B.DEFLECT_MIN_REACT) return false;
+```
+
+- [ ] **Step 5: 통과 + 회귀 (순차, 헤드리스)**
+  - `node tests/motions.mjs` → `MOTIONS PASSED`
+  - `node tests/state.mjs` → `STATE PASSED`
+  - `node tests/bot.mjs --boss=7 --seed=7` (완벽) · `--seed=11` · `--seed=23` → 결과 기록(채택 판정은 Task 16 재측정). hitLog 에 `DEFLECT@…` 가 남는지, 남으면 그 순간 플레이어–탄 거리가 충분했는지 기록.
+
+- [ ] **Step 6: 커밋** — `fix(engine): 반응 시간이 없는 되받아치기 금지 — 코앞에서 쏜 손패 탄이 28px 에서 되돌아오던 결함` (파일: js/config.js js/boss.js tests/motions.mjs)
+
+---
+
 ## Task 16.5: 재미 QA — 봇 지표 · 화면 점검 · 플레이어 관점 검토단 (사용자 요청 2026-09-23)
 
 사용자 결정: "보스 재작성 뒤 풀 QA". 재미 **자체**는 기계가 못 잰다 — 이 태스크는 **재미를 해치는 신호**를 찾아 사용자 플레이테스트(G8)가 볼 곳을 좁힌다. 결과는 Task 17 의 플레이테스트 체크리스트에 보스별 "여기를 봐 달라" 항목으로 들어간다.
