@@ -1,10 +1,8 @@
 /* =============================================================================
  * RIPOSTE — js/bosses/adamant.js
- * ADAMANT — 벽 그 자체 (챕터 3 마지막 = 최종 보스). 스펙 §2.4
- * 설계 축은 "리턴이 있는 기믹". 엔진 방벽(def.wall)이 서 있는 동안 리포스트는 튕기고,
- * 반사탄 둘로 벽을 깨면 카운터 경직(breakStagger)이 열린다 — 그 창의 모든 리포스트가 ×1.5 다.
- * 벽은 깨지 않아도 up 초 뒤 저절로 내려간다. 기믹은 의무가 아니라 노리는 기회다.
- * Phase 2 는 counterOnly — 윈드업·카운터 경직 중 명중만 피해가 들어간다(완화안 softMult).
+ * ADAMANT — 벽 그 자체 (챕터 3 마지막 = 최종 보스). 스펙 §3.12 · 2026-09-23 재설계 §2.4
+ * 방벽(반사탄으로 깬다) + 반격 자세 guard(이 윈드업에 치면 벌을 받는다) + P2 카운터 전용.
+ * "어느 윈드업은 치고, 어느 윈드업은 참는가" — 12스테이지가 가르친 것의 기말고사.
  * 이 파일이 Adamant 의 모든 수치를 소유한다.
  * ========================================================================== */
 (function (global) {
@@ -43,18 +41,24 @@
     /* 패턴 사이 간격 */
     gap: { 1: 0.9, 2: 0.65 },
 
-    /* ---- 공격 테이블 (스펙 §2.4) ----------------------------------------
-     * 금색 둘(cleave·shards)은 플래시 → 타격 간격이 다르게 고정돼 있다(0.78 / 0.62).
-     * 붉은 둘(advance·quake)은 자리를 옮기게 한다 — 벽을 등지고 서 있게 두지 않는다.
-     * 판정기: 구성이 HOLLOW(charge/melee/volley)와 60% 로 한계(75%) 아래. 멀리서 붙는 이동
-     * 모양(m:far … m:close)은 아무도 쓰지 않았다.
+    /* ---- 공격 테이블 (스펙 §3.12 · 2026-09-23 §2.4) --------------------------
+     * shards(금, 방벽을 깨는 재료) · guard(금, 반격 자세) · retort(적, 자세 벌 — 패턴이 부르지 않는다).
+     * 붉은 공격을 패턴이 직접 쓰지 않는다 — 이 보스의 위협은 "참지 못함"에서 온다.
      * -------------------------------------------------------------------- */
     attacks: {
-      cleave: {                                  // 대검 한 번 — 느리고 크고 무겁다
-        id: 'cleave', label: 'CLEAVE', tell: 'gold', kind: 'melee',
-        windup: 0.78, active: 0.12, recover: 0.62,
+      guard: {                                     // 반격 자세 — 참으면 끝에 금 강타(CLEAVE), 치면 retort (§3.8)
+        id: 'guard', label: 'GUARD', tell: 'gold', kind: 'stance',
+        windup: 0.90, active: 0.12, recover: 0.62,
         reach: 190, approach: 60, damage: 1, swing: 'arc',
+        stance: { counter: 'retort' },
         steal: { id: 'CLEAVE', label: 'CLEAVE', kind: 'slam', damage: 24 }
+      },
+      retort: {                                     // 벌 반격 — 자세 중에 맞았을 때만. 패턴이 직접 부르지 않는다
+        id: 'retort', label: 'RETORT', tell: 'red', kind: 'melee',
+        windup: 0.34, active: 0.12, recover: 0.60,
+        reach: 240, approach: 0, damage: 1, swing: 'thrust',
+        stanceCounter: true,                       // 판정기 서명 stance/counter — 자세 동작의 일부 (tools/boss-overlap.mjs)
+        steal: null
       },
       shards: {                                  // 벽 조각 두 발 — 받아서 벽에 되돌리는 것이 정답
         id: 'shards', label: 'SHARDS', tell: 'gold', kind: 'projectile',
@@ -63,19 +67,6 @@
         proj: { speed: 360, r: 13, y: 46, damage: 1, reflectDamage: 14, shape: 'arrow' },
         volley: { count: 2, interval: 0.5, p2Interval: 0.42 },
         steal: { id: 'SHARD', label: 'SHARD', kind: 'shot', damage: 12 }
-      },
-      advance: {                                 // 벽이 걸어온다 — 돌진, 패리 불가. 아레나 벽에 박으면 경직
-        id: 'advance', label: 'ADVANCE', tell: 'red', kind: 'charge',
-        windup: 0.80, active: 0.10, recover: 0.40,
-        charge: { speed: 700, damage: 1, wallStun: 1.0 },
-        steal: null
-      },
-      quake: {                                   // 발밑이 갈라진다 — 보스 앞 구역, 패리 불가
-        id: 'quake', label: 'QUAKE', tell: 'red', kind: 'zone',
-        windup: 0.90, active: 0.10, recover: 0.65,
-        /* anchor boss + 기본 offset(ZONE_OFFSET_DEFAULT) — 붙어 있던 자리를 지운다. linger 없음 */
-        zone: { w: 160, damage: 1, anchor: 'boss' },
-        steal: null
       }
     },
 
@@ -86,18 +77,16 @@
      * -------------------------------------------------------------------- */
     patterns: {
       1: [
-        { name: 'far-shards',              steps: [{ move: 'far' }, { atk: 'shards' }], tag: 'wall' },
-        { name: 'cleave',                  steps: [{ atk: 'cleave' }], tag: 'any' },
-        { name: 'quake-cleave',            steps: [{ atk: 'quake' }, { wait: 0.4 }, { atk: 'cleave' }], tag: 'any' },
-        { name: 'far-shards-close-cleave', steps: [{ move: 'far' }, { atk: 'shards' }, { move: 'close' }, { atk: 'cleave' }], tag: 'wall' },
-        { name: 'advance-cleave',          steps: [{ atk: 'advance' }, { atk: 'cleave' }], tag: 'any' }
+        { name: 'far-shards',             steps: [{ move: 'far' }, { atk: 'shards' }], tag: 'wall' },
+        { name: 'far-shards-close-guard', steps: [{ move: 'far' }, { atk: 'shards' }, { move: 'close' }, { atk: 'guard' }], tag: 'wall' },
+        { name: 'guard',                  steps: [{ atk: 'guard' }], tag: 'any' },
+        { name: 'close-guard',            steps: [{ move: 'close' }, { atk: 'guard' }], tag: 'any' }
       ],
       2: [
-        { name: 'far-shards-shards',             steps: [{ move: 'far' }, { atk: 'shards' }, { atk: 'shards' }], tag: 'wall' },
-        { name: 'quake-advance',                 steps: [{ atk: 'quake' }, { atk: 'advance' }], tag: 'any' },
-        { name: 'close-cleave-far-shards',       steps: [{ move: 'close' }, { atk: 'cleave' }, { wait: 0.3 }, { move: 'far' }, { atk: 'shards' }], tag: 'wall' },
-        { name: 'far-shards-quake-close-cleave', steps: [{ move: 'far' }, { atk: 'shards' }, { atk: 'quake' }, { move: 'close' }, { atk: 'cleave' }], tag: 'wall' },
-        { name: 'advance-cleave',                steps: [{ atk: 'advance' }, { atk: 'cleave' }], tag: 'any' }
+        { name: 'far-shards-shards',      steps: [{ move: 'far' }, { atk: 'shards' }, { atk: 'shards' }], tag: 'wall' },
+        { name: 'far-shards-close-guard', steps: [{ move: 'far' }, { atk: 'shards' }, { move: 'close' }, { atk: 'guard' }], tag: 'wall' },
+        { name: 'guard-guard',            steps: [{ atk: 'guard' }, { wait: 0.4 }, { atk: 'guard' }], tag: 'any' },
+        { name: 'close-guard',            steps: [{ move: 'close' }, { atk: 'guard' }], tag: 'any' }
       ]
     },
 
