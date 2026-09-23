@@ -196,6 +196,33 @@
     }
   };
 
+  /* ---- 표식 (§3.7 HOLLOW) ------------------------------------------------
+   * active 에 플레이어에게 붙는다 — 그 순간 두 번째 텔 버스트. 붙은 뒤 delay 에 터진다(일정). */
+  MOTIONS.mark = {
+    remote: true,
+    active: function (boss, a, g) {
+      var mk = a.def.mark, p = g.player, red = a.def.tell === 'red';
+      g.spawnMark(new Mark({ x: p.x, delay: mk.delay, tell: a.def.tell, damage: mk.damage,
+                             def: a.def, label: a.def.label || a.def.id }));
+      FX.tellBurst(p.x, V.FLOOR_Y - C.MOTION.MARK_Y, red ? C.COLORS.RED : C.COLORS.GOLD, red ? 'red' : 'gold');
+      if (red) RAudio.tellRed(); else RAudio.tellGold();
+    }
+  };
+
+  /* ---- 메아리 (§3.10 CHORUS) ---------------------------------------------
+   * kind 가 아니라 근접 정의의 표지 def.echo — boss.js onActiveStart 근접 분기가 부른다.
+   * 타격이 실제로 일어난 공격만 메아리친다(windup 중 끊기면 active 에 오지 않는다). */
+  MOTIONS.echo = {
+    spawn: function (boss, a, g) {
+      var def = a.def;
+      g.spawnEcho(new Echo({
+        x: boss.x, facing: boss.facing, def: def, delay: def.echo.delay,
+        windup: Math.max(B.MIN_WINDUP, def.windup * boss.windupMult()),
+        damage: a.damage, color: boss.color, build: boss.silhouette, label: def.label || def.id
+      }));
+    }
+  };
+
   /* ---- 동작 항목은 이 줄 위에 추가한다 ---- */
 
   global.MOTIONS = MOTIONS;

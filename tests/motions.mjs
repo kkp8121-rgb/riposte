@@ -473,6 +473,92 @@ check('기둥 — 칸이 SAFE_MIN_W 보다 좁으면 서지 않는다', area.cag
 check('기둥 — 서는 순간 칸이 좁아졌으면 서지 않는다', area.pillarRecheck);
 check('기둥 — windup 중 경직되면 서지 않는다', area.pillarCancel);
 
+/* ---- 표식 · 메아리 (Task 6) ------------------------------------------------ */
+const remote = await page.evaluate(() => {
+  const g = window.__RIPOSTE.game, T = window.__T;
+  const out = {};
+  const BRAND = { id: 'brand', label: 'BRAND', tell: 'gold', kind: 'mark', windup: 0.7, active: 0.06, recover: 0.45,
+                  mark: { delay: 1.4, damage: 1 }, steal: { id: 'BRAND', label: 'BRAND', kind: 'lunge', damage: 20 } };
+  /* 붙고, 따라다니고, delay 뒤 터진다 — 받으면 훔치고 보스는 경직되지 않는다 */
+  T.setup({ brand: BRAND }, 300, 700);
+  T.attack('brand');
+  out.markRemote = g.boss.attackState().remote === true;
+  T.run(0.75);
+  out.markOn = g.marks.length === 1;
+  let attachAt = null;
+  T.setup({ brand: BRAND }, 300, 700);             // 부착 시각을 스텝 단위로 잰다
+  T.attack('brand');
+  T.run(0.75, (gg) => { if (attachAt === null && gg.marks.length) attachAt = gg.time; });
+  T.run(0.5, null, 1);
+  out.markFollow = g.marks.length === 1 && Math.abs(g.marks[0].x - g.player.x) < 0.01;
+  let parried = false, boomAt = null;
+  T.run(1.2, (gg) => {
+    const m = gg.marks[0];
+    if (m && !parried && m.t <= 0.05) { gg.player.startParry(); parried = true; }
+    if (!m && boomAt === null) boomAt = gg.time;
+  });
+  out.markSteal = g.player.hand.some((s) => s.id === 'BRAND') && g.hits === 0 && g.boss.state !== 'stagger';
+  out.markDelay = boomAt !== null && attachAt !== null && Math.abs((boomAt - attachAt) - 1.4) < 0.02;
+  /* 붙은 뒤에는 보스가 경직돼도 터진다 */
+  T.setup({ brand: BRAND }, 300, 700);
+  T.attack('brand'); T.run(0.75);
+  g.boss.stagger(1.0, false);
+  T.run(1.6);
+  out.markPersist = g.hits === 1 && g.lastHitBy.kind === 'mark';
+  /* 붙기 전(windup)에 끊기면 붙지 않는다 */
+  T.setup({ brand: BRAND }, 300, 700);
+  T.attack('brand'); T.run(0.3);
+  g.boss.stagger(1.0, false);
+  T.run(2.5);
+  out.markCancel = g.marks.length === 0 && g.hits === 0;
+  /* KO 중에는 아무것도 안 한다 (Review Focus 5) */
+  T.setup({ brand: BRAND }, 300, 700);
+  T.attack('brand'); T.run(0.75);
+  g.ko = 'victory'; g.koT = 999;                  // koT 를 크게 — 메인 루프가 승리 처리로 넘어가지 않게
+  T.run(1.6);
+  out.markKo = g.hits === 0;
+  g.ko = null; g.koT = 0;
+
+  const CANON = { id: 'canon', label: 'CANON', tell: 'gold', kind: 'melee', windup: 0.55, active: 0.1, recover: 0.5,
+                  reach: 150, approach: 0, damage: 1, swing: 'thrust', echo: { delay: 0.7 },
+                  steal: { id: 'CANON', label: 'CANON', kind: 'lunge', damage: 15 } };
+  /* 친 자리에서 delay 뒤 잔상이 같은 windup 으로 다시 친다 — 보스가 건너가 있어도 */
+  T.setup({ canon: CANON }, 300, 420);
+  g.player.iframes = 0.9;                         // 원 타격은 무적으로 흘린다
+  T.attack('canon'); T.run(0.6);
+  g.boss.x = 150;                                 // 보스는 반대편으로
+  T.run(0.8);
+  out.echoAt = g.echoes.length === 1 && g.echoes[0].x === 420;
+  T.run(0.8);
+  out.echoHit = g.hits === 1 && g.lastHitBy.kind === 'echo';
+  /* 잔상 사거리 밖이면 맞지 않는다 */
+  T.setup({ canon: CANON }, 300, 420);
+  g.player.iframes = 0.9;
+  T.attack('canon'); T.run(0.6);
+  g.boss.x = 150; g.player.x = 200;
+  T.run(1.6);
+  out.echoMiss = g.hits === 0;
+  /* 원 공격이 windup 중 끊기면 메아리도 없다 */
+  T.setup({ canon: CANON }, 300, 420);
+  T.attack('canon'); T.run(0.3);
+  g.boss.interrupt(0.45);
+  T.run(2.0);
+  out.echoCancel = g.echoes.length === 0 && g.hits === 0;
+  return out;
+});
+check('표식 — attackState.remote', remote.markRemote);
+check('표식 — windup 끝에 붙는다', remote.markOn);
+check('표식 — 플레이어를 따라다닌다', remote.markFollow);
+check('표식 — 받으면 훔치고 보스 경직 없음', remote.markSteal);
+check('표식 — 붙은 뒤 delay 에 터진다', remote.markDelay);
+check('표식 — 붙은 뒤엔 보스 경직으로 안 사라진다', remote.markPersist);
+check('표식 — windup 중 끊기면 붙지 않는다', remote.markCancel);
+check('표식 — KO 중에는 아무것도 안 한다', remote.markKo);
+check('메아리 — 친 자리에 잔상이 선다', remote.echoAt);
+check('메아리 — 잔상이 다시 친다', remote.echoHit);
+check('메아리 — 잔상 사거리 밖이면 무사', remote.echoMiss);
+check('메아리 — 원 공격이 끊기면 없다', remote.echoCancel);
+
 /* ---- 새 동작 검사는 이 줄 위에 추가한다 ------------------------------------ */
 
 check('pageerror 0', errors.length === 0, errors.slice(0, 3).join(' | '));

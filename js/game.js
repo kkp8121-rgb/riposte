@@ -1169,6 +1169,21 @@
     p.x = nx;
   };
 
+  /** 잔상이 나타났다 — 플레이어를 보고 무기 끝에서 자기 텔을 찍는다 (잔상 텔 → 타격 = 원 windup) */
+  Game.prototype.onEchoFlash = function (e) {
+    e.facing = (this.player.x >= e.x) ? 1 : -1;
+    var t = Render.tipOf(e.build, e.facing, 'windup');
+    var red = e.tell === 'red';
+    FX.tellBurst(e.x + t.x, V.FLOOR_Y + t.y, red ? C.COLORS.RED : C.COLORS.GOLD, red ? 'red' : 'gold');
+    if (red) RAudio.tellRed(); else RAudio.tellGold();
+  };
+
+  /** 잔상이 친다 — 원 공격과 같은 reach 로, 잔상 자리 기준 */
+  Game.prototype.onEchoStrike = function (e) {
+    if (Math.abs(this.player.x - e.x) > e.reach) return;
+    this.resolveRemoteHit({ tell: e.tell, def: e.def, damage: e.damage, fromX: e.x, label: e.label, kind: 'echo' });
+  };
+
   /** 선 기둥은 플레이어의 걷기·대시·밀림·끌림·블록 밀림이 넘지 못한다 — 설 때 있던 쪽(side)으로만 자른다 */
   Game.prototype.blockByPillars = function () {
     var p = this.player;

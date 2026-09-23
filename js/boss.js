@@ -503,6 +503,7 @@
         { speed: 340, life: 0.55, dir: -Math.PI / 2, spread: Math.PI * 1.1, size: 2.6 });
       FX.addShake(C.SHAKE.RIPOSTE);
     }
+    if (def.echo) global.MOTIONS.echo.spawn(this, a, g);   // 메아리 (스펙 2026-09-23 §3.10)
     this.testMelee(a);
   };
 

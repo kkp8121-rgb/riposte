@@ -655,6 +655,49 @@
     for (i = 0; i < game.beams.length; i++) drawBeam(ctx, game.beams[i]);
   }
 
+  /** 표식 — 줄어드는 링(남은 시간) + 도착선. 적 표식은 X 자를 겹친다 (색 없이도 읽히게, §2.2) */
+  function drawMark(ctx, m) {
+    var M = C.MOTION, k = clamp(m.t / m.delay, 0, 1);
+    var red = m.tell === 'red', col = red ? C.COLORS.RED : C.COLORS.GOLD;
+    var cy = V.FLOOR_Y - M.MARK_Y, inner = M.MARK_R * 0.35;
+    ctx.save();
+    ctx.strokeStyle = col;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(m.x, cy, inner + (M.MARK_R - inner) * k, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(m.x, cy, inner, 0, TAU); ctx.stroke();
+    if (red) {
+      ctx.globalAlpha = 0.9;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(m.x - inner, cy - inner); ctx.lineTo(m.x + inner, cy + inner);
+      ctx.moveTo(m.x + inner, cy - inner); ctx.lineTo(m.x - inner, cy + inner);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** 메아리 잔상 — 반투명 실루엣. 치는 순간 원 공격과 같은 궤적 */
+  function drawEcho(ctx, e) {
+    var M = C.MOTION;
+    var pose = e.stage === 'wait' ? 'idle' : (e.stage === 'windup' ? 'windup' : 'active');
+    var alpha = M.ECHO_ALPHA * (e.stage === 'hit' ? clamp(e.fade / M.ECHO_FADE, 0, 1) : 1);
+    drawFighter(ctx, {
+      x: e.x, facing: e.facing, color: e.color, build: e.build,
+      t: 0, pose: pose, poseP: e.stage === 'windup' ? 1 - e.t / Math.max(0.01, e.windup) : 0.5,
+      vx: 0, moving: false, alpha: alpha
+    });
+    if (e.stage === 'hit') {
+      var bh = BUILD[e.build] ? BUILD[e.build].h : 84;
+      drawSwing(ctx, e.x, e.facing, bh, e.tell === 'red' ? C.COLORS.RED : C.COLORS.GOLD,
+        e.def.swing || 'thrust', e.reach, 1 - clamp(e.fade / M.ECHO_FADE, 0, 1), 0.7);
+    }
+  }
+
   /* ---- 파티클 / 링 / 텔 버스트 -------------------------------------------- */
 
   function drawParticles(ctx) {
@@ -890,6 +933,7 @@
     }
 
     if (b) drawBoss(ctx, b, bp, false);
+    for (i = 0; i < game.echoes.length; i++) drawEcho(ctx, game.echoes[i]);
     if (b && b.wallUp()) drawWall(ctx, b);
 
     /* 어둠 (스펙 §2.3) — 배경·기둥·바닥·보스 몸통만 덮는다. 텔(무기 끝 글로우·궤적)·존·투사체·
@@ -904,6 +948,7 @@
     }
 
     drawPlayer(ctx, p, pp, false);
+    for (i = 0; i < game.marks.length; i++) drawMark(ctx, game.marks[i]);
     if (b) drawBossTells(ctx, b);
 
     for (i = 0; i < game.projectiles.length; i++) drawProjectile(ctx, game.projectiles[i]);

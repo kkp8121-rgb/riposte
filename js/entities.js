@@ -416,9 +416,74 @@
     if (this.up <= 0) this.dead = true;
   };
 
+  /* =========================================================================
+   * Mark — 표식 (스펙 2026-09-23 §3.7). 플레이어를 따라다니다 delay 뒤 그 자리에서 터진다.
+   * 붙은 뒤에는 보스가 끊겨도 사라지지 않는다(이미 약속된 타격).
+   * ====================================================================== */
+  function Mark(o) {
+    this.x = o.x;
+    this.t = o.delay;
+    this.delay = o.delay;
+    this.tell = o.tell || 'gold';
+    this.damage = o.damage || 1;
+    this.def = o.def || null;
+    this.label = o.label || 'MARK';
+    this.dead = false;
+  }
+
+  Mark.prototype.update = function (dt, game) {
+    if (this.dead) return;
+    this.x = game.player.x;
+    this.t -= dt;
+    if (this.t > 0) return;
+    this.dead = true;
+    game.resolveRemoteHit({ tell: this.tell, def: this.def, damage: this.damage,
+      fromX: game.boss ? game.boss.x : this.x, label: this.label, kind: 'mark' });
+  };
+
+  /* =========================================================================
+   * Echo — 메아리 잔상 (스펙 2026-09-23 §3.10). 원 공격이 친 자리에서 wait 뒤 나타나
+   * 자기 플래시(game.onEchoFlash)를 찍고, 원 windup 뒤 같은 reach 로 친다(game.onEchoStrike).
+   * ====================================================================== */
+  function Echo(o) {
+    this.x = o.x;
+    this.facing = o.facing;
+    this.def = o.def;
+    this.tell = o.def.tell;
+    this.reach = o.def.reach;
+    this.damage = o.damage || 1;
+    this.label = o.label || 'ECHO';
+    this.color = o.color;
+    this.build = o.build;
+    this.wait = o.delay;
+    this.windup = o.windup;
+    this.t = o.windup;
+    this.stage = 'wait';       // wait → windup → hit
+    this.fade = 0;
+    this.dead = false;
+  }
+
+  Echo.prototype.update = function (dt, game) {
+    if (this.dead) return;
+    if (this.stage === 'wait') {
+      this.wait -= dt;
+      if (this.wait <= 0) { this.stage = 'windup'; game.onEchoFlash(this); }
+      return;
+    }
+    if (this.stage === 'windup') {
+      this.t -= dt;
+      if (this.t <= 0) { this.stage = 'hit'; this.fade = C.MOTION.ECHO_FADE; game.onEchoStrike(this); }
+      return;
+    }
+    this.fade -= dt;
+    if (this.fade <= 0) this.dead = true;
+  };
+
   global.Player = Player;
   global.Projectile = Projectile;
   global.Zone = Zone;
   global.Beam = Beam;
   global.Pillar = Pillar;
+  global.Mark = Mark;
+  global.Echo = Echo;
 })(window);
