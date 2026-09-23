@@ -2849,6 +2849,111 @@ Expected: 패배 — 연타 봇은 자세에 벌을 받는다.
 
 ---
 
+## Task 15.1: 엔진 — 끊긴 공격의 예약 발사(연사 후속탄·협공 뒤 탄) 취소
+
+(컨트롤러가 추가한 태스크 — Task 14·15 구현 중 발견된 엔진 결함. 판정 근거: ledger "Ruling (engine bug found in T14/T15)".)
+
+**문제**: 연사(volley)의 2·3발째와 협공 뒤 탄은 `game.scheduleProjectile` 로 예약된다. 보스가 경직(`stagger`)되거나 2페이즈 포효(`enterPhase2`)·사망(`die`)으로 공격이 끊겨도 `cancelAttackSpawns()` 가 존·빔·기둥만 지우고 **예약 발사는 그대로 남아**, 공격 상태(`currentAttack`)가 없는 채로 탄이 나간다. 플레이어가 경직 창(ADAMANT 방벽 파괴 카운터 창)을 노리고 붙으면 탄이 **코앞에서** 생겨 반응할 수 없다(Task 15 계측: ADAMANT t=13.95 `bossState:stagger`, `currentAttack:null` 에 shards 2발째 발사 · HOLLOW t=8.98 포효 중 ember 2발째 발사). 기존 원칙("보스를 끊었는데 결과가 그대로 온다 = 텔과 결과가 어긋난다", `cancelAttackSpawns` 주석)과 같은 결함이다.
+
+**컨트롤러 판정**: 엔진 전체에 적용한다 — 끊긴 공격이 예약한 발사는 같이 취소한다. 챕터 1 SERAPH triple 도 도중에 끊기면 남은 화살이 안 나가게 된다(수용한 편차 — G3 은 Task 16 봇 승패로 확인).
+
+**Files:**
+- Modify: `js/game.js` (`scheduleProjectile` 에 출처 인자, `cancelScheduled` 신설)
+- Modify: `js/boss.js` (`fire` 가 출처를 넘긴다, `cancelAttackSpawns` 가 예약 발사를 지운다)
+- Modify: `js/motions.js` (`MOTIONS.pincer.active` 가 출처를 넘긴다)
+- Test: `tests/motions.mjs` (새 블록)
+
+**Interfaces:**
+- `Game.prototype.scheduleProjectile(delay, make, cue, src)` — `src`(선택) = 예약한 공격 인스턴스 `a`. 기존 3인자 호출은 그대로 동작한다.
+- `Game.prototype.cancelScheduled(src)` — `pendingShots` 에서 `ps.src === src` 인 항목을 모두 뺀다. `src` 가 falsy 면 아무것도 하지 않는다.
+
+- [ ] **Step 1: 실패하는 테스트** — `tests/motions.mjs` 의 `/* ---- 새 동작 검사는 이 줄 위에 추가한다 ---- */` 바로 위에 넣는다.
+
+```js
+/* ---- 끊긴 공격의 예약 발사 취소 (Task 15.1) ------------------------------- */
+const cancelShots = await page.evaluate(() => {
+  const g = window.__RIPOSTE.game, T = window.__T;
+  const out = {};
+  const TRI = { id: 'tri', label: 'TRI', tell: 'gold', kind: 'projectile', windup: 0.4, active: 0.06, recover: 0.6,
+                proj: { speed: 300, r: 8, y: 50, damage: 1, reflectDamage: 10, shape: 'arrow' },
+                volley: { count: 3, interval: 0.2 }, steal: null };
+  const countShots = (interrupt) => {
+    T.setup({ tri: TRI }, 200, 700);
+    g.player.iframes = 99;
+    let spawned = 0;
+    const orig = g.spawnProjectile;
+    g.spawnProjectile = function (p) { if (p.owner === 'boss') spawned++; return orig.call(this, p); };
+    T.attack('tri');
+    T.run(0.45);                                   // 첫 발만 나간 뒤
+    if (interrupt) interrupt();
+    T.run(1.0);
+    g.spawnProjectile = orig;
+    return spawned;
+  };
+  out.none = countShots(null);
+  out.stagger = countShots(() => g.boss.stagger(1.0, false));
+  out.phase2 = countShots(() => g.boss.enterPhase2());
+
+  const SQUALL = { id: 'squall', label: 'SQUALL', tell: 'gold', kind: 'pincer', windup: 0.6, active: 0.06, recover: 0.6,
+                   proj: { speed: 420, r: 12, y: 50, damage: 1, reflectDamage: 14, shape: 'arrow' },
+                   pincer: { backDist: 260, backSpeed: 360, backTell: 'red', gap: 0.45, y: 30, r: 11, shape: 'bolt' },
+                   steal: null };
+  T.setup({ squall: SQUALL }, 420, 760);
+  g.player.iframes = 99;
+  T.attack('squall');
+  T.run(0.7);                                      // 앞 탄 발사 직후, 뒤 탄은 아직 예약 중
+  g.boss.stagger(1.0, false);
+  let rear = false;
+  T.run(2.0, (gg) => { if (gg.projectiles.some((p) => p.fromBehind)) rear = true; });
+  out.pincerCancel = !rear;
+  return out;
+});
+check('예약 발사 — 끊기지 않으면 연사 3발 그대로', cancelShots.none === 3, `(${cancelShots.none})`);
+check('예약 발사 — 경직되면 남은 연사는 나가지 않는다', cancelShots.stagger === 1, `(${cancelShots.stagger})`);
+check('예약 발사 — 2페이즈 포효로 끊겨도 나가지 않는다', cancelShots.phase2 === 1, `(${cancelShots.phase2})`);
+check('예약 발사 — 경직되면 협공 뒤 탄도 나가지 않는다', cancelShots.pincerCancel);
+```
+
+- [ ] **Step 2: 실패 확인** — `node tests/motions.mjs` → 새 검사 중 stagger/phase2/pincerCancel FAIL (none 은 통과).
+
+- [ ] **Step 3: `js/game.js`** — `scheduleProjectile` 을 바꾸고 바로 뒤에 `cancelScheduled` 를 넣는다.
+
+```js
+  /** src = 예약한 공격 인스턴스(선택). 그 공격이 끊기면 cancelScheduled(src) 로 같이 취소된다 */
+  Game.prototype.scheduleProjectile = function (delay, make, cue, src) {
+    this.pendingShots.push({ t: delay, make: make, cue: !!cue, src: src || null });
+  };
+
+  /** 끊긴 공격이 예약해 둔 발사를 지운다 — "보스를 끊었는데 탄이 그대로 나온다" 를 막는다 (Task 15.1) */
+  Game.prototype.cancelScheduled = function (src) {
+    if (!src) return;
+    for (var i = this.pendingShots.length - 1; i >= 0; i--) {
+      if (this.pendingShots[i].src === src) this.pendingShots.splice(i, 1);
+    }
+  };
+```
+
+- [ ] **Step 4: `js/boss.js`**
+  - `fire` 의 예약 줄을 `for (var i = 1; i < def.volley.count; i++) g.scheduleProjectile(iv * i, make, true, this.attack);` 로 바꾼다(`fire` 는 `onActiveStart` 에서 불리므로 그때 `this.attack` 이 그 공격 인스턴스다).
+  - `cancelAttackSpawns` 의 `a.spawns` 블록 다음(함수 끝 `};` 앞)에 넣는다:
+
+```js
+    this.game.cancelScheduled(a);                  // 연사 후속탄·협공 뒤 탄 — 끊긴 공격이 예약한 발사 (Task 15.1)
+```
+
+  - ⚠️ 함수 머리의 `if (!a || !a.zones) return;` 는 그대로 둔다(새 줄은 그 뒤에 온다).
+
+- [ ] **Step 5: `js/motions.js`** — `MOTIONS.pincer.active` 의 `g.scheduleProjectile(Math.max(0, eta + pc.gap - backTravel), function () { return backShot(boss, def, g); }, false);` 에 4번째 인자 `a` 를 더한다.
+
+- [ ] **Step 6: 통과 + 회귀 (순차, 헤드리스)**
+  - `node tests/motions.mjs` → `MOTIONS PASSED`
+  - `node tests/state.mjs` → `STATE PASSED`
+  - `node tests/bot.mjs --all --seed=7` → 12/12 VICTORY (보스 1~4 승패 기준선과 같다 — 시간·hits 편차는 노이즈). HOLLOW·ADAMANT 완벽 봇 피격이 줄었는지 hitLog 를 보고 기록한다.
+
+- [ ] **Step 7: 커밋** — `fix(engine): 끊긴 공격의 예약 발사 취소 — 경직·포효 중 연사 후속탄이 코앞에서 나가던 결함` (파일: js/game.js js/boss.js js/motions.js tests/motions.mjs)
+
+---
+
 ## Task 16: 밸런스 — 8보스 3시드
 
 **Files:**
