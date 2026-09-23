@@ -544,6 +544,16 @@ const remote = await page.evaluate(() => {
   g.boss.interrupt(0.45);
   T.run(2.0);
   out.echoCancel = g.echoes.length === 0 && g.hits === 0;
+  /* 연타(volley) 는 windup→active 를 타격마다 다시 돈다(onActiveStart 재호출) — 잔상은 원 공격당 하나(첫 타격만) */
+  const CANON_VOLLEY = { id: 'canonv', label: 'CANONV', tell: 'gold', kind: 'melee', windup: 0.55, active: 0.1, recover: 0.5,
+                         reach: 150, approach: 0, damage: 1, swing: 'thrust', echo: { delay: 0.7 },
+                         volley: { count: 3, interval: 0.35 },
+                         steal: { id: 'CANONV', label: 'CANONV', kind: 'lunge', damage: 15 } };
+  T.setup({ canonv: CANON_VOLLEY }, 300, 420);
+  g.player.iframes = 2.0;                         // 전 구간 무적으로 흘려 곁가지 판정을 배제한다
+  T.attack('canonv');
+  T.run(1.6);
+  out.echoVolleyOnce = g.echoes.length === 1;
   return out;
 });
 check('표식 — attackState.remote', remote.markRemote);
@@ -558,6 +568,7 @@ check('메아리 — 친 자리에 잔상이 선다', remote.echoAt);
 check('메아리 — 잔상이 다시 친다', remote.echoHit);
 check('메아리 — 잔상 사거리 밖이면 무사', remote.echoMiss);
 check('메아리 — 원 공격이 끊기면 없다', remote.echoCancel);
+check('메아리 — 연타 공격도 잔상은 하나', remote.echoVolleyOnce);
 
 /* ---- 새 동작 검사는 이 줄 위에 추가한다 ------------------------------------ */
 
