@@ -19,13 +19,15 @@
     visible: false,   // 버튼을 그리는가
     blocked: false,   // 세로 — 게임을 멈추고 회전 안내만 그린다
     set: [],          // 지금 화면의 버튼 id 목록 (C.TOUCH.SETS[scene])
-    _ptr: {},         // pointerId -> 버튼 id (버튼 밖이면 null)
+    _ptr: {},         // pointerId -> 버튼 id (버튼 밖이면 null, 화면 전환 전부터 쥐고 있어 무시 중이면 false)
     _count: {},       // 액션 -> 그 액션을 쥔 손가락 수
     _hold: {},        // 꾹 누르기 버튼 id -> 누르기 시작한 시각(초)
     _fired: {},       // 꾹 누르기 버튼 id -> 이번 누름에서 이미 발동했나
     _safe: { t: 0, r: 0, b: 0, l: 0 },   // 안전 영역(노치) px
     _probe: null,     // 안전 영역 측정용 div
-    _autoFs: false    // 첫 터치 자동 전체 화면 요청을 이미 했나 (부팅 후 한 번만)
+    _autoFs: false,   // 전체 화면을 이미 한 번 요청했나 (손가락을 뗄 때 한 번만)
+    _scene: null,     // 지난 프레임의 scene — 버튼 세트가 바뀔 때 "어디서 왔는가" 판정용
+    _graceUntil: 0    // 이 시각(초)까지는 새 터치를 무시한다 (전투 직후 유예, C.TOUCH.GRACE)
   };
 
   function nowSec() { return (global.performance ? global.performance.now() : Date.now()) / 1000; }
@@ -95,8 +97,11 @@
 
   function press(id) {
     var b = T.BUTTONS[id];
-    if (b.special === 'fullscreen') { TouchUI.requestLandscape(); return; }
-    if (b.hold) { TouchUI._hold[id] = nowSec(); TouchUI._fired[id] = false; return; }
+    if (b.special) return;
+    if (b.hold) {
+      if (!TouchUI._hold.hasOwnProperty(id)) { TouchUI._hold[id] = nowSec(); TouchUI._fired[id] = false; }
+      return;
+    }
     var n = TouchUI._count[b.action] || 0;
     TouchUI._count[b.action] = n + 1;
     if (n === 0) Input.touchAction(b.action, true);
@@ -105,7 +110,17 @@
   function release(id) {
     var b = T.BUTTONS[id];
     if (b.special) return;
-    if (b.hold) { delete TouchUI._hold[id]; delete TouchUI._fired[id]; return; }
+    if (b.hold) {
+      // 다른 손가락이 아직 이 버튼을 쥐고 있으면 놓지 않는다
+      // (onUp 은 떼는 포인터를 release() 전에 지우고, onMove 는 old 를 release() 전에 새 버튼으로 옮겨 두므로
+      //  이 손가락 자신이 루프에서 다시 걸리지는 않는다)
+      for (var pid in TouchUI._ptr) {
+        if (TouchUI._ptr.hasOwnProperty(pid) && TouchUI._ptr[pid] === id) return;
+      }
+      delete TouchUI._hold[id];
+      delete TouchUI._fired[id];
+      return;
+    }
     var n = (TouchUI._count[b.action] || 0) - 1;
     if (n > 0) { TouchUI._count[b.action] = n; return; }
     delete TouchUI._count[b.action];
@@ -113,10 +128,11 @@
   }
 
   /** 쥔 버튼을 전부 놓는다 — 손가락 추적은 남기되(버튼 없음) 액션은 모두 뗀다.
-      화면(세트)이 바뀌거나 세로로 돌면 부른다 — 눌린 채 다음 화면으로 넘어가 멈추지 않는 키가 생기지 않게. */
+      화면(세트)이 바뀌거나 세로로 돌면 부른다 — 화면이 바뀔 때 쥐고 있던 손가락은 뗄 때까지 무시한다
+      (그래야 그 손가락이 움직여도 새 화면의 버튼을 누르지 않는다). */
   function releaseAll() {
     for (var pid in TouchUI._ptr) {
-      if (TouchUI._ptr.hasOwnProperty(pid)) TouchUI._ptr[pid] = null;
+      if (TouchUI._ptr.hasOwnProperty(pid)) TouchUI._ptr[pid] = false;
     }
     for (var a in TouchUI._count) {
       if (TouchUI._count.hasOwnProperty(a)) Input.touchAction(a, false);
@@ -135,17 +151,17 @@
   function onDown(e) {
     e.preventDefault();
     TouchUI.visible = true;
-    // 첫 터치 한 번만 전체 화면 + 가로 고정을 요청한다 (사용자가 빠져나오면 다시 강제하지 않는다)
-    if (!TouchUI._autoFs) { TouchUI._autoFs = true; TouchUI.requestLandscape(); }
-    // 세로 — 버튼이 없다. 안내를 탭하면 전체 화면 + 가로 고정을 다시 요청한다
-    if (TouchUI.blocked) { TouchUI.requestLandscape(); return; }
+    // 세로 — 버튼이 없다. 전체 화면 + 가로 고정 재요청은 손가락을 뗄 때(onUp) 한다
+    if (TouchUI.blocked) { TouchUI._ptr[e.pointerId] = false; return; }
+    // 전투 직후 유예 — 결과 화면 버튼 자리가 전투 버튼과 겹쳐 있어 오조작을 막는다
+    if (nowSec() < TouchUI._graceUntil) { TouchUI._ptr[e.pointerId] = false; return; }
     var id = hitTest(e.clientX, e.clientY);
     TouchUI._ptr[e.pointerId] = id;
     if (id) press(id);
   }
 
   function onMove(e) {
-    if (!TouchUI._ptr.hasOwnProperty(e.pointerId)) return;   // 누르지 않은 포인터(마우스 hover 등)
+    if (!TouchUI._ptr.hasOwnProperty(e.pointerId) || TouchUI._ptr[e.pointerId] === false) return;   // 누르지 않은 포인터(마우스 hover 등) 또는 화면 전환 전부터 쥐고 있던 손가락
     e.preventDefault();
     var old = TouchUI._ptr[e.pointerId];
     var id = hitTest(e.clientX, e.clientY);
@@ -161,15 +177,24 @@
     var id = TouchUI._ptr[e.pointerId];
     delete TouchUI._ptr[e.pointerId];
     if (id) release(id);
+    if (e.type !== 'pointerup') return;       // pointercancel 은 사용자 조작이 아니다
+    var fs = !TouchUI._autoFs || TouchUI.blocked || (id && T.BUTTONS[id].special === 'fullscreen');
+    TouchUI._autoFs = true;
+    if (fs) TouchUI.requestLandscape();
   }
 
   /** 프레임마다 (main.js frame — 터치 모드일 때만). scene 으로 버튼 세트를 고르고 꾹 누르기를 센다. */
   TouchUI.update = function (scene) {
     var blocked = global.innerHeight > global.innerWidth;   // 가로 전용 — 세로면 게임을 멈춘다(main.js)
     if (blocked !== TouchUI.blocked) { TouchUI.blocked = blocked; releaseAll(); }
-    var set = pickSet(scene);
-    if (set.join(',') !== TouchUI.set.join(',')) { TouchUI.set = set; releaseAll(); }
     var t = nowSec();
+    var set = pickSet(scene);
+    if (set.join(',') !== TouchUI.set.join(',')) {
+      TouchUI.set = set;
+      releaseAll();
+      TouchUI._graceUntil = T.GRACE_AFTER.indexOf(TouchUI._scene) >= 0 ? t + T.GRACE : 0;
+    }
+    TouchUI._scene = scene;
     for (var id in TouchUI._hold) {
       if (!TouchUI._hold.hasOwnProperty(id) || TouchUI._fired[id]) continue;
       if (t - TouchUI._hold[id] < T.HOLD_TIME) continue;
@@ -213,8 +238,8 @@
     ctx.rotate(ang);
     ctx.beginPath();
     ctx.moveTo(s, 0);
-    ctx.lineTo(-s * 0.6, -s * 0.8);
-    ctx.lineTo(-s * 0.6, s * 0.8);
+    ctx.lineTo(-s * T.ARROW_BACK, -s * T.ARROW_HALF);
+    ctx.lineTo(-s * T.ARROW_BACK, s * T.ARROW_HALF);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
@@ -258,7 +283,7 @@
     ctx.fillStyle = T.ROTATE_BG;
     ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = C.COLORS.GOLD;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = T.ROTATE_LINE_W;
     ctx.strokeRect(W / 2 - pw / 2, H / 2 - ph, pw, ph);   // 가로로 누운 폰
     ctx.fillStyle = C.COLORS.WHITE;
     ctx.font = C.font('800', T.ROTATE_SIZE);
@@ -302,6 +327,8 @@
     Input.onNonTouch = function () { TouchUI.visible = false; };   // 키보드·패드가 오면 숨긴다 — 다음 터치에 다시 보인다
     readSafe();
     global.addEventListener('resize', readSafe);
+    var so = global.screen && global.screen.orientation;
+    if (so && so.addEventListener) so.addEventListener('change', readSafe);   // 180도 회전 — 노치가 반대쪽으로 옮겨간다
     canvas.addEventListener('pointerdown', onDown, { passive: false });
     canvas.addEventListener('pointermove', onMove, { passive: false });
     canvas.addEventListener('pointerup', onUp, { passive: false });

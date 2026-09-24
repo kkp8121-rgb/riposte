@@ -479,7 +479,7 @@
       menuRow(ctx, M.ROW_Y + i * M.ROW_GAP, (list[i] + 1) + '.  ' + d.name, rk || '-',
         i === game.menuIndex, rankColor(rk || 'C'));
     }
-    text(ctx, say('OPTION_HINT', M.OPTION_HINT), V.W / 2, M.HINT_Y,
+    text(ctx, say('BOSS_HINT', M.OPTION_HINT), V.W / 2, M.HINT_Y,
       { size: 10, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 

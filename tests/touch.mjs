@@ -162,7 +162,7 @@ async function tFight(browser) {
   await f.start(1, 'right');
   await sleep(250);
   await f.start(2, 'parry');
-  await sleep(60);
+  await waitFor(page, () => window.__RIPOSTE.getState().stamina < 100, 1000, 'parry fired');
   const sMid = await page.evaluate(state);
   await f.end(2);
   await sleep(150);
@@ -240,6 +240,13 @@ async function tRelease(browser) {
   const s = await page.evaluate(state);
   check('RF1: a scene change while a finger holds RIGHT releases it', s.scene === 'TITLE' && s.touch.held.length === 0,
     `(scene ${s.scene}, held [${s.touch.held}])`);
+  const c = await page.evaluate(() => window.__RIPOSTE.touch.center('right'));
+  await f.move(1, { x: c.x + 1, y: c.y });
+  await sleep(150);
+  const s2 = await page.evaluate(state);
+  check('RF1: after the screen change, moving the still-held finger presses nothing',
+    s2.touch.held.length === 0 && s2.scene === 'TITLE' && s2.menuIndex === 0,
+    `(scene ${s2.scene}, held [${s2.touch.held}], menuIndex ${s2.menuIndex})`);
   await f.end(1);
   await ctx.close();
 }
@@ -434,6 +441,10 @@ async function tFlow(browser) {
   await page.evaluate(() => window.__RIPOSTE.setTimeScale(4));
   check('T-flow: a passive fight ends in DEFEAT',
     await waitFor(page, () => window.__RIPOSTE.getState().scene === 'DEFEAT', 30000, 'DEFEAT'));
+  await f.tap('dRetry');
+  check('F3: a tap right after the fight ends is ignored', (await page.evaluate(state)).scene === 'DEFEAT');
+  const graceMs = (await page.evaluate(() => window.__RIPOSTE.CONFIG.TOUCH.GRACE)) * 1000 + 100;
+  await sleep(graceMs);
   await page.evaluate(() => window.__RIPOSTE.setTimeScale(1));
   await sleep(150);
   const sd = await page.evaluate(state);
@@ -466,6 +477,48 @@ async function tTextDesktop(browser) {
   await page.close();
 }
 
+/* ---- F1: 화면이 바뀔 때까지 쥔 손가락은 새 화면의 버튼을 누르지 않는다 ---- */
+async function tHoldAcross(browser) {
+  const { ctx, page, f } = await openPhone(browser, '?boss=1&story=0&mute=1&touch=1');
+  await waitFor(page, () => window.__RIPOSTE.getState().scene === 'FIGHT', 6000, 'FIGHT');
+  await f.start(1, 'title');
+  await waitFor(page, () => window.__RIPOSTE.getState().scene === 'TITLE', 3000, 'TITLE');
+  const c = await page.evaluate(() => window.__RIPOSTE.touch.center('title'));
+  await f.move(1, { x: c.x + 1, y: c.y });
+  await sleep(900);
+  const s = await page.evaluate(state);
+  check('F1: holding TITLE through the screen change never fires NEW GAME', s.scene === 'TITLE', s.scene);
+  await f.end(1);
+  await ctx.close();
+}
+
+/* ---- F2: 전체 화면·가로 고정은 손가락을 뗄 때만 요청한다 (터치의 사용자 동작은 pointerup) ---- */
+async function tFullscreen(browser) {
+  const { ctx, page, f } = await openPhone(browser, '?mute=1&touch=1');
+  await sleep(300);
+  await page.evaluate(() => {
+    window.__fs = 0;
+    document.documentElement.requestFullscreen = function () { window.__fs++; return Promise.resolve(); };
+  });
+  await f.start(1, { x: 457, y: 150 });
+  await sleep(80);
+  check('F2: fullscreen is not requested on finger-down', (await page.evaluate(() => window.__fs)) === 0);
+  await f.end(1);
+  await sleep(80);
+  check('F2: the first finger-up requests fullscreen once', (await page.evaluate(() => window.__fs)) === 1);
+
+  await f.start(1, 'full');
+  await sleep(80);
+  check('F2: FULL requests nothing on finger-down either', (await page.evaluate(() => window.__fs)) === 1);
+  await f.end(1);
+  await sleep(80);
+  check('F2: FULL requests fullscreen when the finger lifts', (await page.evaluate(() => window.__fs)) === 2);
+
+  await f.tap({ x: 457, y: 150 });
+  check('F2: later taps on empty space do not re-request', (await page.evaluate(() => window.__fs)) === 2);
+  await ctx.close();
+}
+
 /* ---- 새 검사 함수는 이 줄 위에 추가한다 ---- */
 
 function finish() {
@@ -496,6 +549,8 @@ function finish() {
     await tStory(browser);
     await tFlow(browser);
     await tTextDesktop(browser);
+    await tHoldAcross(browser);
+    await tFullscreen(browser);
     // ---- 새 검사 호출은 이 줄 위에 추가한다 ----
   } finally {
     await browser.close();

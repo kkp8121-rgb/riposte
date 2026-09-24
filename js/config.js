@@ -652,6 +652,8 @@
       HOLD_TIME: 0.5,        // 꾹 누르기 버튼(hold) — 이만큼(초) 쥐어야 한 번 누른다. 잘못 눌러 판을 잃는 버튼에만
       HIT_PAD: 10,           // 판정 원 = 반지름 + 이만큼(px). 판정이 겹치면 중심이 가까운 버튼
       EDGE: 18,              // 화면 가장자리 여백(px) — 안전 영역(노치)은 따로 더한다
+      GRACE: 0.4,             // 전투가 끝난 직후 이만큼(초) 새 터치를 무시한다 — 전투 버튼 자리가 결과 화면 버튼으로 바뀌기 때문
+      GRACE_AFTER: ['FIGHT'], // 이 scene 에서 다른 세트로 바뀔 때만 유예를 둔다
       /* 그리기 */
       ALPHA_IDLE: 0.38,      // 평소 — 게임을 가리지 않게 반투명
       ALPHA_DOWN: 0.85,      // 누르는 동안
@@ -661,6 +663,8 @@
       LINE_W: 2,
       RING_GAP: 5,           // 꾹 누르기 진행 링 — 버튼 바깥 간격(px)
       ARROW: 0.42,           // 방향 삼각형 크기 = 반지름 × 이만큼
+      ARROW_BACK: 0.6,        // 방향 삼각형 — 뒷변까지 거리 = 크기 × 이만큼
+      ARROW_HALF: 0.8,        // 방향 삼각형 — 뒷변 반너비 = 크기 × 이만큼
       LABEL_SIZE: 11,
       LABEL_SIZE_SMALL: 9,   // 반지름이 SMALL_R 미만인 버튼
       SMALL_R: 30,
@@ -668,6 +672,7 @@
       ROTATE_BG: '#04050a',
       ROTATE_PHONE_W: 120,   // 가로로 누운 폰 도형
       ROTATE_PHONE_H: 64,
+      ROTATE_LINE_W: 3,       // 가로로 누운 폰 도형 — 테두리 두께
       ROTATE_SIZE: 16,
       ROTATE_GAP: 30,        // 화면 중앙 → 안내 글
       ROTATE_SUB_GAP: 24,    // 안내 글 → 보조 글
@@ -676,6 +681,7 @@
         TITLE_HINT: 'UP DOWN  MOVE      OK  SELECT',
         TITLE_NEW: '      HOLD NEW  —  NEW GAME',
         OPTION_HINT: 'LEFT RIGHT  CHANGE      OK  SELECT      BACK  RETURN',
+        BOSS_HINT: 'UP DOWN  MOVE      OK  SELECT      BACK  RETURN',
         PROMPT_NEXT: 'OK',
         PROMPT_SKIP: 'HOLD OK  —  SKIP',
         CHOICE_K: '[PARRY]',
