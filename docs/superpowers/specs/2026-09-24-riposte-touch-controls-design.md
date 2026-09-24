@@ -22,7 +22,7 @@
 | S2 | 이동 버튼을 누른 채 다른 버튼을 눌러도 둘 다 들어간다(멀티터치) | `tests/touch.mjs` — ▶ 홀드 + PARRY 탭 → 이동·패리 동시 |
 | S3 | 타이틀 → 보스 선택 → 전투 → 패배 → RETRY → 타이틀, 대사 진행·선택지·스킵, 옵션 값 변경이 전부 버튼으로 된다 | `tests/touch.mjs` 흐름 검사 |
 | S4 | 세로로 들면 게임 시간이 멈추고 회전 안내가 뜬다 | `tests/touch.mjs` — 세로 뷰포트에서 `game.time` 불변 |
-| S5 | 터치 모드가 꺼진 환경(PC)의 동작·결과는 이전과 한 비트도 다르지 않다 | 기존 테스트 전부 + `bot.mjs --all`(3시드 결과 기존과 동일) |
+| S5 | 터치 모드가 꺼진 환경(PC)의 동작은 이전과 같다 — 터치 코드는 리스너 0 · 프레임당 `TouchUI.on` 분기 두 번뿐 | 기존 테스트 전부 통과 + `bot.mjs --all` 통과 + `mash.mjs --all --riposte --expect-lose` 전패 + 데스크톱 화면 문구가 키보드 문구 그대로(`tests/touch.mjs` T-text) |
 | S6 | 실제 안드로이드 크롬에서 플레이 가능 | 배포 후 **사용자 실기기 확인** (헤드리스로는 못 잰다) |
 
 ## 1. 불변 (건드리지 않는 것)
@@ -30,7 +30,7 @@
 - **전투 규칙·판정 수치·보스 데이터 전부.** 버튼은 기존 액션 이름(`left`·`right`·`parry`·`riposte`·`dash`·`confirm`·`back`·`restart`·`up`·`down`·`newgame`)만 누른다 — **동사를 늘리지 않는다**(§2.1 패드 원칙과 같다).
 - 입력 의미: `justPressed` 는 "고정 스텝 1회에서만 true". 터치도 키보드·패드와 **같은 `setAction` 경로**로 합류한다.
 - 캔버스 한 장 구조, classic `<script>` 로딩, 외부 에셋 0. 버튼은 캔버스에 도형으로 그린다(DOM 버튼·이미지·아이콘 폰트 없음).
-- 🔴 **터치 모드가 꺼져 있으면 프레임 비용 0.** 패드의 "연결 전에는 폴링 비용 0"(§2.1)과 같은 이유 — 프레임 루프의 작은 비용도 예민한 보스의 봇 결과를 바꾼다. 꺼져 있을 때 `Touch.draw` 는 첫 줄에서 돌아가고, 포인터 이벤트 리스너는 터치 모드일 때만 붙인다.
+- 🔴 **터치 모드가 꺼져 있으면 프레임 비용 0.** 패드의 "연결 전에는 폴링 비용 0"(§2.1)과 같은 이유 — 프레임 루프의 작은 비용도 예민한 보스의 봇 결과를 바꾼다. 꺼져 있을 때 `TouchUI.draw` 는 첫 줄에서 돌아가고, 포인터 이벤트 리스너는 터치 모드일 때만 붙인다.
 
 ## 2. 기기 판별 — 터치 모드
 
@@ -41,7 +41,7 @@
 
 ## 3. 입력 경로
 
-- 새 파일 **`js/touch.js`** (`index.html` 에서 `input.js` 바로 다음). `window.Touch` 를 내보낸다.
+- 새 파일 **`js/touch.js`** (`index.html` 에서 `input.js` 바로 다음). `window.TouchUI` 를 내보낸다(브라우저 내장 `window.Touch` — 터치 이벤트의 Touch 생성자 — 를 덮어쓰지 않으려고 이름을 다르게 한다).
 - 캔버스에 `pointerdown`·`pointermove`·`pointerup`·`pointercancel` 을 붙이고 **손가락(pointerId)마다** 지금 어느 버튼 위에 있는지 추적한다.
   - 손가락이 버튼 안에서 눌리면 그 버튼의 액션을 누른다. 버튼 밖으로 미끄러지면 놓고, 다른 버튼으로 들어가면 그 버튼을 누른다 — **◀ 에서 ▶ 로 미끄러뜨리면 바로 방향이 바뀐다.**
   - 한 액션을 여러 손가락이 쥐고 있으면 마지막 손가락이 뗄 때 놓는다.
@@ -79,17 +79,17 @@
 | PARRY | 오른쪽 아래 구석 (엄지가 쉬는 자리 — 가장 많이 누른다) | 40 |
 | DASH | PARRY 왼쪽 | 32 |
 | RIPOSTE | PARRY 위 | 32 |
-| ▲ ▼ | 왼쪽 아래, 세로로 (메뉴 세트는 ◀ ▶ 자리를 ▲ ▼ 가 쓰고, 옵션은 ◀ ▶ 를 그 옆에 둔다) | 34 |
+| ▲ ▼ ◀ ▶ (메뉴) | 왼쪽 아래 십자 — 타이틀·보스 선택은 ▲ ▼ 만, 옵션은 넷 다 | 30 |
 | OK · BACK(SKIP) | 오른쪽 아래 — OK 가 PARRY 자리, BACK 이 DASH 자리 | 40 · 32 |
-| RETRY · TITLE · NEW GAME · FULLSCREEN | 오른쪽 위 구석, 작게 | 20 |
+| RETRY · TITLE · NEW GAME · FULLSCREEN | 오른쪽 위 구석, 작게 | 24 |
 
-- 모든 좌표·반지름·간격·투명도는 **`C.TOUCH`** 표(매직넘버 금지). 화면 가장자리 여백은 `C.TOUCH.EDGE` + 안전 영역(노치) — `style.css` 의 `:root { --sal: env(safe-area-inset-left) ... }` 를 `getComputedStyle` 로 읽는다.
+- 모든 좌표·반지름·간격·투명도는 **`C.TOUCH`** 표(매직넘버 금지). 화면 가장자리 여백은 `C.TOUCH.EDGE` + 안전 영역(노치) — 터치 모드에서만 만드는 보이지 않는 측정용 div 의 `padding: env(safe-area-inset-*)` 을 `getComputedStyle` 로 읽는다(`env()` 를 모르는 브라우저는 선언이 버려져 0).
 - 모양: 반투명 원(평소 `ALPHA_IDLE`, 누르면 `ALPHA_DOWN`), 방향은 삼각형 도형, 나머지는 짧은 라벨(`PARRY` 등) — 글리프 폰트에 기대지 않는다. PARRY 는 금색 테두리, DASH 는 붉은 테두리로 텔 색과 맞춘다(§2.2 색 문법 — 금=패리, 적=대시).
 - 16:9 폰처럼 좌우 여백이 없는 화면에서는 버튼이 게임 위에 더 겹친다 — 반투명이 그 대책이고, 실기기 확인(S6)에서 본다.
 
 ## 6. 안내 문구
 
-터치 모드에서는 키 이름 대신 버튼 이름을 쓴다. 문자열은 `C.TOUCH.TEXT`(키보드 문구와 같은 키 이름)에 두고 UI 는 헬퍼 하나(`UI.prompt(key)` — 터치 모드면 `C.TOUCH.TEXT[key]`, 아니면 키보드 문구)로 고른다.
+터치 모드에서는 키 이름 대신 버튼 이름을 쓴다. 문자열은 `C.TOUCH.TEXT`(키보드 문구와 같은 키 이름)에 두고 UI 는 헬퍼 하나(`say(key, 키보드 문구)` — 터치 모드면 `C.TOUCH.TEXT[key]`, 아니면 키보드 문구)로 고른다. `js/ui.js` 에서 옮기는 키보드 문구는 새 `C.PROMPTS` 블록에 둔다.
 
 - 이미 config 에 있는 문구: `MENU.TITLE_HINT`·`OPTION_HINT`·`STORY.PROMPT_NEXT`·`PROMPT_SKIP` 등.
 - **`js/ui.js` 에 박혀 있는 문구는 config 로 옮긴다** — `'N  NEW GAME'`(타이틀 힌트 꼬리), `'[K]'`·`'[J]'`(선택지), `'ENTER  —  …'`(VICTORY·INTERLUDE·ENDING), `'ESC  —  TITLE'`, 조작법 표 `CONTROLS`. 옮기는 것은 터치용 대체가 필요한 문구뿐이다.
@@ -99,9 +99,9 @@
 
 - **첫 터치에서 전체 화면 + 가로 고정**을 요청한다: `document.documentElement.requestFullscreen()` 이 성공하면 `screen.orientation.lock('landscape')`. 둘 다 실패해도 조용히 넘어간다(지원 안 하는 브라우저). 자동 요청은 **부팅 후 한 번만** — 사용자가 전체 화면을 빠져나오면 다시 강제하지 않는다.
 - 전체 화면이 아니고 API 가 있으면 타이틀에 **FULLSCREEN** 버튼을 보여 준다(누르면 같은 요청).
-- **세로 감지**: 터치 모드이고 `innerHeight > innerWidth` 이면 `Touch.blocked = true`.
+- **세로 감지**: 터치 모드이고 `innerHeight > innerWidth` 이면 `TouchUI.blocked = true`.
   - 화면: 게임 대신 회전 안내(`C.TOUCH.TEXT.ROTATE` + 폰 도형)를 그린다. 안내를 탭하면 전체 화면 + 가로 고정을 다시 요청한다.
-  - 시간: `js/main.js` 의 `frame()` 이 `Touch.blocked` 동안 `game.update` 를 부르지 않는다(전투가 뒤에서 흘러가면 불공정하다). 풀릴 때 `lastT` 를 다시 잡아 dt 가 튀지 않게 한다.
+  - 시간: `js/main.js` 의 `frame()` 이 `TouchUI.blocked` 동안 `game.update` 를 부르지 않는다(전투가 뒤에서 흘러가면 불공정하다). 풀릴 때 `lastT` 를 다시 잡아 dt 가 튀지 않게 한다.
 
 ## 8. 디버그 훅 · 테스트
 
@@ -111,14 +111,14 @@
   - T-desktop: 일반 데스크톱 컨텍스트에서 `touch.on === false`, 캔버스를 탭해도 켜지지 않는다.
   - T-multi: CDP `Input.dispatchTouchEvent` 로 ▶ 홀드 중 PARRY 탭 → 플레이어 x 증가 + 패리 발동.
   - T-slide: ◀ 에서 ▶ 로 손가락 이동 → `left` 해제·`right` 눌림.
-  - T-flow: 타이틀 → (▼·OK) 보스 선택 → OK 전투 → 패배(피격 누적) → RETRY → 전투 → TITLE(꾹) → 타이틀. 꾹 누르기 버튼은 짧게 탭하면 발동하지 않는다.
+  - T-flow: 타이틀 → OK 전투 → 패배(피격 누적) → RETRY → 전투 → TITLE(꾹) → 타이틀. 꾹 누르기 버튼은 짧게 탭하면 발동하지 않는다. 보스 선택은 `?dev=1`(클리어 여부와 무관하게 전 보스가 열린다)로 타이틀 → ▼ → OK → 보스 선택 → OK → 전투.
   - T-story: 대사 진행(OK)·선택지(PARRY/RIPOSTE)·스킵(SKIP).
   - T-options: KEY BINDINGS 행이 없다, ◀ ▶ 로 값이 바뀐다.
   - T-portrait: 412×915 로 바꾸면 `blocked` + `game.time` 불변, 되돌리면 재개.
   - T-hide: 터치 모드에서 키보드 입력 → `visible false`, 다음 터치 → `true`.
   - T-scenes: 모든 scene 이름에 `C.TOUCH.SETS` 항목이 있다.
   - pageerror 0.
-- 기존 테스트 전부(데스크톱 = 터치 모드 꺼짐)와 `bot.mjs --all` 3시드가 기존과 같다(S5). 브라우저 측정은 하나씩.
+- 기존 테스트 전부(데스크톱 = 터치 모드 꺼짐)·`bot.mjs --all`·`mash.mjs` 가 통과한다(S5). 봇 결과는 헤드리스 프레임 흔들림 때문에 변경이 없어도 실행마다 조금씩 다르므로(handover 교훈 10) "결과 동일" 은 기준으로 쓰지 않는다. 브라우저 측정은 하나씩.
 
 ## 9. 문서 변경
 
