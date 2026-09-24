@@ -440,8 +440,20 @@
     this.setMenuMsg('');
   };
 
-  Game.prototype.stepOptions = function (dt) {
+  /** 옵션 행 — 터치 모드에서는 KEY BINDINGS 를 숨긴다.
+      키 재지정 대기는 키 입력만 받아 터치로는 빠져나올 수 없다 (터치 스펙 §4) */
+  Game.prototype.optionRows = function () {
     var rows = C.MENU.OPTIONS;
+    if (!TouchUI.on) return rows;
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].id !== 'keys') out.push(rows[i]);
+    }
+    return out;
+  };
+
+  Game.prototype.stepOptions = function (dt) {
+    var rows = this.optionRows();
     if (this.menuMsgT > 0) this.menuMsgT -= dt;
     this.menuMove(rows.length);
     var row = rows[this.menuIndex];

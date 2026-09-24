@@ -621,6 +621,29 @@
       }
     },
 
+    /* ---- 안내 문구 (2026-09-24 — js/ui.js 에 박혀 있던 키보드 문구를 옮겼다) ----
+     * 터치 모드에서는 C.TOUCH.TEXT 의 같은 키가 대신 쓰인다(ui.js say). 키보드 문구는 이전과 한 글자도 같다. */
+    PROMPTS: {
+      TITLE_NEW: '      N  NEW GAME',          // 타이틀 힌트 꼬리
+      CHOICE_K: '[K]',                          // 대사 선택지 — parry
+      CHOICE_J: '[J]',                          // 대사 선택지 — riposte
+      CHOICE_DX: 44,                            // 선택지 라벨 → 본문 간격(px)
+      NEXT: 'ENTER  —  ',                      // 챕터 카드 — 뒤에 다음 보스 이름이 붙는다
+      NEXT_BOSS: 'ENTER  —  NEXT BOSS',
+      ENDING: 'ENTER  —  ENDING',
+      RETRY: 'R  —  RETRY',
+      TITLE_ESC: 'ESC  —  TITLE',
+      TITLE_ENTER: 'ENTER  —  TITLE',
+      HAND_RIPOSTE: 'J  RIPOSTE',               // 손패 위 안내 — 손패가 있을 때
+      CONTROLS: [                               // 타이틀 조작표
+        ['← →  /  A D', 'MOVE'],
+        ['K  /  Z', 'PARRY  —  gold flash'],
+        ['J  /  X', 'RIPOSTE  —  use stolen attack'],
+        ['SPACE  /  L  /  C', 'DASH  —  red flash'],
+        ['R  /  M  /  ESC', 'RETRY  /  MUTE  /  TITLE']
+      ]
+    },
+
     /* ---- 터치 조작 (2026-09-24 — docs/superpowers/specs/2026-09-24-riposte-touch-controls-design.md) ----
      * 버튼은 기존 액션 이름만 누른다(동사를 늘리지 않는다). 좌표는 화면 CSS px 이다(게임 좌표 960×540 이 아니다).
      * anchor: bl 왼쪽 아래 · br 오른쪽 아래 · tr 오른쪽 위. dx·dy = 가장자리 여백선에서 버튼 중심까지(안쪽이 +).
@@ -649,6 +672,34 @@
       ROTATE_GAP: 30,        // 화면 중앙 → 안내 글
       ROTATE_SUB_GAP: 24,    // 안내 글 → 보조 글
       TEXT: {
+        /* 안내 문구 — C.PROMPTS·C.MENU·C.STORY 의 같은 키를 터치 모드에서 대신한다 (ui.js say) */
+        TITLE_HINT: 'UP DOWN  MOVE      OK  SELECT',
+        TITLE_NEW: '      HOLD NEW  —  NEW GAME',
+        OPTION_HINT: 'LEFT RIGHT  CHANGE      OK  SELECT      BACK  RETURN',
+        PROMPT_NEXT: 'OK',
+        PROMPT_SKIP: 'HOLD OK  —  SKIP',
+        CHOICE_K: '[PARRY]',
+        CHOICE_J: '[RIPOSTE]',
+        CHOICE_DX: 104,                         // 라벨이 길다 — 본문을 더 민다(px)
+        NEXT: 'OK  —  ',
+        NEXT_BOSS: 'OK  —  NEXT BOSS',
+        ENDING: 'OK  —  ENDING',
+        RETRY: 'TAP RETRY',
+        TITLE_ESC: 'TAP TITLE',
+        TITLE_ENTER: 'OK  —  TITLE',
+        HAND_RIPOSTE: 'TAP RIPOSTE',
+        TUT_PARRY: 'PARRY  —  THE GOLD FLASH',          // C.TUTORIAL.PARRY 대신
+        TUT_RIPOSTE: 'RIPOSTE  —  WITH THE STOLEN ATTACK', // C.TUTORIAL.RIPOSTE 대신
+        TUT_DASH: 'DASH  —  THROUGH RED',                // C.TUTORIAL.DASH 대신
+        HINT_GOLD: 'Gold flash  —  tap PARRY as it lands',  // C.DEFEAT.HINT_GOLD 대신
+        HINT_RED: 'Red flash  —  dash through with DASH',    // C.DEFEAT.HINT_RED 대신
+        CONTROLS: [
+          ['LEFT  RIGHT', 'MOVE'],
+          ['PARRY', 'gold flash'],
+          ['RIPOSTE', 'use stolen attack'],
+          ['DASH', 'red flash'],
+          ['HOLD RETRY  /  TITLE', 'RETRY  /  TITLE']
+        ],
         ROTATE: 'ROTATE TO LANDSCAPE',
         ROTATE_SUB: 'TAP FOR FULLSCREEN'
       },

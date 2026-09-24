@@ -13,6 +13,12 @@
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
   function lerp(a, b, t) { return a + (b - a) * t; }
 
+  /** 안내 문구 — 터치 모드면 C.TOUCH.TEXT[key], 아니면 키보드 문구 kb (터치 스펙 §6) */
+  function say(key, kb) {
+    var t = C.TOUCH.TEXT[key];
+    return TouchUI.on && t !== undefined ? t : kb;
+  }
+
   /* HUD 레이아웃 상수 (이 파일 로컬 표) */
   var L = {
     HP_W: 430, HP_H: 12, HP_Y: 34,
@@ -247,6 +253,10 @@
     /* 튜토리얼 프롬프트 */
     var tip = game.tutorialPrompt();
     if (tip) {
+      // 터치 모드면 키 이름 대신 버튼 이름 (tutorialPrompt 는 C.TUTORIAL 의 문자열을 돌려준다)
+      if (tip === C.TUTORIAL.PARRY) tip = say('TUT_PARRY', tip);
+      else if (tip === C.TUTORIAL.RIPOSTE) tip = say('TUT_RIPOSTE', tip);
+      else if (tip === C.TUTORIAL.DASH) tip = say('TUT_DASH', tip);
       var a = 0.65 + 0.35 * Math.sin(game.time * C.TUTORIAL.PULSE_HZ * Math.PI);
       text(ctx, tip, V.W / 2, C.TUTORIAL.Y,
         { size: 17, weight: '700', color: C.COLORS.GOLD, alpha: a, glow: C.COLORS.GOLD, blur: 12, spacing: 1 });
@@ -299,7 +309,7 @@
       }
     }
 
-    text(ctx, p.hand.length ? 'J  RIPOSTE' : 'PARRY TO STEAL', V.W / 2,
+    text(ctx, p.hand.length ? say('HAND_RIPOSTE', C.PROMPTS.HAND_RIPOSTE) : 'PARRY TO STEAL', V.W / 2,
       sy - 12, { size: 10, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 
@@ -325,14 +335,6 @@
     ctx.restore();
   }
 
-  var CONTROLS = [
-    ['← →  /  A D', 'MOVE'],
-    ['K  /  Z', 'PARRY  —  gold flash'],
-    ['J  /  X', 'RIPOSTE  —  use stolen attack'],
-    ['SPACE  /  L  /  C', 'DASH  —  red flash'],
-    ['R  /  M  /  ESC', 'RETRY  /  MUTE  /  TITLE']
-  ];
-
   UI.drawTitle = function (ctx, game) {
     var t = game.sceneT;
     // 뒤에서 두 실루엣이 대치 중이다 — 타이틀은 그 위로 0.6s 동안 떠오른다
@@ -350,10 +352,11 @@
     var ty = 268;
     text(ctx, 'CONTROLS', V.W / 2, ty - 24,
       { size: 11, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: fade });
-    for (var i = 0; i < CONTROLS.length; i++) {
-      text(ctx, CONTROLS[i][0], V.W / 2 - 16, ty + i * 24,
+    var controls = say('CONTROLS', C.PROMPTS.CONTROLS);
+    for (var i = 0; i < controls.length; i++) {
+      text(ctx, controls[i][0], V.W / 2 - 16, ty + i * 24,
         { size: 14, weight: '700', color: C.COLORS.TEXT, align: 'right', family: C.FONT.MONO, alpha: fade });
-      text(ctx, CONTROLS[i][1], V.W / 2 + 16, ty + i * 24,
+      text(ctx, controls[i][1], V.W / 2 + 16, ty + i * 24,
         { size: 14, weight: '600', color: C.COLORS.TEXT_DIM, align: 'left', alpha: fade });
     }
 
@@ -375,7 +378,7 @@
           { size: M.ITEM_SIZE, weight: '800', color: C.COLORS.GOLD, align: 'right', alpha: blink });
       }
     }
-    text(ctx, M.TITLE_HINT + '      N  NEW GAME', V.W / 2, M.HINT_Y,
+    text(ctx, say('TITLE_HINT', M.TITLE_HINT) + say('TITLE_NEW', C.PROMPTS.TITLE_NEW), V.W / 2, M.HINT_Y,
       { size: 10, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2, alpha: fade * 0.8 });
 
     // 저장된 랭크
@@ -447,7 +450,7 @@
   UI.drawOptions = function (ctx, game) {
     var M = C.MENU;
     menuFrame(ctx, game, 'OPTIONS');
-    var rows = M.OPTIONS;
+    var rows = game.optionRows();
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
       var assistOff = row.type === 'choice' && game.save.settings[row.id] > 0;
@@ -458,7 +461,7 @@
       text(ctx, M.ASSIST_BADGE, V.W / 2, M.MSG_Y - 18,
         { size: 11, weight: '800', color: C.COLORS.GOLD, spacing: 3 });
     }
-    text(ctx, M.OPTION_HINT, V.W / 2, M.HINT_Y,
+    text(ctx, say('OPTION_HINT', M.OPTION_HINT), V.W / 2, M.HINT_Y,
       { size: 10, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 
@@ -476,7 +479,7 @@
       menuRow(ctx, M.ROW_Y + i * M.ROW_GAP, (list[i] + 1) + '.  ' + d.name, rk || '-',
         i === game.menuIndex, rankColor(rk || 'C'));
     }
-    text(ctx, M.OPTION_HINT, V.W / 2, M.HINT_Y,
+    text(ctx, say('OPTION_HINT', M.OPTION_HINT), V.W / 2, M.HINT_Y,
       { size: 10, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 
@@ -571,17 +574,18 @@
     var bossColor = b ? b.color : C.COLORS.WHITE;
 
     panel(ctx, S.BOX_X, S.BOX_Y, S.BOX_W, S.BOX_H, 1);
-    text(ctx, S.PROMPT_SKIP, S.BOX_X + S.BOX_W - 16, S.BOX_Y + 14,
+    text(ctx, say('PROMPT_SKIP', S.PROMPT_SKIP), S.BOX_X + S.BOX_W - 16, S.BOX_Y + 14,
       { size: 9, weight: '700', color: C.COLORS.TEXT_DIM, align: 'right', spacing: 1, alpha: 0.7 });
 
     if (st.choiceState === 'taken') { UI.drawTaken(ctx, game); return; }
 
     if (st.choiceState === 'pending') {
       // 두 동사 — K(받아넘김) / J(되받아침)
-      text(ctx, '[K]', S.TEXT_X, S.CHOICE_Y, { size: 14, weight: '800', color: C.COLORS.GOLD, align: 'left', spacing: 1 });
-      text(ctx, st.choice.K.text, S.TEXT_X + 44, S.CHOICE_Y, { size: S.TEXT_SIZE, weight: '600', color: C.COLORS.TEXT, align: 'left' });
-      text(ctx, '[J]', S.TEXT_X, S.CHOICE_Y + S.CHOICE_GAP, { size: 14, weight: '800', color: C.COLORS.PLAYER, align: 'left', spacing: 1 });
-      text(ctx, st.choice.J.text, S.TEXT_X + 44, S.CHOICE_Y + S.CHOICE_GAP, { size: S.TEXT_SIZE, weight: '600', color: C.COLORS.TEXT, align: 'left' });
+      var cdx = say('CHOICE_DX', C.PROMPTS.CHOICE_DX);
+      text(ctx, say('CHOICE_K', C.PROMPTS.CHOICE_K), S.TEXT_X, S.CHOICE_Y, { size: 14, weight: '800', color: C.COLORS.GOLD, align: 'left', spacing: 1 });
+      text(ctx, st.choice.K.text, S.TEXT_X + cdx, S.CHOICE_Y, { size: S.TEXT_SIZE, weight: '600', color: C.COLORS.TEXT, align: 'left' });
+      text(ctx, say('CHOICE_J', C.PROMPTS.CHOICE_J), S.TEXT_X, S.CHOICE_Y + S.CHOICE_GAP, { size: 14, weight: '800', color: C.COLORS.PLAYER, align: 'left', spacing: 1 });
+      text(ctx, st.choice.J.text, S.TEXT_X + cdx, S.CHOICE_Y + S.CHOICE_GAP, { size: S.TEXT_SIZE, weight: '600', color: C.COLORS.TEXT, align: 'left' });
       return;
     }
 
@@ -602,7 +606,7 @@
 
     if (shown >= body.length) {
       var blink = 0.45 + 0.45 * Math.sin(game.sceneT * 5);
-      text(ctx, S.PROMPT_NEXT, S.BOX_X + S.BOX_W - 18, S.BOX_Y + S.BOX_H - 16,
+      text(ctx, say('PROMPT_NEXT', S.PROMPT_NEXT), S.BOX_X + S.BOX_W - 18, S.BOX_Y + S.BOX_H - 16,
         { size: 10, weight: '800', color: C.COLORS.TEXT_DIM, align: 'right', spacing: 2, alpha: blink });
     }
   };
@@ -616,7 +620,7 @@
       { size: 60, weight: '800', color: C.COLORS.HEART, spacing: 10, glow: C.COLORS.HEART, blur: 24 });
     text(ctx, st.reply.text, V.W / 2, 262, { size: S.TEXT_SIZE, weight: '600', color: C.COLORS.TEXT });
     var blink = 0.5 + 0.5 * Math.sin(game.sceneT * 4);
-    text(ctx, 'ENTER', V.W / 2, 330, { size: 14, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
+    text(ctx, say('PROMPT_NEXT', S.PROMPT_NEXT), V.W / 2, 330, { size: 14, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
   };
 
   /* =========================================================================
@@ -652,7 +656,7 @@
       { size: 10, weight: '800', color: C.COLORS.TEXT_DIM, spacing: 4, alpha: k });
 
     var blink = 0.5 + 0.5 * Math.sin(t * 4);
-    text(ctx, 'ENTER  —  ' + (next ? next.name : 'CONTINUE'), V.W / 2, V.H - 24,
+    text(ctx, say('NEXT', C.PROMPTS.NEXT) + (next ? next.name : 'CONTINUE'), V.W / 2, V.H - 24,
       { size: 15, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
   };
 
@@ -704,7 +708,7 @@
     }
 
     var blink = 0.5 + 0.5 * Math.sin(t * 4);
-    text(ctx, game.bossIndex + 1 >= game.defs.length ? 'ENTER  —  ENDING' : 'ENTER  —  NEXT BOSS',
+    text(ctx, game.bossIndex + 1 >= game.defs.length ? say('ENDING', C.PROMPTS.ENDING) : say('NEXT_BOSS', C.PROMPTS.NEXT_BOSS),
       V.W / 2, y + L.CARD_H + 30,
       { size: 15, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
   };
@@ -713,7 +717,7 @@
   function defeatHint(src) {
     if (!src) return null;
     if (src.kind === 'zone') return C.DEFEAT.HINT_ZONE;
-    return src.tell === 'gold' ? C.DEFEAT.HINT_GOLD : C.DEFEAT.HINT_RED;
+    return src.tell === 'gold' ? say('HINT_GOLD', C.DEFEAT.HINT_GOLD) : say('HINT_RED', C.DEFEAT.HINT_RED);
   }
 
   UI.drawDefeat = function (ctx, game) {
@@ -748,9 +752,9 @@
     }
 
     var blink = 0.5 + 0.5 * Math.sin(t * 4);
-    text(ctx, 'R  —  RETRY', V.W / 2, 392,
+    text(ctx, say('RETRY', C.PROMPTS.RETRY), V.W / 2, 392,
       { size: 22, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
-    text(ctx, 'ESC  —  TITLE', V.W / 2, 424,
+    text(ctx, say('TITLE_ESC', C.PROMPTS.TITLE_ESC), V.W / 2, 424,
       { size: 14, weight: '700', color: C.COLORS.TEXT_DIM, spacing: 2 });
   };
 
@@ -811,7 +815,7 @@
     }
 
     var blink = 0.5 + 0.5 * Math.sin(t * 4);
-    text(ctx, 'ENTER  —  TITLE', V.W / 2, V.H - 24,
+    text(ctx, say('TITLE_ENTER', C.PROMPTS.TITLE_ENTER), V.W / 2, V.H - 24,
       { size: 15, weight: '800', color: C.COLORS.WHITE, alpha: blink, spacing: 3 });
   };
 

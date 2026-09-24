@@ -308,6 +308,164 @@ async function tDraw(browser) {
   check('T-draw: touch mode on draws the OK button there', on.join() !== off.join(), `(on ${on} / off ${off})`);
 }
 
+/* 캔버스에 그려진 글자를 모은다 — 글자 간격(spacing) 문구는 한 글자씩 그려지므로 이어 붙이면 원문이 된다 */
+async function drawnText(page) {
+  await page.evaluate(() => {
+    if (!window.__spy) {
+      const orig = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function (s, x, y, w) {
+        if (window.__drawn) window.__drawn.push(String(s));
+        return w === undefined ? orig.call(this, s, x, y) : orig.call(this, s, x, y, w);
+      };
+      window.__spy = true;
+    }
+    window.__drawn = [];
+  });
+  await sleep(150);
+  return page.evaluate(() => window.__drawn.join(''));
+}
+
+async function titleIndex(page, id) {
+  return page.evaluate((want) => window.__RIPOSTE.game.titleItems().map((i) => i.id).indexOf(want), id);
+}
+
+/* ---- T-options: 옵션 — KEY BINDINGS 숨김, ◀ ▶ 로 값 변경 ------------------ */
+async function tOptions(browser) {
+  const { ctx, page, f } = await openPhone(browser, '?mute=1&touch=1');
+  await sleep(300);
+  const idx = await titleIndex(page, 'options');
+  for (let i = 0; i < idx; i++) await f.tap('mDown');
+  await f.tap('ok');
+  check('T-options: ▼ + OK on the title opens OPTIONS',
+    await waitFor(page, () => window.__RIPOSTE.getState().scene === 'OPTIONS', 3000, 'OPTIONS'), `(index ${idx})`);
+  const rows = await page.evaluate(() => window.__RIPOSTE.game.optionRows().map((r) => r.id));
+  check('T-options: KEY BINDINGS is hidden in touch mode', rows.length > 0 && !rows.includes('keys'), rows.join());
+  const v0 = (await page.evaluate(state)).settings.volume;
+  await f.tap('mLeft');
+  const v1 = (await page.evaluate(state)).settings.volume;
+  check('T-options: ◀ changes the selected row (volume)', v1 !== v0, `(${v0} -> ${v1})`);
+  await f.tap('back');
+  check('T-options: BACK returns to the title',
+    await waitFor(page, () => window.__RIPOSTE.getState().scene === 'TITLE', 2000, 'TITLE'));
+  await ctx.close();
+}
+
+/* ---- T-bossselect: ?dev=1 은 전 보스를 연다 — ▼ OK 로 두 번째 보스 ---------- */
+async function tBossSelect(browser) {
+  const { ctx, page, f } = await openPhone(browser, '?mute=1&touch=1&dev=1&story=0');
+  await sleep(300);
+  const idx = await titleIndex(page, 'bosses');
+  for (let i = 0; i < idx; i++) await f.tap('mDown');
+  await f.tap('ok');
+  check('T-bossselect: the title opens BOSS SELECT',
+    await waitFor(page, () => window.__RIPOSTE.getState().scene === 'BOSSSELECT', 3000, 'BOSSSELECT'), `(index ${idx})`);
+  await f.tap('mDown');
+  await f.tap('ok');
+  const ok = await waitFor(page, () => {
+    const s = window.__RIPOSTE.getState();
+    return (s.scene === 'INTRO' || s.scene === 'FIGHT') && s.bossId === 2;
+  }, 4000, 'boss 2');
+  check('T-bossselect: ▼ + OK starts the second boss', ok);
+  await ctx.close();
+}
+
+/* ---- T-story: 대사 — OK 진행 · PARRY 로 줄 완성·선택지 · SKIP · OK 꾹 ------- */
+async function tStory(browser) {
+  {
+    const { ctx, page, f } = await openPhone(browser, '?mute=1&touch=1');
+    await sleep(300);
+    await f.tap('ok');                          // NEW RUN — 대화가 켜져 있으니 STORY 로 간다
+    check('T-story: OK on the title starts a run into STORY',
+      await waitFor(page, () => window.__RIPOSTE.getState().scene === 'STORY', 4000, 'STORY'));
+    const line0 = (await page.evaluate(state)).story.line;
+    await f.tap('cParry');                      // 타자기 즉시 완성
+    await f.tap('ok');                          // 다음 줄
+    const line1 = (await page.evaluate(state)).story.line;
+    check('T-story: PARRY completes the line, OK advances', line1 === line0 + 1, `(${line0} -> ${line1})`);
+    let s = await page.evaluate(state);
+    for (let i = 0; i < 20 && s.story && s.story.choice !== 'pending'; i++) {
+      await f.tap('cParry');
+      await f.tap('ok');
+      s = await page.evaluate(state);
+    }
+    check('T-story: the VESPER choice is reached with OK', !!s.story && s.story.choice === 'pending', JSON.stringify(s.story));
+    const txt = await drawnText(page);
+    check('T-text: the choice labels name the buttons on a phone', txt.includes('[PARRY]') && txt.includes('[RIPOSTE]') && !txt.includes('[K]'));
+    await f.tap('cParry');                      // [K] 아직. — ok:true -> reply
+    s = await page.evaluate(state);
+    check('T-story: PARRY picks the [K] answer', !!s.story && s.story.choice === 'reply', JSON.stringify(s.story));
+    await ctx.close();
+  }
+  {
+    const { ctx, page, f } = await openPhone(browser, '?mute=1&touch=1');
+    await sleep(300);
+    await f.tap('ok');
+    await waitFor(page, () => window.__RIPOSTE.getState().scene === 'STORY', 4000, 'STORY');
+    await f.tap('skip');
+    check('T-story: SKIP leaves the story',
+      await waitFor(page, () => window.__RIPOSTE.getState().scene !== 'STORY', 2000, 'leave STORY'));
+    await ctx.close();
+  }
+  {
+    const { ctx, page, f } = await openPhone(browser, '?mute=1&touch=1');
+    await sleep(300);
+    await f.tap('ok');
+    await waitFor(page, () => window.__RIPOSTE.getState().scene === 'STORY', 4000, 'STORY');
+    await f.hold('ok', 1000);
+    check('T-story: holding OK skips the story (existing HOLD ENTER rule)',
+      await waitFor(page, () => window.__RIPOSTE.getState().scene !== 'STORY', 2000, 'leave STORY'));
+    await ctx.close();
+  }
+}
+
+/* ---- T-flow: 타이틀 → 전투 → 패배 → RETRY → TITLE(꾹) ---------------------- */
+async function tFlow(browser) {
+  const { ctx, page, f } = await openPhone(browser, '?mute=1&touch=1&story=0');
+  await sleep(300);
+  const t0txt = await drawnText(page);
+  check('T-text: phone title wording names the buttons',
+    t0txt.includes('HOLD NEW') && t0txt.includes('LEFT  RIGHT') && !t0txt.includes('K  /  Z'));
+  await f.tap('ok');
+  check('T-flow: title OK -> FIGHT', await waitFor(page, () => window.__RIPOSTE.getState().scene === 'FIGHT', 5000, 'FIGHT'));
+  const ftxt = await drawnText(page);
+  check('T-text: phone fight tutorial names the PARRY button, not the K key',
+    ftxt.includes('PARRY  —  THE GOLD FLASH') && !ftxt.includes('K  —  PARRY'));
+  const tries0 = (await page.evaluate(state)).tries;
+  await page.evaluate(() => window.__RIPOSTE.setTimeScale(4));
+  check('T-flow: a passive fight ends in DEFEAT',
+    await waitFor(page, () => window.__RIPOSTE.getState().scene === 'DEFEAT', 30000, 'DEFEAT'));
+  await page.evaluate(() => window.__RIPOSTE.setTimeScale(1));
+  await sleep(150);
+  const sd = await page.evaluate(state);
+  check('T-flow: DEFEAT shows RETRY / TITLE buttons', sd.touch.set.join() === 'dRetry,dTitle', sd.touch.set.join());
+  const dtxt = await drawnText(page);
+  check('T-text: phone DEFEAT says TAP RETRY and names buttons, not keys',
+    dtxt.includes('TAP RETRY') && !dtxt.includes('R  —  RETRY') && !dtxt.includes('press K') && !dtxt.includes('with SPACE'));
+  await f.tap('dRetry');
+  check('T-flow: RETRY restarts the boss', await waitFor(page, () => window.__RIPOSTE.getState().scene === 'FIGHT', 6000, 'FIGHT again'));
+  const tries1 = (await page.evaluate(state)).tries;
+  check('T-flow: tries went up by one', tries1 === tries0 + 1, `(${tries0} -> ${tries1})`);
+  await f.hold('title', 800);
+  check('T-flow: holding TITLE returns to the title',
+    await waitFor(page, () => window.__RIPOSTE.getState().scene === 'TITLE', 3000, 'TITLE'));
+  await ctx.close();
+}
+
+/* ---- T-text (PC): 데스크톱 문구는 키보드 문구 그대로, KEY BINDINGS 도 있다 --- */
+async function tTextDesktop(browser) {
+  const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
+  hookErrors(page);
+  await page.goto(url('?mute=1'), { waitUntil: 'load' });
+  await waitFor(page, () => !!window.__RIPOSTE, 5000, '__RIPOSTE hook');
+  await sleep(300);
+  const txt = await drawnText(page);
+  check('T-text: PC title keeps keyboard wording',
+    txt.includes('N  NEW GAME') && txt.includes('K  /  Z') && txt.includes('ENTER  SELECT') && !txt.includes('HOLD NEW'));
+  const rows = await page.evaluate(() => window.__RIPOSTE.game.optionRows().map((r) => r.id));
+  check('T-text: PC options still list KEY BINDINGS', rows.includes('keys'), rows.join());
+  await page.close();
+}
+
 /* ---- 새 검사 함수는 이 줄 위에 추가한다 ---- */
 
 function finish() {
@@ -333,6 +491,11 @@ function finish() {
     await tPortrait(browser);
     await tHide(browser);
     await tDraw(browser);
+    await tOptions(browser);
+    await tBossSelect(browser);
+    await tStory(browser);
+    await tFlow(browser);
+    await tTextDesktop(browser);
     // ---- 새 검사 호출은 이 줄 위에 추가한다 ----
   } finally {
     await browser.close();
