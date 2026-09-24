@@ -653,14 +653,15 @@
         ROTATE_SUB: 'TAP FOR FULLSCREEN'
       },
       BUTTONS: {
-        /* 전투 — 왼손 이동, 오른손 동사 (PARRY 가 엄지가 쉬는 구석 — 가장 많이 누른다) */
+        /* 전투 — 왼손 이동, 오른손 동사 (PARRY 가 엄지가 쉬는 구석 — 가장 많이 누른다).
+           RETRY·TITLE 은 오른쪽 레터박스 여백 안에 세로로 쌓는다 — HUD 타이머("PAR 30s")를 가리지 않게 */
         left:     { action: 'left',    anchor: 'bl', dx: 34,  dy: 34,  r: 34, shape: 'left' },
         right:    { action: 'right',   anchor: 'bl', dx: 114, dy: 34,  r: 34, shape: 'right' },
         parry:    { action: 'parry',   anchor: 'br', dx: 40,  dy: 40,  r: 40, label: 'PARRY',   color: 'GOLD' },
         dash:     { action: 'dash',    anchor: 'br', dx: 124, dy: 32,  r: 32, label: 'DASH',    color: 'RED' },
         riposte:  { action: 'riposte', anchor: 'br', dx: 40,  dy: 124, r: 32, label: 'RIPOSTE', color: 'PLAYER' },
-        retry:    { action: 'restart', anchor: 'tr', dx: 84,  dy: 24,  r: 24, label: 'RETRY', hold: true },
-        title:    { action: 'back',    anchor: 'tr', dx: 24,  dy: 24,  r: 24, label: 'TITLE', hold: true },
+        retry:    { action: 'restart', anchor: 'tr', dx: 28,  dy: 84,  r: 24, label: 'RETRY', hold: true },
+        title:    { action: 'back',    anchor: 'tr', dx: 28,  dy: 24,  r: 24, label: 'TITLE', hold: true },
         /* 메뉴 — 왼쪽 십자, 오른쪽 OK(PARRY 자리)·BACK(DASH 자리) */
         mUp:      { action: 'up',      anchor: 'bl', dx: 96,  dy: 160, r: 30, shape: 'up' },
         mDown:    { action: 'down',    anchor: 'bl', dx: 96,  dy: 32,  r: 30, shape: 'down' },
