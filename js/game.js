@@ -1562,7 +1562,8 @@
       beams: beams,
       pillars: pillars,
       marks: marks,
-      echoes: echoes
+      echoes: echoes,
+      touch: TouchUI.state()
     };
   };
 

@@ -62,6 +62,7 @@
     _just: {},     // 현재 고정 스텝에서 true
     _padHeld: {},  // 패드가 "스스로" 쥐고 있는 액션 — 놓을 때만 false 를 내보내 키보드 동시입력을 보호
     _padCount: 0,  // 연결된 패드 수 — 0이면 pollGamepad 가 navigator 를 아예 건드리지 않는다 (매 프레임 비용 방지)
+    _touchHeld: {}, // 터치가 "스스로" 쥐고 있는 액션 — 뗄 때 이것만 내려 키보드·패드 동시입력을 보호 (js/touch.js)
     _codeBuf: {},  // 물리 키 코드 keydown 누적 (다음 beginStep 에서 소비) — 액션 없는 dev 치트 키용
     _justCode: {}, // 현재 고정 스텝에서 true 인 물리 키 코드
     _codeDown: {}, // 물리 키 코드 -> bool (현재 눌림, 리바인드와 무관 — dev 전용 조회용)
@@ -175,6 +176,7 @@
     Input._codeBuf = {};
     Input._justCode = {};
     Input._codeDown = {};
+    Input._touchHeld = {};
   }
 
   Input.attach = function (target) {
@@ -237,6 +239,35 @@
     if (Input.down.left) a -= 1;
     if (Input.down.right) a += 1;
     return a;
+  };
+
+  /** 키보드가 지금 이 액션을 쥐고 있나 — 물리 키 상태(_codeDown)로 본다(리바인드 반영) */
+  function keyHolds(action) {
+    var codes = KEYMAP[action] || [];
+    for (var i = 0; i < codes.length; i++) {
+      if (Input._codeDown[codes[i]]) return true;
+    }
+    return false;
+  }
+
+  /** 터치 버튼 전이 (js/touch.js). 패드의 applyPadAction 과 같은 규칙 —
+      누를 때 setAction(true) + 제스처 훅(오디오 잠금 해제 재시도),
+      뗄 때는 터치가 "스스로" 쥐고 있던 액션만, 그리고 키보드·패드가 같은 액션을 쥐고 있지 않을 때만 내린다
+      (블루투스 키보드로 → 를 쥔 채 화면 ▶ 를 떼도 이동이 끊기지 않는다).
+      눌렀다 같은 프레임에 떼면 버퍼에 한 번 남아 다음 고정 스텝에 justPressed 가 한 번 된다(꾹 누르기 버튼). */
+  Input.touchAction = function (action, isDown) {
+    if (!Input.enabled) return;
+    var wasHeld = !!Input._touchHeld[action];
+    if (isDown) {
+      Input._anyKey = true;
+      if (!wasHeld && typeof Input.onGesture === 'function') {
+        try { Input.onGesture(); } catch (err) { /* 오디오 없음 — 무시 */ }
+      }
+      setAction(action, true);
+    } else if (wasHeld && !keyHolds(action) && !Input._padHeld[action]) {
+      setAction(action, false);
+    }
+    Input._touchHeld[action] = isDown;
   };
 
   /** 패드 연결/해제 카운터 — pollGamepad 의 navigator 접근을 게이팅한다. */

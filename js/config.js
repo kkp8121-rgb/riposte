@@ -619,6 +619,55 @@
         restart: [8],           // Select / Share
         back:    [9]            // Start
       }
+    },
+
+    /* ---- 터치 조작 (2026-09-24 — docs/superpowers/specs/2026-09-24-riposte-touch-controls-design.md) ----
+     * 버튼은 기존 액션 이름만 누른다(동사를 늘리지 않는다). 좌표는 화면 CSS px 이다(게임 좌표 960×540 이 아니다).
+     * anchor: bl 왼쪽 아래 · br 오른쪽 아래 · tr 오른쪽 위. dx·dy = 가장자리 여백선에서 버튼 중심까지(안쪽이 +).
+     * 기준 화면 = 가로 폰 915×412 — 버튼이 바닥선 아래 띠와 좌우 레터박스 여백에 들어간다. */
+    TOUCH: {
+      HOLD_TIME: 0.5,        // 꾹 누르기 버튼(hold) — 이만큼(초) 쥐어야 한 번 누른다. 잘못 눌러 판을 잃는 버튼에만
+      HIT_PAD: 10,           // 판정 원 = 반지름 + 이만큼(px). 판정이 겹치면 중심이 가까운 버튼
+      EDGE: 18,              // 화면 가장자리 여백(px) — 안전 영역(노치)은 따로 더한다
+      BUTTONS: {
+        /* 전투 — 왼손 이동, 오른손 동사 (PARRY 가 엄지가 쉬는 구석 — 가장 많이 누른다) */
+        left:     { action: 'left',    anchor: 'bl', dx: 34,  dy: 34,  r: 34, shape: 'left' },
+        right:    { action: 'right',   anchor: 'bl', dx: 114, dy: 34,  r: 34, shape: 'right' },
+        parry:    { action: 'parry',   anchor: 'br', dx: 40,  dy: 40,  r: 40, label: 'PARRY',   color: 'GOLD' },
+        dash:     { action: 'dash',    anchor: 'br', dx: 124, dy: 32,  r: 32, label: 'DASH',    color: 'RED' },
+        riposte:  { action: 'riposte', anchor: 'br', dx: 40,  dy: 124, r: 32, label: 'RIPOSTE', color: 'PLAYER' },
+        retry:    { action: 'restart', anchor: 'tr', dx: 84,  dy: 24,  r: 24, label: 'RETRY', hold: true },
+        title:    { action: 'back',    anchor: 'tr', dx: 24,  dy: 24,  r: 24, label: 'TITLE', hold: true },
+        /* 메뉴 — 왼쪽 십자, 오른쪽 OK(PARRY 자리)·BACK(DASH 자리) */
+        mUp:      { action: 'up',      anchor: 'bl', dx: 96,  dy: 160, r: 30, shape: 'up' },
+        mDown:    { action: 'down',    anchor: 'bl', dx: 96,  dy: 32,  r: 30, shape: 'down' },
+        mLeft:    { action: 'left',    anchor: 'bl', dx: 32,  dy: 96,  r: 30, shape: 'left' },
+        mRight:   { action: 'right',   anchor: 'bl', dx: 160, dy: 96,  r: 30, shape: 'right' },
+        ok:       { action: 'confirm', anchor: 'br', dx: 40,  dy: 40,  r: 40, label: 'OK' },
+        back:     { action: 'back',    anchor: 'br', dx: 124, dy: 32,  r: 32, label: 'BACK' },
+        newgame:  { action: 'newgame', anchor: 'tr', dx: 24,  dy: 24,  r: 24, label: 'NEW', hold: true },
+        /* 대사 — 선택지 [K]=parry · [J]=riposte 는 왼쪽, 진행은 오른쪽 */
+        cParry:   { action: 'parry',   anchor: 'bl', dx: 40,  dy: 40,  r: 36, label: 'PARRY',   color: 'GOLD' },
+        cRiposte: { action: 'riposte', anchor: 'bl', dx: 40,  dy: 124, r: 36, label: 'RIPOSTE', color: 'PLAYER' },
+        skip:     { action: 'back',    anchor: 'br', dx: 124, dy: 32,  r: 32, label: 'SKIP' },
+        /* 패배 — 판이 끝났으니 꾹 누르기가 아니다 */
+        dRetry:   { action: 'restart', anchor: 'br', dx: 40,  dy: 40,  r: 40, label: 'RETRY' },
+        dTitle:   { action: 'back',    anchor: 'br', dx: 124, dy: 32,  r: 32, label: 'TITLE' }
+      },
+      /* scene -> 버튼 id. js/game.js 의 모든 scene 이 여기 있어야 한다 (tests/touch.mjs T-scenes) */
+      SETS: {
+        FIGHT:      ['left', 'right', 'dash', 'parry', 'riposte', 'retry', 'title'],
+        INTRO:      ['left', 'right', 'dash', 'parry', 'riposte', 'retry', 'title'],
+        STORY:      ['cParry', 'cRiposte', 'ok', 'skip'],
+        TITLE:      ['mUp', 'mDown', 'ok', 'newgame'],
+        OPTIONS:    ['mUp', 'mDown', 'mLeft', 'mRight', 'ok', 'back'],
+        BOSSSELECT: ['mUp', 'mDown', 'ok', 'back'],
+        KEYBIND:    ['back'],
+        VICTORY:    ['ok', 'back'],
+        INTERLUDE:  ['ok', 'back'],
+        ENDING:     ['ok', 'back'],
+        DEFEAT:     ['dRetry', 'dTitle']
+      }
     }
   };
 

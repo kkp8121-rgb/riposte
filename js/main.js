@@ -105,6 +105,7 @@
     var dt = (now - lastT) / 1000;
     lastT = now;
     if (dt < 0) dt = 0;
+    if (TouchUI.on) TouchUI.update(game.scene);
     game.update(dt);
     draw();
   }
@@ -134,6 +135,7 @@
     if (p.mute !== undefined) RAudio.setMuted(true);
 
     Input.attach(global);
+    TouchUI.init(canvas, p.touch);   // 폰·태블릿(또는 ?touch=1)에서만 켜진다 — PC 는 리스너 0
     // 매 입력마다 재시도한다 — 첫 키가 user activation 을 주지 않아도 무음에 갇히지 않는다
     Input.onGesture = function () { RAudio.init(); };
     global.addEventListener('pointerdown', function () { RAudio.init(); });
@@ -151,6 +153,7 @@
     global.__RIPOSTE = {
       game: game,
       CONFIG: C,
+      touch: TouchUI,
       getState: function () { return game.getState(); },
       setTimeScale: function (n) {
         var v = parseFloat(n);
