@@ -7,7 +7,7 @@
  *   node tests/touch.mjs
  * ========================================================================== */
 import { chromium } from 'playwright-core';
-import { readFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 
@@ -79,7 +79,7 @@ async function openPhone(browser, q) {
   const cdp = await ctx.newCDPSession(page);
   await page.goto(url(q), { waitUntil: 'load' });
   await waitFor(page, () => !!window.__RIPOSTE, 5000, '__RIPOSTE hook');
-  return { ctx, page, f: fingers(page, cdp) };
+  return { ctx, page, f: fingers(page, cdp), cdp };
 }
 
 /* ---- T-detect: 판별 ------------------------------------------------------- */
@@ -244,6 +244,70 @@ async function tRelease(browser) {
   await ctx.close();
 }
 
+/* ---- T-portrait: 세로면 게임이 멈추고, 쥔 버튼이 풀린다 (RF5) ------------ */
+async function tPortrait(browser) {
+  const { ctx, page, f, cdp } = await openPhone(browser, '?boss=1&story=0&mute=1&touch=1');
+  await waitFor(page, () => window.__RIPOSTE.getState().scene === 'FIGHT', 6000, 'FIGHT');
+  await f.start(1, 'right');
+  await sleep(100);
+  // 실제 폰 회전은 창이 아니라 화면 지표(screen metrics)가 바뀐다 — 그리고 이미 첫 터치가 헤드리스 창을
+  // 전체 화면으로 바꿔 놓았을 수 있어, 그 상태에서 page.setViewportSize(창 크기)는 거부된다.
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 412, height: 915, deviceScaleFactor: 2, mobile: true });
+  await sleep(200);
+  const s1 = await page.evaluate(state);
+  await sleep(400);
+  const s2 = await page.evaluate(state);
+  // page.screenshot() 는 원시 CDP device-metrics override 를 되돌린다 — 세로 화면 캡처는 Page.captureScreenshot 을 쓴다
+  const shot = await cdp.send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync(join(SHOTS, 'touch-rotate.png'), Buffer.from(shot.data, 'base64'));
+  check('T-portrait: portrait blocks the game', s1.touch.blocked === true, JSON.stringify(s1.touch));
+  check('RF5: rotating to portrait releases the held RIGHT', s1.touch.held.length === 0, s1.touch.held.join());
+  check('T-portrait: game time does not advance while portrait', s2.time === s1.time, `(${s1.time} -> ${s2.time})`);
+  await f.end(1);
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 915, height: 412, deviceScaleFactor: 2, mobile: true });
+  await sleep(300);
+  const s3 = await page.evaluate(state);
+  check('T-portrait: back to landscape resumes', s3.touch.blocked === false && s3.time > s2.time, `(${s2.time} -> ${s3.time})`);
+  await ctx.close();
+}
+
+/* ---- T-hide: 키보드가 오면 버튼을 숨기고, 다음 터치에 다시 보인다 -------- */
+async function tHide(browser) {
+  const { ctx, page, f } = await openPhone(browser, '?boss=1&story=0&mute=1&touch=1');
+  await waitFor(page, () => window.__RIPOSTE.getState().scene === 'FIGHT', 6000, 'FIGHT');
+  await page.screenshot({ path: join(SHOTS, 'touch-fight.png') });
+  check('T-hide: buttons visible in touch mode', (await page.evaluate(state)).touch.visible === true);
+  await page.keyboard.press('ArrowUp');
+  await sleep(80);
+  check('T-hide: a keyboard key hides the buttons', (await page.evaluate(state)).touch.visible === false);
+  await f.tap({ x: 457, y: 150 });
+  check('T-hide: the next touch shows them again', (await page.evaluate(state)).touch.visible === true);
+  await ctx.close();
+}
+
+/* ---- T-draw: 폰에서는 버튼이 그려지고, 터치 모드가 꺼지면 안 그려진다 ----- */
+async function tDraw(browser) {
+  const px = async (q) => {
+    const { ctx, page } = await openPhone(browser, q);
+    await sleep(700);
+    const v = await page.evaluate(() => {
+      const c = window.__RIPOSTE.touch.center('ok');
+      const cv = document.getElementById('game');
+      const k = cv.width / window.innerWidth;
+      const d = cv.getContext('2d').getImageData(Math.round(c.x * k), Math.round(c.y * k) + 14, 1, 1).data;
+      return [d[0], d[1], d[2]];
+    });
+    if (q.includes('touch=1')) await page.screenshot({ path: join(SHOTS, 'touch-title.png') });
+    await ctx.close();
+    return v;
+  };
+  const on = await px('?mute=1&touch=1');
+  const off = await px('?mute=1&touch=0');
+  // OK 버튼 자리(오른쪽 레터박스 여백, 라벨 아래 14px) — 꺼져 있으면 여백 색 #04050a 그대로다
+  check('T-draw: touch mode off draws nothing at the OK spot', off.join() === '4,5,10', off.join());
+  check('T-draw: touch mode on draws the OK button there', on.join() !== off.join(), `(on ${on} / off ${off})`);
+}
+
 /* ---- 새 검사 함수는 이 줄 위에 추가한다 ---- */
 
 function finish() {
@@ -266,6 +330,9 @@ function finish() {
     await tScenes(browser);
     await tFight(browser);
     await tRelease(browser);
+    await tPortrait(browser);
+    await tHide(browser);
+    await tDraw(browser);
     // ---- 새 검사 호출은 이 줄 위에 추가한다 ----
   } finally {
     await browser.close();

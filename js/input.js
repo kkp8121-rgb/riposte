@@ -63,6 +63,7 @@
     _padHeld: {},  // 패드가 "스스로" 쥐고 있는 액션 — 놓을 때만 false 를 내보내 키보드 동시입력을 보호
     _padCount: 0,  // 연결된 패드 수 — 0이면 pollGamepad 가 navigator 를 아예 건드리지 않는다 (매 프레임 비용 방지)
     _touchHeld: {}, // 터치가 "스스로" 쥐고 있는 액션 — 뗄 때 이것만 내려 키보드·패드 동시입력을 보호 (js/touch.js)
+    onNonTouch: null, // 키보드·패드 입력이 들어오면 호출 — 터치 버튼을 숨긴다 (js/touch.js 가 붙인다, PC 에서는 null)
     _codeBuf: {},  // 물리 키 코드 keydown 누적 (다음 beginStep 에서 소비) — 액션 없는 dev 치트 키용
     _justCode: {}, // 현재 고정 스텝에서 true 인 물리 키 코드
     _codeDown: {}, // 물리 키 코드 -> bool (현재 눌림, 리바인드와 무관 — dev 전용 조회용)
@@ -147,6 +148,8 @@
       try { cb(e.code); } catch (err) { /* 무시 */ }
       return;
     }
+    // 터치 모드에서 키보드가 들어오면 화면 버튼을 숨긴다 (블루투스 키보드를 연결한 폰)
+    if (typeof Input.onNonTouch === 'function') Input.onNonTouch();
     // 매핑 여부와 무관하게 제스처 훅을 먼저 친다 (오디오 resume 재시도)
     Input._anyKey = true;
     if (typeof Input.onGesture === 'function') {
@@ -298,6 +301,7 @@
       if (!wasHeld && typeof Input.onGesture === 'function') {
         try { Input.onGesture(); } catch (err) { /* 오디오 없음 — 무시 */ }
       }
+      if (!wasHeld && typeof Input.onNonTouch === 'function') Input.onNonTouch();
       setAction(action, true);
     } else if (wasHeld) {
       setAction(action, false);

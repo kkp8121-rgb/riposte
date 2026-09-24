@@ -629,6 +629,29 @@
       HOLD_TIME: 0.5,        // 꾹 누르기 버튼(hold) — 이만큼(초) 쥐어야 한 번 누른다. 잘못 눌러 판을 잃는 버튼에만
       HIT_PAD: 10,           // 판정 원 = 반지름 + 이만큼(px). 판정이 겹치면 중심이 가까운 버튼
       EDGE: 18,              // 화면 가장자리 여백(px) — 안전 영역(노치)은 따로 더한다
+      /* 그리기 */
+      ALPHA_IDLE: 0.38,      // 평소 — 게임을 가리지 않게 반투명
+      ALPHA_DOWN: 0.85,      // 누르는 동안
+      FILL: '#141824',
+      FILL_DOWN: '#2c3654',
+      STROKE: '#e6ebf5',     // color 가 없는 버튼의 테두리
+      LINE_W: 2,
+      RING_GAP: 5,           // 꾹 누르기 진행 링 — 버튼 바깥 간격(px)
+      ARROW: 0.42,           // 방향 삼각형 크기 = 반지름 × 이만큼
+      LABEL_SIZE: 11,
+      LABEL_SIZE_SMALL: 9,   // 반지름이 SMALL_R 미만인 버튼
+      SMALL_R: 30,
+      /* 세로 회전 안내 */
+      ROTATE_BG: '#04050a',
+      ROTATE_PHONE_W: 120,   // 가로로 누운 폰 도형
+      ROTATE_PHONE_H: 64,
+      ROTATE_SIZE: 16,
+      ROTATE_GAP: 30,        // 화면 중앙 → 안내 글
+      ROTATE_SUB_GAP: 24,    // 안내 글 → 보조 글
+      TEXT: {
+        ROTATE: 'ROTATE TO LANDSCAPE',
+        ROTATE_SUB: 'TAP FOR FULLSCREEN'
+      },
       BUTTONS: {
         /* 전투 — 왼손 이동, 오른손 동사 (PARRY 가 엄지가 쉬는 구석 — 가장 많이 누른다) */
         left:     { action: 'left',    anchor: 'bl', dx: 34,  dy: 34,  r: 34, shape: 'left' },
@@ -646,6 +669,7 @@
         ok:       { action: 'confirm', anchor: 'br', dx: 40,  dy: 40,  r: 40, label: 'OK' },
         back:     { action: 'back',    anchor: 'br', dx: 124, dy: 32,  r: 32, label: 'BACK' },
         newgame:  { action: 'newgame', anchor: 'tr', dx: 24,  dy: 24,  r: 24, label: 'NEW', hold: true },
+        full:     { special: 'fullscreen', anchor: 'tr', dx: 84, dy: 24, r: 24, label: 'FULL' },   // 전체 화면이 아니고 API 가 있을 때만
         /* 대사 — 선택지 [K]=parry · [J]=riposte 는 왼쪽, 진행은 오른쪽 */
         cParry:   { action: 'parry',   anchor: 'bl', dx: 40,  dy: 40,  r: 36, label: 'PARRY',   color: 'GOLD' },
         cRiposte: { action: 'riposte', anchor: 'bl', dx: 40,  dy: 124, r: 36, label: 'RIPOSTE', color: 'PLAYER' },
@@ -659,7 +683,7 @@
         FIGHT:      ['left', 'right', 'dash', 'parry', 'riposte', 'retry', 'title'],
         INTRO:      ['left', 'right', 'dash', 'parry', 'riposte', 'retry', 'title'],
         STORY:      ['cParry', 'cRiposte', 'ok', 'skip'],
-        TITLE:      ['mUp', 'mDown', 'ok', 'newgame'],
+        TITLE:      ['mUp', 'mDown', 'ok', 'newgame', 'full'],
         OPTIONS:    ['mUp', 'mDown', 'mLeft', 'mRight', 'ok', 'back'],
         BOSSSELECT: ['mUp', 'mDown', 'ok', 'back'],
         KEYBIND:    ['back'],

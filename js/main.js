@@ -95,6 +95,9 @@
     if (game.dev && game.devOverlay) UI.drawDevOverlay(ctx, game);
 
     ctx.restore();
+
+    // 터치 버튼·회전 안내 — 화면 좌표(레터박스 여백 포함)로 모든 것 위에 그린다
+    if (TouchUI.on) TouchUI.draw(ctx, dpr);
   }
 
   /* ---- 루프 -------------------------------------------------------------- */
@@ -106,7 +109,8 @@
     lastT = now;
     if (dt < 0) dt = 0;
     if (TouchUI.on) TouchUI.update(game.scene);
-    game.update(dt);
+    // 세로(터치 모드) — 게임 시간을 멈춘다. lastT 는 매 프레임 갱신되므로 풀릴 때 dt 가 튀지 않는다
+    if (!TouchUI.blocked) game.update(dt);
     draw();
   }
 
