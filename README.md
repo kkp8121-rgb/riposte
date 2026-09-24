@@ -4,7 +4,7 @@
 
 **▶ Play in your browser: https://kkp8121-rgb.github.io/riposte/**
 
-A side-view 1:1 boss-rush parry duel for keyboard or gamepad. You start with **zero attacks**. Every
+A side-view 1:1 boss-rush parry duel for keyboard, gamepad or touch. You start with **zero attacks**. Every
 weapon in your hands was taken out of someone else's — a perfect parry doesn't just deflect
 a strike, it *steals* it. Twelve bosses across three chapters: a mirror waits at the end of
 chapter one to give everything back, a taker waits at the end of chapter two to take it all
@@ -34,6 +34,10 @@ first, and at the end of chapter three stands a wall that neither gives nor take
 
 A gamepad is picked up as soon as you press a button on it, and keyboard keeps working at the
 same time — nothing is polled until a pad actually connects.
+
+**On a phone or tablet** (hold it sideways) on-screen buttons appear: ◀ ▶ to move on the left,
+PARRY · RIPOSTE · DASH on the right, and OK / BACK in menus. RETRY and TITLE in a fight need a
+half-second hold, so a stray thumb can't end the run. On a PC the buttons never show.
 
 Two colors, two verbs. **Gold = parry. Red = dash.** That's the whole language — and the two
 tells differ in *shape* as well as colour (gold bursts in eight rays, red in a thick X), so the
@@ -177,6 +181,7 @@ node tests/mash.mjs --all --riposte --expect-lose   # a bot that only mashes mus
 node tests/pad.mjs          # gamepad mapping via a mocked pad: buttons, stick, no stuck keys
 node tests/options.mjs      # options menu: volume, assist, rebinding, reset, boss select
 node tests/zone.mjs         # persistent zone (linger) behavior: one-shot zones unchanged, linger zones re-strike on tick
+node tests/touch.mjs        # touch controls: phone vs PC detection, multi-touch, per-screen buttons, portrait pause
 node tools/boss-overlap.mjs --check  # boss differentiation gate: no undeclared pattern/attack overlap
 node tools/shots.mjs        # re-capture the README screenshots into docs/media/
 ```

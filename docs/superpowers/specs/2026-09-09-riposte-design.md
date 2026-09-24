@@ -60,23 +60,24 @@
 
 ## 2. 핵심 규칙
 
-### 2.1 조작 (키보드 + 게임패드, 마우스 미사용)
+### 2.1 조작 (키보드 + 게임패드 + 터치, 마우스 미사용)
 
-| 키 | 패드 (Standard Gamepad) | 동작 |
-|---|---|---|
-| ← → / A D | 좌스틱 X(데드존 0.35) · D-Pad 14/15 | 이동 |
-| **K** / Z | **2 (X / □)** | **패리** (Parry) |
-| **J** / X | **3 (Y / △)** | **리포스트** (훔친 공격 사용) |
-| **Space** / L / C / Shift | **1 (B / ○) · 5 (RB) · 7 (RT)** | **대시** (무적 프레임, 붉은 공격 회피) |
-| Enter | 0 (A / ×) | 확인 / 시작 / 다음 |
-| R | 8 (Select) | 현재 보스 재시작 |
-| M | — | 음소거 토글 |
-| Esc | 9 (Start) | 타이틀로 |
+| 키 | 패드 (Standard Gamepad) | 터치 (폰·태블릿, 가로) | 동작 |
+|---|---|---|---|
+| ← → / A D | 좌스틱 X(데드존 0.35) · D-Pad 14/15 | ◀ ▶ | 이동 |
+| **K** / Z | **2 (X / □)** | **PARRY** | **패리** (Parry) |
+| **J** / X | **3 (Y / △)** | **RIPOSTE** | **리포스트** (훔친 공격 사용) |
+| **Space** / L / C / Shift | **1 (B / ○) · 5 (RB) · 7 (RT)** | **DASH** | **대시** (무적 프레임, 붉은 공격 회피) |
+| Enter | 0 (A / ×) | OK | 확인 / 시작 / 다음 |
+| R | 8 (Select) | RETRY (전투 중에는 0.5초 꾹) | 현재 보스 재시작 |
+| M | — | — (옵션의 볼륨) | 음소거 토글 |
+| Esc | 9 (Start) | TITLE (전투 중에는 0.5초 꾹) · BACK | 타이틀로 |
 
 - **동사를 늘리지 않는다** — 패드는 기존 액션 이름에만 매핑된다. 버튼 인덱스·데드존은 `js/config.js`의 `PAD` 블록.
 - 패드 입력은 키보드와 **같은 `_buffer`/`down` 경로**로 합류해 `justPressed`가 "고정 스텝 1회에서만 true"인 의미를 유지한다. 두 입력을 동시에 써도 서로를 끊지 않는다(패드가 스스로 쥔 액션만 놓는다).
 - 🔴 **연결 전에는 폴링 비용 0.** `_padCount`가 0이면 `navigator`조차 건드리지 않는다. 프레임 루프에 붙는 작은 비용도 BASTION 같은 예민한 보스의 결과를 바꿀 수 있어서다(§8 게이트·handover 참조). 패드 연결·해제는 `gamepadconnected`/`gamepaddisconnected`로 추적하고, 해제 시 쥐고 있던 액션을 전부 놓는다.
 - 검증: `node tests/pad.mjs` — 가짜 패드로 버튼·스틱·홀드 1회 발동·연결 해제 정리를 확인한다.
+- **터치 (2026-09-24)**: 폰·태블릿(주 입력이 손가락 — `pointer: coarse`, 강제는 `?touch=1/0`)에서만 화면 버튼이 뜬다. **PC 에서는 절대 안 보인다.** 가로 전용 — 세로면 게임을 멈추고 회전 안내를 띄운다. 버튼은 기존 액션 이름만 누른다(동사 불변). 배치·화면별 세트·문구는 `docs/superpowers/specs/2026-09-24-riposte-touch-controls-design.md`, 수치는 `js/config.js` 의 `TOUCH`. 검증: `node tests/touch.mjs`.
 
 ### 2.2 텔(Tell) 문법 — 두 가지 색만 쓴다
 
@@ -458,6 +459,7 @@ js/rng.js             시드 RNG
 js/audio.js           window.RAudio (합성)
 js/fx.js              파티클·흔들림·히트스톱·플래시·슬로모·텍스트 팝
 js/input.js           키 상태 / justPressed / 리매핑 테이블
+js/touch.js           모바일 터치 버튼 window.TouchUI — 폰·태블릿에서만 켜진다, 버튼 → 기존 액션 이름 (2026-09-24)
 js/entities.js        Player, Projectile, Zone
 js/boss.js            Boss 베이스: 패턴 실행기, 공격 생명주기(windup→active→recover), feint/charge/zone/projectile/armor/mirror 지원 (+ deflect, mirror:'loot' — 2026-09-17)
 js/motions.js          새 공격 동작 표 window.MOTIONS[kind](부메랑·협공·쓸기 빔·끌어당김·기둥·표식·반격 자세·악보 + echo 표지) — boss.js 는 새 kind 를 이 표로 넘기기만 한다, 기존 kind(melee·projectile·zone·charge)는 그대로 (2026-09-23)
@@ -478,6 +480,7 @@ tests/pad.mjs · options.mjs  게임패드 · 옵션 화면
 tests/mash.mjs        연타 봇 — --expect-lose 로 연타 전패 검증(스태미너 §2.6.1)
 tests/dev.mjs         dev 모드(THIEF 커맨드·?dev=1·F키 치트·noSave) — 꺼져 있으면 어떤 키로도 발동하지 않는다
 tests/zone.mjs        존 linger 동작 — 단발 존은 때리고 사라지고, 지속 존은 LINGER_TICK 마다 재타격
+tests/touch.mjs       터치 조작 — 기기 판별(PC 에서는 버튼 없음)·멀티터치·화면별 버튼·세로 정지·안내 문구
 tests/motions.mjs     새 공격 동작 9종 단위 검증(부메랑 귀환·협공·빔 방향 선택·끌어당김·기둥 통행 차단·표식 지연 폭발·반격 자세 벌/보상·악보 무플래시 응답·메아리) + 기존 kind 불변 (2026-09-23)
 tools/boss-overlap.mjs 보스 차별화 판정기(§3 공통, 2026-09-23 부터 동작 서명 재활용 검사 포함) · tools/check-pages.mjs Pages 배포 확인
 tools/funqa.mjs        재미 QA 계측 — 봇 지표(퍼펙트/블록/피격 비율·되받기 발동 등)로 보스별 체감 난도 신호를 뽑는다
@@ -509,7 +512,8 @@ README.md
 
 ## 9. 비목표 (YAGNI)
 
-- 점프, 다단 레인, 콤보 트리, 장비/성장, 긴 스토리 컷신, 멀티플레이, 모바일 터치 UI, 외부 에셋.
+- 점프, 다단 레인, 콤보 트리, 장비/성장, 긴 스토리 컷신, 멀티플레이, 외부 에셋.
+- (2026-09-24 개정) 모바일 터치 UI 는 허용 — 가로 전용 화면 버튼. 정본: docs/superpowers/specs/2026-09-24-riposte-touch-controls-design.md
 - (2026-09-17 개정) 헬테이커식 단문 대화(전투 경계에서 한 화면 4줄 이하, R 재도전 시 미반복, 스킵 가능)는 허용. 정본: docs/superpowers/specs/2026-09-17-riposte-story-bible.md
 - 챕터 선택 화면, 새 플레이어 동사(가드 브레이크·홀드 패리 등), 대사 음성, 초상화 그림(실루엣 재사용으로 대신한다).
 
