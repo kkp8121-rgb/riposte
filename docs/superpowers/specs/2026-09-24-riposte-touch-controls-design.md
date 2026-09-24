@@ -1,6 +1,6 @@
 # RIPOSTE — 모바일 터치 조작
 
-- 작성일: 2026-09-24 · 상태: **설계 승인 — 구현 계획 대기** (브랜치 `feat/touch-controls`)
+- 작성일: 2026-09-24 · 상태: **구현 완료 — 실기기(안드로이드 크롬) 확인 대기** (브랜치 `feat/touch-controls`, 구현 계획 `../plans/2026-09-24-riposte-touch-controls.md`, 결정 기록은 §12)
 - 발단(2026-09-24 사용자): GitHub Pages 를 **안드로이드 크롬 앱**으로 열었더니 조작할 방법이 없다. 이 게임은 키보드·패드 전용이다(스펙 §2.1). 스펙 §9 비목표의 "모바일 터치 UI" 를 이번에 뒤집는다.
 - 사용자 결정(2026-09-24 대화):
   1. 방식 = **화면 위 가상 버튼** (제스처·패드 안내만 하는 안은 기각).
@@ -22,7 +22,7 @@
 | S2 | 이동 버튼을 누른 채 다른 버튼을 눌러도 둘 다 들어간다(멀티터치) | `tests/touch.mjs` — ▶ 홀드 + PARRY 탭 → 이동·패리 동시 |
 | S3 | 타이틀 → 보스 선택 → 전투 → 패배 → RETRY → 타이틀, 대사 진행·선택지·스킵, 옵션 값 변경이 전부 버튼으로 된다 | `tests/touch.mjs` 흐름 검사 |
 | S4 | 세로로 들면 게임 시간이 멈추고 회전 안내가 뜬다 | `tests/touch.mjs` — 세로 뷰포트에서 `game.time` 불변 |
-| S5 | 터치 모드가 꺼진 환경(PC)의 동작은 이전과 같다 — 터치 코드는 리스너 0 · 프레임당 `TouchUI.on` 분기 두 번뿐 | 기존 테스트 전부 통과 + `bot.mjs --all` 통과 + `mash.mjs --all --riposte --expect-lose` 전패 + 데스크톱 화면 문구가 키보드 문구 그대로(`tests/touch.mjs` T-text) |
+| S5 | 터치 모드가 꺼진 환경(PC)의 동작은 이전과 같다 — 터치 코드는 리스너 0 · 프레임당 `TouchUI.on`·`blocked` 값 확인과 문구 조회(`say`)뿐 | 기존 테스트 전부 통과 + `bot.mjs --all` 통과 + `mash.mjs --all --riposte --expect-lose` 전패 + 데스크톱 화면 문구가 키보드 문구 그대로(`tests/touch.mjs` T-text) |
 | S6 | 실제 안드로이드 크롬에서 플레이 가능 | 배포 후 **사용자 실기기 확인** (헤드리스로는 못 잰다) |
 
 ## 1. 불변 (건드리지 않는 것)
@@ -45,6 +45,8 @@
 - 캔버스에 `pointerdown`·`pointermove`·`pointerup`·`pointercancel` 을 붙이고 **손가락(pointerId)마다** 지금 어느 버튼 위에 있는지 추적한다.
   - 손가락이 버튼 안에서 눌리면 그 버튼의 액션을 누른다. 버튼 밖으로 미끄러지면 놓고, 다른 버튼으로 들어가면 그 버튼을 누른다 — **◀ 에서 ▶ 로 미끄러뜨리면 바로 방향이 바뀐다.**
   - 한 액션을 여러 손가락이 쥐고 있으면 마지막 손가락이 뗄 때 놓는다.
+  - **화면(버튼 세트)이 바뀌는 순간 닿아 있던 손가락은 뗄 때까지 무시한다** — 그 손가락이 움직여도 새 화면의 버튼을 누르지 않는다(최종 검토 F1: 전투 TITLE 을 쥔 채 타이틀로 넘어가 NEW GAME 이 눌리던 결함).
+  - **전투가 끝난 직후 `C.TOUCH.GRACE`(0.4초) 동안 새 터치를 무시한다** — 전투의 PARRY·DASH 자리가 결과 화면의 RETRY/OK·TITLE/BACK 자리이기 때문이다(F3).
 - `Input` 에 터치 전용 진입점 하나를 더한다 — **`Input.touchAction(action, isDown)`**. 동작은 패드의 `applyPadAction` 과 같다: 누를 때 `setAction(true)` + `onGesture`(오디오 잠금 해제), 뗄 때는 **터치가 스스로 쥐고 있던 액션만** false 로 내린다(`_touchHeld`) — 키보드·패드가 쥔 같은 액션을 끊지 않는다. `blur`·`visibilitychange` 에서 비운다.
 - **꾹 누르기 버튼**(`hold: true`): 누르는 즉시 액션을 내보내지 않고 `C.TOUCH.HOLD_TIME`(0.5초) 동안 쥐고 있어야 한 번 누른다(누르고 바로 뗀 것과 같은 한 번). 잘못 눌러 판을 잃는 버튼(전투 중 RETRY·TITLE, 타이틀의 NEW GAME)에만 쓴다. 채워지는 링으로 진행을 보여 준다.
 - 버튼 위치는 **화면(CSS px) 좌표**다 — 게임 좌표(960×540)가 아니다. 좌우 레터박스 여백까지 쓰기 위해서다. 판정은 원 안(반지름 + `C.TOUCH.HIT_PAD`).
@@ -81,7 +83,7 @@
 | RIPOSTE | PARRY 위 | 32 |
 | ▲ ▼ ◀ ▶ (메뉴) | 왼쪽 아래 십자 — 타이틀·보스 선택은 ▲ ▼ 만, 옵션은 넷 다 | 30 |
 | OK · BACK(SKIP) | 오른쪽 아래 — OK 가 PARRY 자리, BACK 이 DASH 자리 | 40 · 32 |
-| RETRY · TITLE · NEW GAME · FULLSCREEN | 오른쪽 위 구석, 작게 | 24 |
+| RETRY · TITLE (전투) · NEW GAME · FULLSCREEN (타이틀) | 전투는 오른쪽 여백에 세로로(HUD 타이머를 가리지 않게), 타이틀은 오른쪽 위에 가로로 | 24 |
 
 - 모든 좌표·반지름·간격·투명도는 **`C.TOUCH`** 표(매직넘버 금지). 화면 가장자리 여백은 `C.TOUCH.EDGE` + 안전 영역(노치) — 터치 모드에서만 만드는 보이지 않는 측정용 div 의 `padding: env(safe-area-inset-*)` 을 `getComputedStyle` 로 읽는다(`env()` 를 모르는 브라우저는 선언이 버려져 0).
 - 모양: 반투명 원(평소 `ALPHA_IDLE`, 누르면 `ALPHA_DOWN`), 방향은 삼각형 도형, 나머지는 짧은 라벨(`PARRY` 등) — 글리프 폰트에 기대지 않는다. PARRY 는 금색 테두리, DASH 는 붉은 테두리로 텔 색과 맞춘다(§2.2 색 문법 — 금=패리, 적=대시).
@@ -92,12 +94,12 @@
 터치 모드에서는 키 이름 대신 버튼 이름을 쓴다. 문자열은 `C.TOUCH.TEXT`(키보드 문구와 같은 키 이름)에 두고 UI 는 헬퍼 하나(`say(key, 키보드 문구)` — 터치 모드면 `C.TOUCH.TEXT[key]`, 아니면 키보드 문구)로 고른다. `js/ui.js` 에서 옮기는 키보드 문구는 새 `C.PROMPTS` 블록에 둔다.
 
 - 이미 config 에 있는 문구: `MENU.TITLE_HINT`·`OPTION_HINT`·`STORY.PROMPT_NEXT`·`PROMPT_SKIP` 등.
-- **`js/ui.js` 에 박혀 있는 문구는 config 로 옮긴다** — `'N  NEW GAME'`(타이틀 힌트 꼬리), `'[K]'`·`'[J]'`(선택지), `'ENTER  —  …'`(VICTORY·INTERLUDE·ENDING), `'ESC  —  TITLE'`, 조작법 표 `CONTROLS`. 옮기는 것은 터치용 대체가 필요한 문구뿐이다.
+- **`js/ui.js` 에 박혀 있는 문구는 config 로 옮긴다** — `'N  NEW GAME'`(타이틀 힌트 꼬리), `'[K]'`·`'[J]'`(선택지), `'ENTER  —  …'`(VICTORY·INTERLUDE·ENDING), `'ESC  —  TITLE'`, 조작법 표 `CONTROLS`, 손패 안내 `'J  RIPOSTE'`. 옮기는 것은 터치용 대체가 필요한 문구뿐이다. 전투 튜토리얼(`C.TUTORIAL`)과 패배 힌트(`C.DEFEAT.HINT_GOLD/RED`)는 자리에 두고 터치 문구(`TUT_*`·`HINT_*`)로만 대신한다.
 - 조작법 표(`CONTROLS`)는 터치 모드에서 터치 설명으로 바뀐다(버튼 이름 → 동작).
 
 ## 7. 가로 전용 · 전체 화면
 
-- **첫 터치에서 전체 화면 + 가로 고정**을 요청한다: `document.documentElement.requestFullscreen()` 이 성공하면 `screen.orientation.lock('landscape')`. 둘 다 실패해도 조용히 넘어간다(지원 안 하는 브라우저). 자동 요청은 **부팅 후 한 번만** — 사용자가 전체 화면을 빠져나오면 다시 강제하지 않는다.
+- **첫 터치를 뗄 때 전체 화면 + 가로 고정**을 요청한다(터치는 손가락을 뗄 때만 브라우저가 "사용자 조작"으로 인정한다 — FULL 버튼·회전 안내 탭도 뗄 때 요청): `document.documentElement.requestFullscreen()` 이 성공하면 `screen.orientation.lock('landscape')`. 둘 다 실패해도 조용히 넘어간다(지원 안 하는 브라우저). 자동 요청은 **부팅 후 한 번만** — 사용자가 전체 화면을 빠져나오면 다시 강제하지 않는다.
 - 전체 화면이 아니고 API 가 있으면 타이틀에 **FULLSCREEN** 버튼을 보여 준다(누르면 같은 요청).
 - **세로 감지**: 터치 모드이고 `innerHeight > innerWidth` 이면 `TouchUI.blocked = true`.
   - 화면: 게임 대신 회전 안내(`C.TOUCH.TEXT.ROTATE` + 폰 도형)를 그린다. 안내를 탭하면 전체 화면 + 가로 고정을 다시 요청한다.
@@ -119,6 +121,14 @@
   - T-scenes: 모든 scene 이름에 `C.TOUCH.SETS` 항목이 있다.
   - pageerror 0.
 - 기존 테스트 전부(데스크톱 = 터치 모드 꺼짐)·`bot.mjs --all`·`mash.mjs` 가 통과한다(S5). 봇 결과는 헤드리스 프레임 흔들림 때문에 변경이 없어도 실행마다 조금씩 다르므로(handover 교훈 10) "결과 동일" 은 기준으로 쓰지 않는다. 브라우저 측정은 하나씩.
+
+## 12. 구현 중 결정 기록 (2026-09-24)
+
+- 테스트 도구: 헤드리스 크롬 CDP 는 두 손가락 중 하나만 떼려면 `touchEnd` 에 그 손가락만 담아야 한다(짧은 touchMove 목록으로는 안 떼어진다). 세로 회전은 창 크기가 아니라 기기 화면 값(`Emulation.setDeviceMetricsOverride`)으로 흉내 낸다 — 첫 터치의 전체 화면 요청 뒤에는 창 크기 변경이 거부되고, 실제 폰도 창이 아니라 화면이 돈다. 세로 스크린샷은 `Page.captureScreenshot`(Playwright 스크린샷은 화면 값 흉내를 되돌린다).
+- 배치: 전투의 RETRY·TITLE 이 HUD 타이머를 가려 오른쪽 여백 세로로 옮겼다.
+- 문구: 계획 목록 밖이던 전투 튜토리얼·손패 안내·패배 힌트도 터치 문구로 바꿨다.
+- 최종 검토(F1~F8) 반영: 화면 전환 뒤 쥔 손가락 무시, 전체 화면은 손가락 뗄 때, 전투 직후 0.4초 유예, 꾹 누르기 버튼 두 손가락, 180° 회전 때 노치 여백 재측정, 보스 선택 터치 안내, 그리기 수치 config 로, 테스트 고정 대기 제거.
+- 보류(다음 기회): 세로에서 가로로 돌아온 직후 0.4초도 유예가 걸린다 · 자동 전체 화면 뒤에도 옵션의 FULLSCREEN 행은 OFF 로 보인다 · 매핑 없는 키에도 버튼이 숨는다 · 세로 전환 때 releaseAll 두 번(결과 같음) · optionRows 프레임당 배열 생성 · 세로로 쌓인 RETRY·TITLE 판정 원 8px 겹침(가까운 쪽이 이긴다).
 
 ## 9. 문서 변경
 

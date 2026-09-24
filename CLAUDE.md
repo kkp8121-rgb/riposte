@@ -1,6 +1,6 @@
 # RIPOSTE — 프로젝트 지침 (목차형)
 
-> itch.io 게임잼 출품작. 사이드뷰 1:1 보스러시 패리 듀얼. 키보드 전용. 바닐라 JS + Canvas 2D.
+> itch.io 게임잼 출품작. 사이드뷰 1:1 보스러시 패리 듀얼. 키보드·패드·터치(폰은 가로 — PC 에서는 터치 버튼이 안 뜬다). 바닐라 JS + Canvas 2D.
 
 ## Vitals
 - 설계 SSoT: `docs/superpowers/specs/2026-09-09-riposte-design.md` — 규칙·수치·보스 테이블·파일 구조는 여기만 본다.
@@ -25,7 +25,8 @@
 - 챕터 2 재설계안: `docs/superpowers/specs/2026-09-18-riposte-chapter2-redesign.md` (구현 완료, 커밋 8ad2f17)
 - 챕터 3 설계: `docs/superpowers/specs/2026-09-19-riposte-chapter3-design.md` (구현 완료, 확정 수치는 스펙 §3.9~3.12)
 - 챕터 2·3 공격 재설계(동작 어휘 확장): `docs/superpowers/specs/2026-09-23-riposte-ch23-attacks-design.md` (구현 완료 — 사용자 플레이 판정 대기)
-- 구현 계획: `docs/superpowers/plans/2026-09-17-riposte-chapter2-story.md` · `docs/superpowers/plans/2026-09-18-riposte-chapter2-redesign.md` · `docs/superpowers/plans/2026-09-19-riposte-chapter3.md` · `docs/superpowers/plans/2026-09-23-riposte-ch23-attacks.md`
+- 모바일 터치 조작: `docs/superpowers/specs/2026-09-24-riposte-touch-controls-design.md` (구현 완료 — 실기기 확인 대기)
+- 구현 계획: `docs/superpowers/plans/2026-09-17-riposte-chapter2-story.md` · `docs/superpowers/plans/2026-09-18-riposte-chapter2-redesign.md` · `docs/superpowers/plans/2026-09-19-riposte-chapter3.md` · `docs/superpowers/plans/2026-09-23-riposte-ch23-attacks.md` · `docs/superpowers/plans/2026-09-24-riposte-touch-controls.md`
 - 밸런스 실측: `docs/qa/balance-2026-09-17.md`(구 기반, 폐기) · `docs/qa/balance-2026-09-18.md`(챕터 2 확정) · `docs/qa/balance-2026-09-19.md`(챕터 3 확정, 3시드) · `docs/qa/balance-2026-09-23.md`(챕터 2·3 재설계 확정, 3시드)
 - 재미 QA 계측: `docs/qa/funqa-2026-09-23.md`(봇 지표로 억울한 피격·죽은 시간 등을 잰다 — 재미 자체는 못 잰다)
 - 플레이테스트 체크리스트: `docs/qa/playtest-ch23-attacks.md`(봇이 못 재는 것 — 외우기·참기·어둠 속 표식 읽기, G8)
