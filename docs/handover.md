@@ -1,10 +1,10 @@
 # RIPOSTE — 인수인계 (handover)
 
 - 갱신: 2026-09-24
-- 🟢 **현재(2026-09-24): 모바일 터치 조작 — 구현 완료, 실기기 확인 대기.** 브랜치 `feat/touch-controls`(main `3956c10` 에서 분기, 로컬 커밋만 — **push·main 머지 안 함**, push = Pages 배포라 매번 사용자 확인). 스펙 `docs/superpowers/specs/2026-09-24-riposte-touch-controls-design.md`(§12 결정 기록), 계획 `docs/superpowers/plans/2026-09-24-riposte-touch-controls.md`.
+- 🟢 **현재(2026-09-24): 모바일 터치 조작 — 구현 완료, 실기기 확인 대기.** 브랜치 `feat/touch-controls`(main `3956c10` 에서 분기 → **main fast-forward 머지·푸시(2026-09-24 사용자 승인)**, push = Pages 배포라 매번 사용자 확인). 스펙 `docs/superpowers/specs/2026-09-24-riposte-touch-controls-design.md`(§12 결정 기록), 계획 `docs/superpowers/plans/2026-09-24-riposte-touch-controls.md`.
   - **완료**: `js/touch.js`(window.TouchUI — 폰·태블릿 `pointer: coarse` 에서만, `?touch=1/0` 강제) · 가로 전용(세로면 게임 정지 + 회전 안내) · 화면별 버튼 세트 · 전투 RETRY·TITLE 은 0.5초 꾹 · 첫 터치를 뗄 때 전체 화면+가로 고정 · 키보드·패드가 오면 버튼 숨김 · 터치 모드 문구(`say()`, 키보드 문구는 `C.PROMPTS` 로 옮겨 한 글자도 안 바뀜) · 터치 모드에서 KEY BINDINGS 숨김 · 새 테스트 `tests/touch.mjs`.
   - **검증**: 전체 게이트 13/13 통과(HEAD `f0caf6c`, 하나씩 헤드리스) — story · boss-overlap · smoke · motions · state · audio-smoke · pad · options · dev · zone · **touch**(`TOUCH PASSED`) · mash(`wins 0/36`) · bot(`BOT PASSED`). 스크린샷 `tests/shots/touch-fight.png`·`touch-title.png`·`touch-rotate.png`(버튼이 캐릭터·손패·타이머를 가리지 않음). 태스크마다 독립 검토 + 최종 전체 검토(opus) → 지적 F1~F8 반영(`f0caf6c`) → 재검토 통과.
-  - 🔴 **사용자 확인 대기**: (1) **실기기(안드로이드 크롬) 확인(S6)** — 첫 탭을 떼면 전체 화면이 되는지 · FULL 이 한 번에 되는지 · 세로 안내 탭 · 전투 TITLE 을 오래 쥐었다가 떼기 · 보스 선택에서 OK 뒤 화면이 그대로인지 · 버튼이 캐릭터·손패를 가리는지 · 패리 타이밍이 터치로 되는지. (2) main 머지·Pages 배포 여부.
+  - 🔴 **사용자 확인 대기**: (1) **실기기(안드로이드 크롬) 확인(S6)** — 첫 탭을 떼면 전체 화면이 되는지 · FULL 이 한 번에 되는지 · 세로 안내 탭 · 전투 TITLE 을 오래 쥐었다가 떼기 · 보스 선택에서 OK 뒤 화면이 그대로인지 · 버튼이 캐릭터·손패를 가리는지 · 패리 타이밍이 터치로 되는지. ~~(2) main 머지·Pages 배포 여부~~ → 2026-09-24 사용자 승인으로 배포.
   - 보류 목록은 스펙 §12.
 - 🟢 **직전(2026-09-24): 챕터 2·3 공격 재설계 — 구현 완료, 사용자 플레이테스트 대기.** 브랜치 `feat/ch23-attacks` → **main fast-forward 머지·푸시 완료(`3956c10`, 2026-09-24 사용자 승인)**, Pages 배포 확인 `PAGES OK · scripts 25 · bosses live/local: 12 / 12`(사이트에 `js/motions.js` 200). 사람 플레이테스트는 배포본으로 한다. push 는 매번 사용자 확인.
   - **완료**: 엔진 새 동작 9개(`js/motions.js`) · 판정기 공격 단위 재활용 검사 · 봇 새 위협 읽기 · 보스 5~12 재작성 · 3시드 밸런스(`docs/qa/balance-2026-09-23.md`) · 재미 QA(`tools/funqa.mjs` + 페르소나 검토단, `docs/qa/funqa-2026-09-23.md`) · 스펙 §3.5~3.12·README·CLAUDE.md 갱신 · 사람 플레이테스트 체크리스트 `docs/qa/playtest-ch23-attacks.md`. 태스크마다 독립 검토 통과(SDD 원장 `docs/qa/ch23-attacks-sdd-ledger-2026-09-23.md` — 판정 전부 기록) · 최종 게이트 `4bdb1cc`(전 테스트·3시드·연타·하드 통과) · 최종 전체 검토 지적 반영 `ba10561`·`5140231`.
